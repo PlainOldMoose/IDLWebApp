@@ -25,8 +25,8 @@ public class Player {
     @Column(nullable = false)
     private Long elo;
 
-    @Column(unique = true)
-    private String SteamId;
+    @Column(unique = true, nullable = false)
+    private String steamId;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
