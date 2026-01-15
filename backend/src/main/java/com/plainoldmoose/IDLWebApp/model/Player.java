@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,9 +18,24 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
+    private String username;
+
     @Column(nullable = false)
     private Long elo;
 
-    @Column(unique = true, nullable = false)
-    private String username;
+    @Column(unique = true)
+    private String SteamId;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "player")
+    private List<EloHistory> eloHistory;
+
+    @OneToMany(mappedBy = "player")
+    private List<MatchParticipant> matchParticipations;
+
+    @OneToMany(mappedBy = "player")
+    private List<TeamPlayer> teamMemberships;
 }
