@@ -2,11 +2,18 @@ package com.plainoldmoose.IDLWebApp.model;
 
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Entity
+@NoArgsConstructor
+@Getter
+@Setter
 public class Season {
 
     @Id
