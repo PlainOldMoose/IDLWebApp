@@ -1,7 +1,6 @@
 package com.plainoldmoose.IDLWebApp.controller;
 
 import com.plainoldmoose.IDLWebApp.model.Player;
-import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 @RequestMapping(path = "api/players")
 public class PlayerController {
-
     private final PlayerService playerService;
 
     @GetMapping
