@@ -1,9 +1,10 @@
-package com.plainoldmoose.IDLWebApp.dto.response;
+package com.plainoldmoose.IDLWebApp.dto.response.season;
 
-import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
+import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public record SeasonDetailResponse(String name, String status, LocalDate startDate, LocalDate endDate, List<TeamResponse> teams) {
+public record SeasonDetailResponse(String name, SeasonStatus status, LocalDate startDate, LocalDate endDate, List<TeamResponse> teams) {
 }
