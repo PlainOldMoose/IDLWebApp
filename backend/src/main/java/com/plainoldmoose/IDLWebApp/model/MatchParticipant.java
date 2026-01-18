@@ -15,9 +15,11 @@ public class MatchParticipant {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "match_id")
     private Match match;
 
     @ManyToOne
+    @JoinColumn(name = "player_id")
     private Player player;
 
     @Enumerated
@@ -26,6 +28,7 @@ public class MatchParticipant {
     private Boolean isSub;
 
     @ManyToOne
+    @JoinColumn(name = "subbing_for_id")
     @Nullable
     private Player subbingFor;
 }
