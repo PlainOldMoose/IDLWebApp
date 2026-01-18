@@ -1,16 +1,21 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreatePlayerRequest;
-import com.plainoldmoose.IDLWebApp.dto.response.PlayerDetailResponse;
-import com.plainoldmoose.IDLWebApp.dto.response.PlayerSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
+import com.plainoldmoose.IDLWebApp.model.EloHistory;
+import com.plainoldmoose.IDLWebApp.model.Match;
 import com.plainoldmoose.IDLWebApp.model.Player;
+import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,40 +23,127 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
 
-    public List<PlayerSummaryResponse> getAllPlayersSummary() {
-        List<PlayerSummaryResponse> playerlist = new ArrayList<>();
-
-        List<Player> players = playerRepository.findAll();
-        for (Player player : players) {
-            playerlist.add(mapToResponse(player));
-        }
-        return playerlist;
-    }
-
-    public PlayerDetailResponse getPlayerById(String steamId) {
-        Optional<Player> player = playerRepository.findBySteamId(steamId);
-
-        if (player.isPresent()) {
-            return mapToDetailResponse(player.get());
-        }
-
-        return null;
-    }
-
     public PlayerSummaryResponse createPlayer(CreatePlayerRequest request) {
+        // Check for duplications before creating
+        validateSteamIdUnique(request.username());
+        validateUsernameUnique(request.steamId());
+
+        // Copy request to entity and save to repo
         Player player = new Player();
         player.setUsername(request.username());
         player.setElo(request.elo());
         player.setSteamId(request.steamId());
+
         Player saved = playerRepository.save(player);
-        return mapToResponse(saved);
+
+        // Create initial Elo
+        EloHistory initialHistory = new EloHistory();
+        initialHistory.setPlayer(saved);
+        initialHistory.setElo(saved.getElo());
+        initialHistory.setTimestamp(LocalDateTime.now());
+        initialHistory.setReason(EloChangeReason.INITIAL);
+
+        return mapToSummaryResponse(saved);
     }
 
-    private PlayerSummaryResponse mapToResponse(Player player) {
+    public List<PlayerSummaryResponse> getAllPlayersSummary() {
+        return playerRepository.findAll()
+                .stream()
+                .map(this::mapToSummaryResponse)
+                .toList();
+    }
+
+    public PlayerDetailResponse getPlayerById(String steamId) {
+        Player player = findPlayerOrThrow(steamId);
+        return mapToDetailResponse(player);
+    }
+
+    private Player findPlayerOrThrow(String steamId) {
+        return playerRepository.findBySteamId(steamId)
+                .orElseThrow(() -> new EntityNotFoundException("Player not found with SteamID: " + steamId));
+    }
+
+    private void validateUsernameUnique(String username) {
+        if (playerRepository.existsByUsername(username)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+    }
+
+    private void validateSteamIdUnique(String steamId) {
+        if (playerRepository.existsBySteamId(steamId)) {
+            throw new IllegalArgumentException("SteamID already exists");
+        }
+    }
+
+    private PlayerSummaryResponse mapToSummaryResponse(Player player) {
         return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
     }
 
     private PlayerDetailResponse mapToDetailResponse(Player player) {
-        return new PlayerDetailResponse(player.getId(), player.getUsername(), player.getElo(), player.getSteamId(), player.getCreatedAt(), player.getEloHistory(), player.getMatchParticipations(), player.getTeamMemberships());
+        List<EloHistory> eloHistoryList = player.getEloHistory()
+                .stream()
+                .sorted(Comparator.comparing(EloHistory::getTimestamp))
+                .toList();
+
+        // Calculate wins/losses from EloHistory
+        int wins = (int) eloHistoryList.stream()
+                .filter(history -> history.getReason() == EloChangeReason.MATCH_WIN)
+                .count();
+
+        int losses = (int) eloHistoryList.stream()
+                .filter(history -> history.getReason() == EloChangeReason.MATCH_LOSS)
+                .count();
+
+        int matchesPlayed = wins + losses;
+        double winrate = matchesPlayed > 0 ? (double) wins / matchesPlayed * 100 : 0.0;
+
+        // Build elo history
+        List<Long> eloHistory = player.getEloHistory()
+                .stream()
+                .sorted(Comparator.comparing(EloHistory::getTimestamp))
+                .map(EloHistory::getElo)
+                .toList();
+
+        // Build last 20 matches
+        List<RecentMatchResponse> recentMatches = player.getMatchParticipations()
+                .stream()
+                .filter(mp -> mp.getMatch()
+                        .getPlayedTime() != null)
+                .sorted(Comparator.comparing(mp -> mp.getMatch()
+                        .getPlayedTime(), Comparator.reverseOrder()))
+                .limit(20).map(mp -> {
+                    Match match = mp.getMatch();
+                    boolean won = mp.getSide() == match.getMatchWinner();
+
+                    // Find eloChange for this match from eloHistory
+                    int eloChange = eloHistoryList.stream()
+                            .filter(eh -> eh.getMatch() != null && eh.getMatch()
+                                    .getId() == match.getId())
+                            .findFirst()
+                            .map(eh -> {
+                                int idx = eloHistoryList.indexOf(eh);
+                                return idx > 0 ? (int) (eh.getElo() - eloHistoryList.get(idx - 1)
+                                        .getElo()) : 0;
+                            })
+                            .orElse(0);
+                    return new RecentMatchResponse(match.getId(),
+                            match.getPlayedTime(),
+                            won,
+                            eloChange,
+                            match.getSeason() != null ? match.getSeason()
+                                    .getName() : null);
+                }).toList();
+
+        return new PlayerDetailResponse(
+                player.getSteamId(),
+                player.getUsername(),
+                player.getElo(),
+                matchesPlayed,
+                wins,
+                losses,
+                winrate,
+                recentMatches,
+                eloHistory
+        );
     }
 }
