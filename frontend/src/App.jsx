@@ -2,12 +2,19 @@ import { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
-  const [users, setUsers] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [seasons, setSeasons] = useState([]);
 
   useEffect(() => {
     fetch("/api/players")
       .then((response) => response.json())
-      .then((data) => setUsers(data));
+      .then((data) => setPlayers(data));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/seasons")
+      .then((response) => response.json())
+      .then((data) => setSeasons(data));
   }, []);
 
   return (
@@ -22,12 +29,30 @@ function App() {
           </tr>
           </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.username}</td>
-              <td>{user.elo}</td>
+          {players.map((player) => (
+            <tr key={player.steamId}>
+              <td>{player.steamId}</td>
+              <td>{player.username}</td>
+              <td>{player.elo}</td>
               </tr>
+          ))}
+        </tbody>
+      </table>
+      <h1>Seasons</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {seasons.map((season) => (
+            <tr key={season.name}>
+              <td>{season.name}</td>
+              <td>{season.status}</td>
+            </tr>
           ))}
         </tbody>
       </table>
