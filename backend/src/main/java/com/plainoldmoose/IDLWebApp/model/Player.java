@@ -37,9 +37,6 @@ public class Player {
     @OneToMany(mappedBy = "player")
     private List<MatchParticipant> matchParticipations;
 
-    @OneToMany(mappedBy = "player")
-    private List<TeamPlayer> teamMemberships;
-
     @PrePersist
     public void prePersist() {
         createdAt = LocalDateTime.now();
