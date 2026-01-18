@@ -20,7 +20,7 @@ import java.util.List;
 @Table(name = "matches")
 public class Match {
     @Id
-    @Min(value = 1, message = "Mactch ID must be positive")
+    @Min(value = 1, message = "Match ID must be positive")
     private Long matchId;
 
     @Enumerated
