@@ -12,5 +12,4 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     boolean existsByUsername(String username);
     Optional<Player> findBySteamId(String steamId);
     boolean existsBySteamId(String steamId);
-
 }
