@@ -4,7 +4,6 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreatePlayerRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
-import com.plainoldmoose.IDLWebApp.service.StatisticsService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +15,6 @@ import java.util.List;
 @RequestMapping(path = "api/players")
 public class PlayerController {
     private final PlayerService playerService;
-    private final StatisticsService statisticsService;
 
     @PostMapping
     public PlayerSummaryResponse createPlayer(@Valid @RequestBody CreatePlayerRequest request) {
@@ -29,7 +27,7 @@ public class PlayerController {
     }
 
     @GetMapping("/{steamId}")
-    public PlayerDetailResponse getPlayerById(@PathVariable String steamId) {
-        return playerService.getPlayerById(steamId);
+    public PlayerDetailResponse findById(@PathVariable String steamId) {
+        return playerService.findById(steamId);
     }
 }
