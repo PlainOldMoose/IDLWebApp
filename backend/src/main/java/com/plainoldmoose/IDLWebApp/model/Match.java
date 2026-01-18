@@ -6,12 +6,16 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
+@Getter
+@Setter
 @Table(name = "matches")
 public class Match {
     @Id
@@ -37,6 +41,7 @@ public class Match {
     @Enumerated
     private MatchStatus status;
 
+    // TODO - think about this
     @Enumerated
     private Side matchWinner;
 

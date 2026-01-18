@@ -3,8 +3,12 @@ package com.plainoldmoose.IDLWebApp.model;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Getter
+@Setter
 public class MatchParticipant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,12 +22,6 @@ public class MatchParticipant {
 
     @Enumerated
     private Side side;
-
-    private Long eloBefore;
-
-    private Long eloAfter;
-
-    private Long eloChange;
 
     private Boolean isSub;
 
