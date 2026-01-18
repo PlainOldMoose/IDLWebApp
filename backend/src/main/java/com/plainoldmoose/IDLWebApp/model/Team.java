@@ -17,7 +17,7 @@ import java.util.UUID;
 public class Team {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private UUID teamId;
 
     @Column(nullable = false)
     private String name;
@@ -30,8 +30,12 @@ public class Team {
     @JoinColumn(name = "captain_id", nullable = false)
     private Player captain;
 
-    private Long totalElo;
+    @Column(columnDefinition = "bigint default 0")
+    private Long totalElo = 0L;
 
-    private int wins;
-    private int losses;
+    @Column(columnDefinition = "integer default 0")
+    private int wins = 0;
+
+    @Column(columnDefinition = "integer default 0")
+    private int losses = 0;
 }
