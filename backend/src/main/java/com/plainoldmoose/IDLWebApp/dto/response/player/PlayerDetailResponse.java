@@ -1,10 +1,7 @@
-package com.plainoldmoose.IDLWebApp.dto.response;
+package com.plainoldmoose.IDLWebApp.dto.response.player;
 
 import com.plainoldmoose.IDLWebApp.model.EloHistory;
-import com.plainoldmoose.IDLWebApp.model.MatchParticipant;
-import jakarta.annotation.Nullable;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record PlayerDetailResponse(
@@ -15,7 +12,7 @@ public record PlayerDetailResponse(
         int wins,
         int losses,
         double winRate,
-        List<RecentMatchResponse> recentMatches, // Last 20 matches
-        List<EloHistory> eloHistory
+        List<RecentMatchResponse> recentMatches,// Last 20 matches
+        List<Long> eloHistory
 ) {
 }
