@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface SeasonRepository extends JpaRepository<Season, Long> {
     Optional<Season> findByName(String name);
+    Optional<Season> findById(long id);
     Optional<Season> findByStatus(String status);
 }
