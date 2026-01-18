@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
@@ -21,7 +22,7 @@ public class SeasonController {
     }
 
     @GetMapping("/{id}")
-    public SeasonDetailResponse getSeasonById(@PathVariable long id) {
+    public SeasonDetailResponse getSeasonById(@PathVariable UUID id) {
         return seasonService.getSeasonById(id);
     }
 
