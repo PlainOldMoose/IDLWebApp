@@ -40,6 +40,7 @@ public class PlayerService {
         EloHistory initialHistory = new EloHistory();
         initialHistory.setPlayer(saved);
         initialHistory.setElo(saved.getElo());
+        initialHistory.setEloChange(0L);
         initialHistory.setTimestamp(LocalDateTime.now());
         initialHistory.setReason(EloChangeReason.INITIAL);
 
@@ -53,13 +54,13 @@ public class PlayerService {
                 .toList();
     }
 
-    public PlayerDetailResponse getPlayerById(String steamId) {
+    public PlayerDetailResponse findById(String steamId) {
         Player player = findPlayerOrThrow(steamId);
         return mapToDetailResponse(player);
     }
 
     private Player findPlayerOrThrow(String steamId) {
-        return playerRepository.findBySteamId(steamId)
+        return playerRepository.findById(steamId)
                 .orElseThrow(() -> new EntityNotFoundException("Player not found with SteamID: " + steamId));
     }
 
@@ -70,7 +71,7 @@ public class PlayerService {
     }
 
     private void validateSteamIdUnique(String steamId) {
-        if (playerRepository.existsBySteamId(steamId)) {
+        if (playerRepository.existsById(steamId)) {
             throw new IllegalArgumentException("SteamID already exists");
         }
     }
@@ -118,15 +119,13 @@ public class PlayerService {
                     // Find eloChange for this match from eloHistory
                     int eloChange = eloHistoryList.stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
-                                    .getId() == match.getId())
+                                    .getMatchId()
+                                    .equals(match.getMatchId()))
                             .findFirst()
-                            .map(eh -> {
-                                int idx = eloHistoryList.indexOf(eh);
-                                return idx > 0 ? (int) (eh.getElo() - eloHistoryList.get(idx - 1)
-                                        .getElo()) : 0;
-                            })
+                            .map(eh -> eh.getEloChange()
+                                    .intValue())
                             .orElse(0);
-                    return new RecentMatchResponse(match.getId(),
+                    return new RecentMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),
                             won,
                             eloChange,
