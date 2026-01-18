@@ -16,17 +16,14 @@ import java.util.List;
 @Setter
 public class Player {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(length = 17, unique = true, nullable = false)
+    private String steamId;
 
     @Column(unique = true, nullable = false)
     private String username;
 
     @Column(nullable = false)
     private Long elo;
-
-    @Column(unique = true, nullable = false)
-    private String steamId;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
