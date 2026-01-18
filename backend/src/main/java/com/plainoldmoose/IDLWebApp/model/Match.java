@@ -6,6 +6,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,8 +20,8 @@ import java.util.List;
 @Table(name = "matches")
 public class Match {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Min(value = 1, message = "Mactch ID must be positive")
+    private Long matchId;
 
     @Enumerated
     private MatchType matchType;
