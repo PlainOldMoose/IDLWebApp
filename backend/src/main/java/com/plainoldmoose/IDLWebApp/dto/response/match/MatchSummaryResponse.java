@@ -5,7 +5,9 @@ import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import java.time.LocalDateTime;
 
 public record MatchSummaryResponse(
-        Long matchId, Side winner,
+        Long matchId,
+        Side winner,
         LocalDateTime timePlayed,
-        Long avgElo) {
+        int avgElo,
+        String seasonName) {
 }

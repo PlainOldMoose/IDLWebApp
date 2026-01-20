@@ -5,7 +5,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import java.time.LocalDateTime;
 
 public record EloHistoryResponse(
-        Long elo,
+        int elo,
         int eloChange,
         LocalDateTime timestamp,
         EloChangeReason reason,

@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record RecentMatchResponse(
         Long matchId,
-        LocalDateTime playedAt,
+        LocalDateTime timePlayed,
         boolean won,
         int eloChange,
         String seasonName
