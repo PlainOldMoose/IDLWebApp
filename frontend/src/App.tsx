@@ -1,35 +1,54 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+import NavbarComponent from "./components/Navbar";
+import Landing from "./pages/Landing";
+import Leaderboard from "./pages/Leaderboard";
+import PlayerProfile from "./pages/PlayerProfile";
+import Login from "./pages/Login";
+import Admin from "./pages/Admin";
+import Matches from "./pages/match/Matches";
+import Seasons from "./pages/season/Seasons";
+import { useAuthStore } from "./store/AuthStore";
+import MatchDetail from "./pages/match/MatchDetail";
+import SeasonDetail from "./pages/season/SeasonDetail";
+
+const queryClient = new QueryClient();
+
+function AppContent() {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <NavbarComponent />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/players/:steamId" element={<PlayerProfile />} />
+        <Route path="/matches" element={<Matches />} />
+        <Route path="/matches/:matchId" element={<MatchDetail />} />
+        <Route path="/seasons" element={<Seasons />} />
+        <Route path="/seasons/:seasonId" element={<SeasonDetail />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
     </>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

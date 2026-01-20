@@ -6,9 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Represents a team in a given season.
+ */
 @Entity
 @Getter
 @Setter
@@ -30,12 +34,15 @@ public class Team {
     @JoinColumn(name = "captain_id", nullable = false)
     private Player captain;
 
-    @Column(columnDefinition = "bigint default 0")
-    private Long totalElo = 0L;
+    @Column(columnDefinition = "integer default 0")
+    private int avgElo = 0;
 
     @Column(columnDefinition = "integer default 0")
     private int wins = 0;
 
     @Column(columnDefinition = "integer default 0")
     private int losses = 0;
+
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
+    private List<TeamMember> members = new ArrayList<>();
 }
