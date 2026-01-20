@@ -1,68 +1,161 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+  /* ===========================================
+     1. THEME VARIABLES
+     =========================================== */
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Background tokens */
+    --bg-primary: #030304;
+    --bg-secondary: #0a0a0c;
+    --bg-elevated: rgba(255, 255, 255, 0.03);
+    --bg-elevated-hover: rgba(255, 255, 255, 0.06);
+    --bs-card-bg: transparent;
+
+    /* Text tokens */
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+
+    /* Accent */
+    --accent: #6366f1;
+    --accent-muted: rgba(99, 102, 241, 0.15);
+
+    /* Borders */
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-medium: rgba(255, 255, 255, 0.1);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+    /* Glass effect */
+    --glass-bg: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+    --glass-blur: blur(12px);
   }
-  a:hover {
-    color: #747bff;
+
+    /* ===========================================
+     2. BODY BACKGROUND
+     =========================================== */
+  body {
+    background: linear-gradient(135deg, #030304 0%, #0d0a1a 100%);
+    background-attachment: fixed;
   }
-  button {
-    background-color: #f9f9f9;
+
+  /* ===========================================
+     2. BASE CARD STYLES
+     =========================================== */
+  .card {
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
   }
-}
+
+  .card:hover {
+    background: var(--bg-elevated-hover);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ===========================================
+     3. TABLE STYLES (PlayerList)
+     =========================================== */
+
+
+  .table thead th {
+    border-bottom: 1px solid var(--border-medium);
+    color: var(--text-primary);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+  }
+
+  .table tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .table tbody tr:hover {
+    background: var(--bg-elevated-hover);
+    transform: scale(1.01);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table tbody td {
+    padding: 1rem;
+  }
+
+  .rounded-table {
+    overflow: hidden;
+  }
+
+  /* ===========================================
+     4. GLASS PANEL (PlayerList container)
+     =========================================== */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-medium);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .glass-panel .table,
+  .glass-panel .table thead,
+  .glass-panel .table tbody,
+  .glass-panel .table tr,
+  .glass-panel .table th,
+  .glass-panel .table td {
+    background: transparent;
+  }
+  
+
+  /* ===========================================
+     5. STAT CARDS (PlayerProfile)
+     =========================================== */
+  .stat-card {
+    background: var(--glass-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ===========================================
+     ANIMATIONS
+     =========================================== */
+  .slide-in {
+    animation: slideIn 0.5s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+    /* ===========================================
+     NAVBAR
+     =========================================== */
+  .navbar-gradient {
+    background: linear-gradient(
+      135deg,
+      rgba(20, 20, 30, 0.95) 0%,
+      rgba(30, 30, 45, 0.95) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-md);
+  }
+
+
+  
