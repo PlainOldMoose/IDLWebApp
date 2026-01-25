@@ -1,14 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-<<<<<<< HEAD
-import { getAllPlayers, getMatches, getPlayerDetail } from "./Api";
-
-export function useMatchIds() {
-  return useQuery({
-    queryKey: ["matches"],
-    queryFn: getMatches,
-  });
-}
-=======
 import {
   getAllMatches,
   getAllPlayers,
@@ -20,7 +10,6 @@ import {
   getUpcomingMatches,
   getActiveSeason,
 } from "./Api";
->>>>>>> 4e8cb82 (WIP)
 
 export function usePlayers() {
   return useQuery({
@@ -36,8 +25,6 @@ export function usePlayerDetail(steamId: string | undefined) {
     enabled: !!steamId,
   });
 }
-<<<<<<< HEAD
-=======
 
 export function useMatches() {
   return useQuery({
@@ -93,4 +80,3 @@ export function useActiveSeason() {
     queryFn: getActiveSeason,
   });
 }
->>>>>>> 4e8cb82 (WIP)

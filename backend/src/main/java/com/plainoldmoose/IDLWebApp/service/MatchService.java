@@ -1,14 +1,5 @@
 package com.plainoldmoose.IDLWebApp.service;
 
-<<<<<<< HEAD
-import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
-import com.plainoldmoose.IDLWebApp.model.Match;
-import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-=======
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.ParticipantResponse;
@@ -25,24 +16,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
->>>>>>> 4e8cb82 (WIP)
 
 @Service
 @AllArgsConstructor
 public class MatchService {
     private final MatchRepository matchRepository;
 
-<<<<<<< HEAD
-    public List<MatchSummaryResponse> getAllMatches() {
-        return matchRepository.findAll()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    private MatchSummaryResponse mapToResponse(Match match) {
-        return new MatchSummaryResponse(match.getMatchId(), match.getMatchWinner(), match.getPlayedTime(), match.getAvgElo());
-=======
     public List<MatchSummaryResponse> getAllMatches(UUID seasonId, UUID teamId, String playerSteamId) {
         List<Match> matches;
 
@@ -165,6 +144,5 @@ public class MatchService {
                 match.getRadiantTeam() != null ? match.getRadiantTeam().getAvgElo() : 0,
                 match.getDireTeam() != null ? match.getDireTeam().getAvgElo() : 0
         );
->>>>>>> 4e8cb82 (WIP)
     }
 }

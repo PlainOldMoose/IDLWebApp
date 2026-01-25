@@ -1,15 +1,6 @@
 package com.plainoldmoose.IDLWebApp.repository;
 
 import com.plainoldmoose.IDLWebApp.model.Match;
-<<<<<<< HEAD
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-
-@Repository
-public interface MatchRepository extends JpaRepository<Match, Long> {
-=======
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,5 +20,4 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findByParticipantSteamId(@Param("steamId") String steamId);
 
     List<Match> findByStatusOrderByScheduledTimeAsc(MatchStatus status, Pageable pageable);
->>>>>>> 4e8cb82 (WIP)
 }

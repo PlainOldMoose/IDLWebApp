@@ -1,8 +1,6 @@
 import { useParams } from "react-router-dom";
 import { Card, Col, Row } from "react-bootstrap";
 import { usePlayerDetail } from "../services/Queries";
-<<<<<<< HEAD
-=======
 import { useNavigate } from "react-router";
 import {
   Legend,
@@ -14,13 +12,10 @@ import {
   YAxis,
 } from "recharts";
 import RecentMatchCard from "../components/match/RecentMatchCard";
->>>>>>> 4e8cb82 (WIP)
 
 export default function PlayerProfile() {
   const { steamId } = useParams<{ steamId: string }>();
   const { data: player, isPending, isError } = usePlayerDetail(steamId);
-<<<<<<< HEAD
-=======
   const navigate = useNavigate();
 
   const chartData =
@@ -28,7 +23,6 @@ export default function PlayerProfile() {
       match: index + 1,
       elo: elo,
     })) ?? [];
->>>>>>> 4e8cb82 (WIP)
 
   if (isPending) return <p>Loading...</p>;
   if (isError) return <p>Player not found</p>;
@@ -38,11 +32,7 @@ export default function PlayerProfile() {
     { label: "Matches Played", value: player?.matchesPlayed },
     { label: "Wins", value: player?.wins },
     { label: "Losses", value: player?.losses },
-<<<<<<< HEAD
-    { label: "Winrate", value: `${player?.winRate}%` },
-=======
     { label: "Winrate", value: `${player?.winRate?.toFixed(2)}%` },
->>>>>>> 4e8cb82 (WIP)
   ];
 
   return (
@@ -62,8 +52,6 @@ export default function PlayerProfile() {
           </Col>
         ))}
       </Row>
-<<<<<<< HEAD
-=======
 
       <Card className="stat-card mt-4">
         <Card.Body>
@@ -127,7 +115,6 @@ export default function PlayerProfile() {
           ))}
         </Card.Body>
       </Card>
->>>>>>> 4e8cb82 (WIP)
     </div>
   );
 }
