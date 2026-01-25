@@ -2,15 +2,12 @@ package com.plainoldmoose.IDLWebApp.model;
 
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchType;
-import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,7 +43,7 @@ public class Match {
     @Enumerated
     private Side matchWinner;
 
-    private Long avgElo;
+    private int avgElo;
 
     @OneToMany(mappedBy = "match")
     private List<MatchParticipant> participants;

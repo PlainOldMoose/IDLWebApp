@@ -25,11 +25,14 @@ public class Season {
     @Column(nullable = false)
     private String name;
 
-    @Enumerated
-    private SeasonStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SeasonStatus status = SeasonStatus.REGISTRATION;
 
     private LocalDate startDate;
     private LocalDate endDate;
+
+    // TODO captains / draft / other
 
     @OneToMany(mappedBy = "season")
     private List<Team> teams;
