@@ -1,9 +1,9 @@
 import { Card, Row, Col, Badge } from "react-bootstrap";
 import { formatDistanceToNow } from "date-fns";
-import type { PlayerMatch } from "../../types/player/PlayerDetail";
+import type { RecentMatch } from "../../types/player/RecentMatch";
 
 interface RecentMatchCardProps {
-  match: PlayerMatch;
+  match: RecentMatch;
   onClick?: () => void;
 }
 
