@@ -1,5 +1,5 @@
 import type { PlayerListColumn } from "./PlayerListTypes";
-import type { PlayerSummary } from "../../types/player/PlayerDetail";
+import type { PlayerSummary } from "../../types/player/PlayerSummary";
 
 export function usernameColumn<T extends PlayerSummary>(): PlayerListColumn<T> {
   return {
