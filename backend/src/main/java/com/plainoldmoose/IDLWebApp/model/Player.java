@@ -23,7 +23,7 @@ public class Player {
     private String username;
 
     @Column(nullable = false)
-    private Long elo;
+    private int elo;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

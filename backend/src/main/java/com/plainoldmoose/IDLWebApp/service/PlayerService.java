@@ -40,7 +40,7 @@ public class PlayerService {
         EloHistory initialHistory = new EloHistory();
         initialHistory.setPlayer(saved);
         initialHistory.setElo(saved.getElo());
-        initialHistory.setEloChange(0L);
+        initialHistory.setEloChange(0);
         initialHistory.setTimestamp(LocalDateTime.now());
         initialHistory.setReason(EloChangeReason.INITIAL);
 
@@ -99,7 +99,7 @@ public class PlayerService {
         double winrate = matchesPlayed > 0 ? (double) wins / matchesPlayed * 100 : 0.0;
 
         // Build elo history
-        List<Long> eloHistory = player.getEloHistory()
+        List<Integer> eloHistory = player.getEloHistory()
                 .stream()
                 .sorted(Comparator.comparing(EloHistory::getTimestamp))
                 .map(EloHistory::getElo)
@@ -119,11 +119,9 @@ public class PlayerService {
                     // Find eloChange for this match from eloHistory
                     int eloChange = eloHistoryList.stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
-                                    .getMatchId()
-                                    .equals(match.getMatchId()))
+                                    .getMatchId().equals(match.getMatchId()))
                             .findFirst()
-                            .map(eh -> eh.getEloChange()
-                                    .intValue())
+                            .map(EloHistory::getEloChange)
                             .orElse(0);
                     return new RecentMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),

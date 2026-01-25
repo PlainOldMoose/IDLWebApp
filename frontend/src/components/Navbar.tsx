@@ -2,9 +2,24 @@ import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
+<<<<<<< HEAD
 import { Link } from "react-router-dom";
 
 function NavbarComponent() {
+=======
+import { Link, useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/AuthStore";
+
+function NavbarComponent() {
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
+>>>>>>> 4e8cb82 (WIP)
   return (
     <Navbar
       sticky="top"
@@ -30,6 +45,27 @@ function NavbarComponent() {
             <Nav.Link as={Link} to="/seasons">
               Seasons
             </Nav.Link>
+<<<<<<< HEAD
+=======
+
+            {/* Admin-only link */}
+            {isAuthenticated && user?.isAdmin && (
+              <Nav.Link as={Link} to="/admin">
+                Admin
+              </Nav.Link>
+            )}
+          </Nav>
+          <Nav>
+            {isAuthenticated ? (
+              <Nav.Link onClick={handleLogout} style={{ cursor: "pointer" }}>
+                Logout
+              </Nav.Link>
+            ) : (
+              <Nav.Link as={Link} to="/login">
+                Login
+              </Nav.Link>
+            )}
+>>>>>>> 4e8cb82 (WIP)
             <NavDropdown title="Tools" id="basic-nav-dropdown">
               <NavDropdown.Item as={Link} to="/tools/inhouse">
                 In-house Balancer

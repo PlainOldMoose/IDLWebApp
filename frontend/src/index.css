@@ -118,6 +118,10 @@
     background: var(--glass-bg);
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
+<<<<<<< HEAD
+=======
+    text-align: center;
+>>>>>>> 4e8cb82 (WIP)
   }
 
   .stat-card:hover {
@@ -158,4 +162,692 @@
   }
 
 
+<<<<<<< HEAD
   
+=======
+   /* ===========================================
+     MATCH CARDS
+     =========================================== */
+  .match-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .match-card:hover {
+    transform: translateX(4px);
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-md);
+  }
+
+  .match-card .card-body {
+    background: transparent;
+  }
+
+  /* ===========================================
+     MATCH DETAIL - Team Panels
+     =========================================== */
+  .team-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .team-panel--winner {
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  }
+
+  .team-panel--radiant .team-header {
+    border-bottom: 2px solid rgba(34, 197, 94, 0.6);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .team-panel--dire .team-header {
+    border-bottom: 2px solid rgba(239, 68, 68, 0.6);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .team-header h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  /* Participant rows */
+  .participant-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.15s;
+  }
+
+  .participant-row:last-child {
+    border-bottom: none;
+  }
+
+  .participant-row:hover {
+    background: var(--bg-elevated-hover);
+    margin: 0 -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    border-radius: 6px;
+  }
+
+  .participant-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .participant-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+
+  .participant-link:hover {
+    color: var(--accent);
+  }
+
+  .participant-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .elo-current {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .elo-positive {
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .elo-negative {
+    color: #ef4444;
+    font-weight: 600;
+  }
+
+  .sub-badge {
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  /* Match detail header */
+  .match-detail-header {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .match-detail-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  /* ===========================================
+     SEASON DETAIL - Teams Grid
+     =========================================== */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .team-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .team-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .team-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .team-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .team-member-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+  }
+
+  .team-member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .team-member-item:last-child {
+    border-bottom: none;
+  }
+
+  .team-member-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .team-member-link:hover {
+    color: var(--accent);
+  }
+
+  .captain-badge {
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+
+  .team-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
+  .team-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .team-stat-value {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .team-stat-label {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+
+  /* Section headers */
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  /* ===========================================
+     AUTH / LOGIN CARD
+     =========================================== */
+  .auth-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-medium);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .auth-card .card-body {
+    padding: 2rem;
+  }
+
+  .auth-card h2 {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Form inputs */
+  .auth-card .form-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .auth-card .form-control:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    color: var(--text-primary);
+  }
+
+  .auth-card .form-control::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .auth-card .form-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Primary button */
+  .btn-accent {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+
+  .btn-accent:hover {
+    background: #5558e3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  }
+
+  .btn-accent:active {
+    transform: translateY(0);
+  }
+
+  .btn-accent:disabled {
+    background: rgba(99, 102, 241, 0.5);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Alert styling */
+  .auth-card .alert-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    border-radius: 8px;
+  }
+
+  /* ===========================================
+     ADMIN DASHBOARD
+     =========================================== */
+  .admin-stat-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .admin-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .admin-stat-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .admin-stat-card p {
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0 0;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .admin-info-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .admin-info-card h5 {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-info-card p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* ===========================================
+     LANDING PAGE
+     =========================================== */
+  .landing-hero {
+    padding: 2rem 0;
+  }
+
+  .landing-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .landing-tagline {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* Current Season Card */
+  .current-season-card {
+    padding: 0.5rem 0;
+  }
+
+  .current-season-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .current-season-link {
+    text-decoration: none;
+  }
+
+  .current-season-link h3 {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 0;
+    transition: color 0.15s;
+  }
+
+  .current-season-link:hover h3 {
+    color: var(--accent);
+  }
+
+  .season-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .season-status--active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .season-status--registration {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+  }
+
+  .season-status--completed {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent);
+  }
+
+  .season-progress-container {
+    margin-bottom: 1.5rem;
+  }
+
+  .season-progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .season-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, #818cf8 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .season-progress-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .current-season-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 1rem;
+  }
+
+  .current-season-stat .stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .current-season-stat .stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Season Standings Card */
+  .season-standings-card {
+    padding: 0.5rem 0;
+  }
+
+  .standings-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .standings-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .standings-table thead th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border-medium);
+    text-align: left;
+  }
+
+  .standings-table thead th:first-child {
+    width: 40px;
+  }
+
+  .standings-table tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.15s;
+  }
+
+  .standings-table tbody tr:hover {
+    background: var(--bg-elevated-hover);
+  }
+
+  .standings-table tbody td {
+    padding: 0.75rem 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .standings-rank {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .standings-team-name {
+    font-weight: 500;
+  }
+
+  .standings-wins {
+    color: #22c55e;
+  }
+
+  .standings-losses {
+    color: #ef4444;
+  }
+
+  .standings-winrate {
+    color: var(--text-secondary);
+  }
+
+  .standings-empty {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  /* Upcoming Matches */
+  .upcoming-matches-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .upcoming-matches-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .upcoming-match-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+
+  .upcoming-match-card:hover {
+    transform: translateX(4px);
+    border-color: var(--border-medium);
+  }
+
+  .upcoming-match-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .upcoming-match-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .upcoming-team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .upcoming-team .team-name {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .upcoming-team .team-elo {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .upcoming-team--radiant .team-name {
+    color: #22c55e;
+  }
+
+  .upcoming-team--dire .team-name {
+    color: #ef4444;
+  }
+
+  .upcoming-team--dire {
+    text-align: right;
+  }
+
+  .upcoming-vs {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 991px) {
+    .current-season-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 576px) {
+    .landing-title {
+      font-size: 1.75rem;
+    }
+
+    .current-season-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+
+>>>>>>> 4e8cb82 (WIP)

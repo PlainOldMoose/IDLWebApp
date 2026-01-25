@@ -1,4 +1,7 @@
 package com.plainoldmoose.IDLWebApp.dto.response.player;
 
-public record PlayerSummaryResponse(String username, Long elo, String steamId) {
+public record PlayerSummaryResponse(
+        String username,
+        int elo,
+        String steamId) {
 }

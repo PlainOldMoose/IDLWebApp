@@ -1,6 +1,23 @@
 package com.plainoldmoose.IDLWebApp.dto.response.season;
 
-import java.time.LocalDate;
+import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 
-public record SeasonSummaryResponse(String name, String status, LocalDate startDate, LocalDate endDate) {
+import java.time.LocalDate;
+import java.util.UUID;
+
+/**
+ * Represents a Summary Response for a Season Entity.
+ *
+ * @param name
+ * @param status
+ * @param id
+ * @param startDate
+ * @param endDate
+ */
+public record SeasonSummaryResponse(
+        String name,
+        SeasonStatus status,
+        UUID id,
+        LocalDate startDate,
+        LocalDate endDate) {
 }
