@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { usePlayers } from "../services/Queries";
 import PlayerList from "../components/playerlist/PlayerList";
+
 import {
   eloColumn,
   usernameColumn,
