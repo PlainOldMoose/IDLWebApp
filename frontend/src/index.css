@@ -118,10 +118,7 @@
     background: var(--glass-bg);
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
-<<<<<<< HEAD
-=======
     text-align: center;
->>>>>>> 4e8cb82 (WIP)
   }
 
   .stat-card:hover {
@@ -162,9 +159,6 @@
   }
 
 
-<<<<<<< HEAD
-  
-=======
    /* ===========================================
      MATCH CARDS
      =========================================== */
@@ -850,4 +844,3 @@
     }
   }
 
->>>>>>> 4e8cb82 (WIP)

@@ -1,15 +1,5 @@
 package com.plainoldmoose.IDLWebApp.controller;
 
-<<<<<<< HEAD
-import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
-import com.plainoldmoose.IDLWebApp.service.MatchService;
-import lombok.AllArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-=======
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.UpcomingMatchResponse;
@@ -19,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
->>>>>>> 4e8cb82 (WIP)
 
 @RestController
 @AllArgsConstructor
@@ -28,10 +17,6 @@ public class MatchController {
     private final MatchService matchService;
 
     @GetMapping
-<<<<<<< HEAD
-    public List<MatchSummaryResponse> getAllMatches() {
-        return matchService.getAllMatches();
-=======
     public List<MatchSummaryResponse> getAllMatches(
             @RequestParam(required = false) UUID seasonId,
             @RequestParam(required = false) UUID teamId,
@@ -48,6 +33,5 @@ public class MatchController {
     @GetMapping("/{matchId}")
     public MatchDetailResponse getMatchDetails(@PathVariable("matchId") Long matchId) {
         return matchService.getMatchById(matchId);
->>>>>>> 4e8cb82 (WIP)
     }
 }
