@@ -19,10 +19,24 @@ export default function PlayerProfile() {
   const navigate = useNavigate();
 
   const chartData =
-    player?.eloHistory.map((elo, index) => ({
-      match: index + 1,
-      elo: elo,
+    player?.eloSnapshotHistory.map((snapshot, index, arr) => ({
+      matchId: snapshot.matchId,
+      elo: snapshot.eloDuringMatch,
+      win: index === 0 ? true : snapshot.eloDuringMatch > arr[index - 1].eloDuringMatch,
     })) ?? [];
+
+  const CustomDot = (props: { cx?: number; cy?: number; payload?: { win: boolean } }) => {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null) return null;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={payload?.win ? "#4a9d6b" : "#c45c5c"}
+      />
+    );
+  };
 
   if (isPending) return <p>Loading...</p>;
   if (isError) return <p>Player not found</p>;
@@ -45,7 +59,7 @@ export default function PlayerProfile() {
           <Col key={stat.label}>
             <Card className="text-center lift-on-hover stat-card gradient-card-subtle">
               <Card.Body className="p-4">
-                <Card.Title className="fs-2">{stat.value}</Card.Title>
+                <Card.Title className="fs-2" style={{ color: "rgba(255, 255, 255, 0.7)" }}>{stat.value}</Card.Title>
                 <Card.Text className="text-muted">{stat.label}</Card.Text>
               </Card.Body>
             </Card>
@@ -67,33 +81,37 @@ export default function PlayerProfile() {
               responsive
               data={chartData}
             >
-              <XAxis
-                dataKey="match"
-                stroke="var(--text-secondary)"
-                tick={{ fill: "var(--text-secondary)" }}
-              />
+                <XAxis
+                    dataKey="matchId"
+                    stroke="var(--text-secondary)"
+                    tick={false}
+                />
               <YAxis
                 stroke="var(--text-secondary)"
                 tick={{ fill: "var(--text-secondary)" }}
                 domain={["dataMin - 50", "dataMax + 50"]}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "var(--text-secondary)" }}
-                formatter={(value) => [`${value} ELO`, ""]}
-                labelFormatter={(eloHistory) => `Match ${eloHistory.match}`}
-              />
+                <Tooltip
+                    contentStyle={{
+                        backgroundColor: "var(--card-bg, #1a1a2e)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                    }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
+                    itemStyle={{ color: "rgba(255, 255, 255, 0.7)" }}
+                    labelFormatter={(matchId) => `Match ID: ${matchId}`}
+                    formatter={(value) => [`${value} ELO`, "Elo"]}
+                />
+
               <Legend />
               <Line
                 type="monotone"
                 dataKey="elo"
-                stroke="var(--accent)"
+                stroke="rgba(75, 85, 99, 0.5)"
                 strokeWidth={2}
-                dot={{ fill: "var(--accent)", r: 4 }}
+                dot={<CustomDot />}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

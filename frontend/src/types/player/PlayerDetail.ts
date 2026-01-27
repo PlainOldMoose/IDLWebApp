@@ -1,4 +1,5 @@
 import type { RecentMatch } from "./RecentMatch";
+import type {EloSnapshot} from "./EloSnapshot.ts";
 
 export interface PlayerDetail {
   steamId: string;
@@ -8,6 +9,6 @@ export interface PlayerDetail {
   wins: number;
   losses: number;
   winRate: number;
-  eloHistory: number[];
+  eloSnapshotHistory: EloSnapshot[];
   recentMatches: RecentMatch[];
 }
