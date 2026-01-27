@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { Navigate } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from "../store/AuthStore";
 
 interface AdminStats {
   totalPlayers: number;

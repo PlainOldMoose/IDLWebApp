@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router";
 import { usePlayers } from "../services/Queries";
-import PlayerList from "../components/playerlist/PlayerList";
+import PlayerList from "../components/PlayerList/PlayerList";
 
 import {
   eloColumn,
   usernameColumn,
-} from "../components/playerlist/ColumnHelpers";
+} from "../components/PlayerList/ColumnHelpers";
 
 export default function Leaderboard() {
   const navigate = useNavigate();

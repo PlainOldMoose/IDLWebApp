@@ -1,7 +1,7 @@
-import { useMatchIds } from "../services/Queries";
+import { useMatches } from "../services/Queries";
 
 export default function Matches() {
-  const matchesQuery = useMatchIds();
+  const matchesQuery = useMatches();
 
   if (matchesQuery.isPending || matchesQuery.isError) {
     return <span>loading...</span>;
@@ -9,8 +9,8 @@ export default function Matches() {
 
   return (
     <>
-      {matchesQuery.data.map((id) => (
-        <p key={id}>{id}</p>
+      {matchesQuery.data.map((match) => (
+        <p key={match.matchId}>{match.matchId}</p>
       ))}
     </>
   );
