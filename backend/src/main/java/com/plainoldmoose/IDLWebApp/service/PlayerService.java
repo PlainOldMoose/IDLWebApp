@@ -4,10 +4,11 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreatePlayerRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
-import com.plainoldmoose.IDLWebApp.model.EloHistory;
-import com.plainoldmoose.IDLWebApp.model.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
+import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
+import com.plainoldmoose.IDLWebApp.model.player.EloSnapshot;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -99,10 +100,10 @@ public class PlayerService {
         double winrate = matchesPlayed > 0 ? (double) wins / matchesPlayed * 100 : 0.0;
 
         // Build elo history
-        List<Integer> eloHistory = player.getEloHistory()
+        List<EloSnapshot> eloHistory = player.getEloHistory()
                 .stream()
-                .sorted(Comparator.comparing(EloHistory::getTimestamp))
-                .map(EloHistory::getElo)
+                .map(eh -> new EloSnapshot(eh.getMatch()
+                        .getMatchId(), eh.getElo()))
                 .toList();
 
         // Build last 20 matches
@@ -119,7 +120,8 @@ public class PlayerService {
                     // Find eloChange for this match from eloHistory
                     int eloChange = eloHistoryList.stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
-                                    .getMatchId().equals(match.getMatchId()))
+                                    .getMatchId()
+                                    .equals(match.getMatchId()))
                             .findFirst()
                             .map(EloHistory::getEloChange)
                             .orElse(0);
