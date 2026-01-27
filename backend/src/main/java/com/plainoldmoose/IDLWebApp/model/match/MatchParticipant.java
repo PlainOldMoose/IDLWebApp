@@ -1,5 +1,6 @@
-package com.plainoldmoose.IDLWebApp.model;
+package com.plainoldmoose.IDLWebApp.model.match;
 
+import com.plainoldmoose.IDLWebApp.model.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
@@ -7,8 +8,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Getter
 @Setter
+@Getter
 public class MatchParticipant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

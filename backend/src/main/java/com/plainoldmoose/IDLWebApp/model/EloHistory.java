@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.model;
 
 import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

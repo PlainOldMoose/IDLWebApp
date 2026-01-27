@@ -5,7 +5,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.Side;
 public record ParticipantResponse(
         String steamId,
         String username,
-        int currentElo,
+        int eloAtMatchTime,
         Side side,
         int eloChange,
         boolean isSub,
