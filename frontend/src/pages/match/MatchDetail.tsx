@@ -105,7 +105,7 @@ function ParticipantRow({ player }: { player: MatchParticipant }) {
         )}
       </div>
       <div className="participant-stats">
-        <span className="elo-current">{player.currentElo} ELO</span>
+        <span className="elo-current">{player.eloAtMatchTime} ELO</span>
         <span className={eloChangeClass}>
           {eloChangePrefix}
           {player.eloChange}

@@ -1,7 +1,7 @@
 export interface MatchParticipant {
     steamId: string;
     username: string;
-    currentElo: number;
+    eloAtMatchTime: number;
     side: "RADIANT" | "DIRE";
     eloChange: number;
     isSub: boolean;
