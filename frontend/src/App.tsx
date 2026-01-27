@@ -13,6 +13,9 @@ import Seasons from "./pages/season/Seasons";
 import { useAuthStore } from "./store/AuthStore";
 import MatchDetail from "./pages/match/MatchDetail";
 import SeasonDetail from "./pages/season/SeasonDetail";
+import InhouseBalancer from "./pages/tools/InhouseBalancer";
+import SeasonDrafter from "./pages/tools/SeasonDrafter";
+import Doodle from "./pages/tools/Doodle";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,9 @@ function AppContent() {
         <Route path="/seasons/:seasonId" element={<SeasonDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/tools/inhouse" element={<InhouseBalancer />} />
+        <Route path="/tools/drafter" element={<SeasonDrafter />} />
+        <Route path="/tools/doodle" element={<Doodle />} />
       </Routes>
     </>
   );
