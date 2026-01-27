@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.model;
 
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -1,6 +1,6 @@
 package com.plainoldmoose.IDLWebApp.model.match;
 
-import com.plainoldmoose.IDLWebApp.model.Player;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;

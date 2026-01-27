@@ -1,6 +1,6 @@
 package com.plainoldmoose.IDLWebApp.repository;
 
-import com.plainoldmoose.IDLWebApp.model.Player;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

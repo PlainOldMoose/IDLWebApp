@@ -1,5 +1,7 @@
 package com.plainoldmoose.IDLWebApp.dto.response.player;
 
+import com.plainoldmoose.IDLWebApp.model.player.EloSnapshot;
+
 import java.util.List;
 
 public record PlayerDetailResponse(
@@ -11,6 +13,6 @@ public record PlayerDetailResponse(
         int losses,
         double winRate,
         List<RecentMatchResponse> recentMatches,// Last 20 matches
-        List<Integer> eloHistory
+        List<EloSnapshot> eloSnapshotHistory
 ) {
 }
