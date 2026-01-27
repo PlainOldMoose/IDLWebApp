@@ -7,7 +7,7 @@ import type { PlayerDetail } from "../types/player/PlayerDetail";
 import type { MatchDetail } from "../types/match/MatchDetail";
 import type { SeasonDetail } from "../types/season/SeasonDetail";
 
-const BASE_URL = "http://localhost:8080/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 const axiosInstance = axios.create({ baseURL: BASE_URL });
 
 export const getAllPlayers = async (): Promise<PlayerSummary[]> => {
