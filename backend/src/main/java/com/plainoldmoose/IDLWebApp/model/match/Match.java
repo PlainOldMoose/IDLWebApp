@@ -1,5 +1,7 @@
-package com.plainoldmoose.IDLWebApp.model;
+package com.plainoldmoose.IDLWebApp.model.match;
 
+import com.plainoldmoose.IDLWebApp.model.Season;
+import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchType;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;

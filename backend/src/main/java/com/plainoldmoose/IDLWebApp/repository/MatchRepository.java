@@ -1,7 +1,7 @@
 package com.plainoldmoose.IDLWebApp.repository;
 
-import com.plainoldmoose.IDLWebApp.model.Match;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -5,10 +5,10 @@ import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.ParticipantResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.UpcomingMatchResponse;
 import com.plainoldmoose.IDLWebApp.model.EloHistory;
-import com.plainoldmoose.IDLWebApp.model.Match;
-import com.plainoldmoose.IDLWebApp.model.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
+import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -47,13 +47,13 @@ public class MatchService {
         }
 
         if (seasonId != null && playerSteamId != null) {
-            String finalSteaamId = playerSteamId;
+            String finalSteamId = playerSteamId;
             matches = matches.stream()
                     .filter(m -> m.getParticipants()
                             .stream()
                             .anyMatch(p -> p.getPlayer()
                                     .getSteamId()
-                                    .equals(finalSteaamId)))
+                                    .equals(finalSteamId)))
                     .toList();
         }
 
@@ -100,19 +100,21 @@ public class MatchService {
     private ParticipantResponse mapToParticipantResponse(MatchParticipant participant) {
         Player player = participant.getPlayer();
 
-        int eloChange = player.getEloHistory()
+        EloHistory matchEloHistory = player.getEloHistory()
                 .stream()
                 .filter(eh -> eh.getMatch() != null && eh.getMatch()
-                        .getMatchId().equals(participant.getMatch()
-                        .getMatchId()))
+                        .getMatchId()
+                        .equals(participant.getMatch().getMatchId()))
                 .findFirst()
-                .map(EloHistory::getEloChange)
-                .orElse(0);
+                .orElse(null);
+        int eloChange = matchEloHistory != null ? matchEloHistory.getEloChange() : 0;
+
+        int eloAtMatchTime = matchEloHistory != null ? matchEloHistory.getElo() - matchEloHistory.getEloChange() : player.getElo();
 
         return new ParticipantResponse(
                 player.getSteamId(),
                 player.getUsername(),
-                player.getElo(),
+                eloAtMatchTime,
                 participant.getSide(),
                 eloChange,
                 participant.getIsSub() != null && participant.getIsSub(),
@@ -138,11 +140,16 @@ public class MatchService {
         return new UpcomingMatchResponse(
                 match.getMatchId(),
                 match.getScheduledTime(),
-                match.getSeason() != null ? match.getSeason().getName() : null,
-                match.getRadiantTeam() != null ? match.getRadiantTeam().getName() : null,
-                match.getDireTeam() != null ? match.getDireTeam().getName() : null,
-                match.getRadiantTeam() != null ? match.getRadiantTeam().getAvgElo() : 0,
-                match.getDireTeam() != null ? match.getDireTeam().getAvgElo() : 0
+                match.getSeason() != null ? match.getSeason()
+                        .getName() : null,
+                match.getRadiantTeam() != null ? match.getRadiantTeam()
+                        .getName() : null,
+                match.getDireTeam() != null ? match.getDireTeam()
+                        .getName() : null,
+                match.getRadiantTeam() != null ? match.getRadiantTeam()
+                        .getAvgElo() : 0,
+                match.getDireTeam() != null ? match.getDireTeam()
+                        .getAvgElo() : 0
         );
     }
 }
