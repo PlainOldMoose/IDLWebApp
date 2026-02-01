@@ -6,9 +6,10 @@ import type { PlayerSummary } from "../types/player/PlayerSummary";
 import type { PlayerDetail } from "../types/player/PlayerDetail";
 import type { MatchDetail } from "../types/match/MatchDetail";
 import type { SeasonDetail } from "../types/season/SeasonDetail";
+import type { CreateSeasonRequest } from "../types/season/CreateSeasonRequest";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
-const axiosInstance = axios.create({ baseURL: BASE_URL });
+const axiosInstance = axios.create({ baseURL: BASE_URL, withCredentials: true });
 
 export const getAllPlayers = async (): Promise<PlayerSummary[]> => {
   const response = await axiosInstance.get<PlayerSummary[]>("players");
@@ -73,5 +74,12 @@ export const getActiveSeason = async (): Promise<SeasonDetail | null> => {
   const response = await axiosInstance.get<SeasonDetail | null>(
     "seasons/active",
   );
+  return response.data;
+};
+
+export const createSeason = async (
+  request: CreateSeasonRequest,
+): Promise<Season> => {
+  const response = await axiosInstance.post<Season>("seasons", request);
   return response.data;
 };

@@ -472,19 +472,34 @@
     margin-bottom: 0.5rem;
   }
 
+  /* Date input styling for dark theme */
+  .auth-card .form-control[type="date"] {
+    color-scheme: dark;
+  }
+
+  .auth-card .form-control[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    cursor: pointer;
+  }
+
   /* Primary button */
   .btn-accent {
+    display: inline-block;
     background: var(--accent);
     border: none;
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
   }
 
   .btn-accent:hover {
     background: #5558e3;
+    color: white;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   }

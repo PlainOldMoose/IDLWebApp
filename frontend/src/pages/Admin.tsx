@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/AuthStore";
 
 interface AdminStats {
@@ -67,6 +67,9 @@ export default function Admin() {
           Use the edit buttons on the Matches, Seasons, and Player pages to
           manage data.
         </p>
+        <Link to="/seasons/create" className="btn-accent mt-2">
+          Create Season
+        </Link>
       </div>
     </Container>
   );

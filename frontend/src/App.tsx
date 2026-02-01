@@ -13,6 +13,7 @@ import Seasons from "./pages/season/Seasons";
 import { useAuthStore } from "./store/AuthStore";
 import MatchDetail from "./pages/match/MatchDetail";
 import SeasonDetail from "./pages/season/SeasonDetail";
+import CreateSeason from "./pages/season/CreateSeason";
 import InhouseBalancer from "./pages/tools/InhouseBalancer";
 import SeasonDrafter from "./pages/tools/SeasonDrafter";
 import Doodle from "./pages/tools/Doodle";
@@ -36,6 +37,7 @@ function AppContent() {
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:matchId" element={<MatchDetail />} />
         <Route path="/seasons" element={<Seasons />} />
+        <Route path="/seasons/create" element={<CreateSeason />} />
         <Route path="/seasons/:seasonId" element={<SeasonDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<Admin />} />

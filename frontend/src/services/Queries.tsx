@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllMatches,
   getAllPlayers,
@@ -9,7 +9,9 @@ import {
   getSeasonDetail,
   getUpcomingMatches,
   getActiveSeason,
+  createSeason,
 } from "./Api";
+import type { CreateSeasonRequest } from "../types/season/CreateSeasonRequest";
 
 export function usePlayers() {
   return useQuery({
@@ -78,5 +80,15 @@ export function useActiveSeason() {
   return useQuery({
     queryKey: ["seasons", "active"],
     queryFn: getActiveSeason,
+  });
+}
+
+export function useCreateSeason() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateSeasonRequest) => createSeason(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seasons"] });
+    },
   });
 }
