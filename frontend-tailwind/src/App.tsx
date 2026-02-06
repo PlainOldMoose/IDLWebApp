@@ -9,7 +9,7 @@ function App() {
 
     return (
         <BrowserRouter>
-            <main className="max-w-4xl mx-auto text-light-grey">
+            <main className="max-w-7xl mx-auto text-grey">
                 <Navbar/>
                 <Routes>
                     <Route path="/" element={<Landing/>}/>

@@ -1,5 +1,5 @@
 export default function Landing() {
     return(
-        <div>Landing page</div>
+        <div className="flex justify-center">Landing page</div>
     );
 }

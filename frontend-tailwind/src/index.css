@@ -1,11 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-    --color-light-grey: #c4cad3;
+    --color-background: #161616;
+    --color-accent: #1c1c1c;
+    --color-grey: #7a7b7b;
+    --color-grey-hover: #c2c2c2;
     --color-blue: #0b131e;
     --color-light-blue: #202b3b;
 }
 
 body {
-    background-color: var(--color-blue);
+    background-color: var(--color-background);
+}
+
+.nav-link {
+    @apply hover:text-grey-hover transition-colors;
 }
