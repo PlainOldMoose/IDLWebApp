@@ -7,7 +7,6 @@ export default function Players() {
     if (isError) return <div>Error...</div>;
 
     return (
-        <div>
             <div className="bg-accent rounded-2xl p-8 mt-8">
                 <table className="table-auto w-full">
                     <thead className="border-b">
@@ -28,6 +27,5 @@ export default function Players() {
                     </tbody>
                 </table>
             </div>
-        </div>
     );
 }
