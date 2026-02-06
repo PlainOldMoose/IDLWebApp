@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Navbar() {
     return (
-        <nav className="flex p-4 justify-between bg-dark-grey border-b">
+        <nav className="flex mt-8 p-4 justify-between bg-light-blue rounded-full">
             {/*Logo*/}
             <div>
                 <Link to="/">IDL Web App</Link>
