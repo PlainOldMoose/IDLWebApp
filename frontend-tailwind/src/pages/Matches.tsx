@@ -7,11 +7,20 @@ export default function Matches() {
     if (isLoading) return <div>Loading...</div>;
     if (isError) return <div>Error...</div>;
 
-    return(
+    return (
         <div>
-            {matches?.map((match) => (
-                <MatchSummaryCard key={match.matchId} match={match}/>
-            ))}
+            <div className="flex justify-between mt-8 px-6">
+                <p>Match ID</p>
+                <p>Winner</p>
+                <p>Time Played</p>
+                <p>Avg Elo</p>
+                <p>Season</p>
+            </div>
+            <div>
+                {matches?.map((match) => (
+                    <MatchSummaryCard key={match.matchId} match={match}/>
+                ))}
+            </div>
         </div>
     );
 }

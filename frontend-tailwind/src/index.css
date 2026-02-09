@@ -36,3 +36,11 @@ body {
 .nav-link.active {
     @apply text-primary-a20  transition-colors;
 }
+
+.match-summary-card {
+    @apply flex justify-between bg-surface-a20 rounded-xl p-6 mt-4
+}
+
+.match-summary-card:hover {
+    @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
+}
