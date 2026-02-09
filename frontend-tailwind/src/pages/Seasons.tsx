@@ -17,7 +17,7 @@ export default function Seasons() {
             </div>
 
             {/*Seasons*/}
-            <div>
+            <div className="grid grid-cols-3 gap-2 mt-12">
             {seasons?.map((season) => (
                 <SeasonSummaryCard key={season.id} season={season}/>
                 ))}

@@ -18,7 +18,7 @@ export default function Players() {
                     </thead>
                     <tbody>
                     {players?.map((player) => (
-                        <tr key={player.steamId} className="border-b border-surface-a30">
+                        <tr key={player.steamId} className="border-b border-surface-a30 hover:bg-surface-a30 hover:scale-102">
                             <td className="text-left py-2 px-4">{player.steamId}</td>
                             <td className="text-left py-2 px-4">{player.username}</td>
                             <td className="text-left py-2 px-4">{player.elo}</td>
