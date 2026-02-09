@@ -1,18 +1,18 @@
-import {Link} from "react-router-dom";
+import {NavLink} from "react-router-dom";
 
 export default function Navbar() {
     return (
-        <nav className="flex mx-8 mt-8 p-4 justify-between bg-accent rounded-full">
+        <nav className="flex p-4 justify-between items-center bg-surface-a20">
             {/*Logo*/}
             <div>
-                <Link to="/" className="nav-link">IDL Web App</Link>
+                <NavLink to="/" className="nav-link">IDL Web App</NavLink>
             </div>
             {/*Links*/}
             <div className="flex gap-4">
-                <Link to="/players" className="nav-link">Players</Link>
-                <Link to="/seasons" className="nav-link">Seasons</Link>
-                <Link to="/matches" className="nav-link">Matches</Link>
-                <Link to="/tools" className="nav-link">Tools</Link>
+                <NavLink to="/players" className="nav-link">Players</NavLink>
+                <NavLink to="/seasons" className="nav-link">Seasons</NavLink>
+                <NavLink to="/matches" className="nav-link">Matches</NavLink>
+                <NavLink to="/tools" className="nav-link">Tools</NavLink>
             </div>
         </nav>
     );

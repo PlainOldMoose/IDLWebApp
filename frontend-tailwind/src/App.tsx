@@ -9,15 +9,18 @@ function App() {
 
     return (
         <BrowserRouter>
-            <main className="max-w-7xl mx-auto text-grey">
+
+            <div className="text-light-a10 font-inter">
                 <Navbar/>
-                <Routes>
-                    <Route path="/" element={<Landing/>}/>
-                    <Route path="/players" element={<Players/>}/>
-                    <Route path="/seasons" element={<Seasons/>}/>
-                    <Route path="/matches" element={<Matches/>}/>
-                </Routes>
-            </main>
+                <main className="max-w-5xl mx-auto">
+                    <Routes>
+                        <Route path="/" element={<Landing/>}/>
+                        <Route path="/players" element={<Players/>}/>
+                        <Route path="/seasons" element={<Seasons/>}/>
+                        <Route path="/matches" element={<Matches/>}/>
+                    </Routes>
+                </main>
+            </div>
         </BrowserRouter>
     );
 }
