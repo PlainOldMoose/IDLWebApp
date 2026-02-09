@@ -9,6 +9,12 @@ export default function Navbar() {
             </div>
             {/*Links*/}
             <div className="flex gap-4">
+                <button
+                    onClick={() => window.location.href = 'http://localhost:8080/auth/login'}
+                    className="nav-link"
+                >
+                    Login with Steam
+                </button>
                 <NavLink to="/players" className="nav-link">Players</NavLink>
                 <NavLink to="/seasons" className="nav-link">Seasons</NavLink>
                 <NavLink to="/matches" className="nav-link">Matches</NavLink>
