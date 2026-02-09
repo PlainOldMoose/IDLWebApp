@@ -53,6 +53,10 @@ public class SteamAuthController {
 
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(@RequestParam Map<String, String> params) {
+        if (!params.containsKey("openid.claimed_id") || !params.containsKey("openid.sig")) {
+            return ResponseEntity.badRequest().build();
+        }
+
         if (!steamAuthService.verifyResponse(params)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .build();
