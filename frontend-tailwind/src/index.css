@@ -1,7 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-    --color-background: #161616;
+    --font-ibm: "IBM Plex Mono", monospace;
+    --font-roboto: "Roboto", sans-serif;
+    --font-inter: "Inter", sans-serif;
+    --color-surface-a10: #121212;
+    --color-surface-a20: #282828;
+    --color-surface-a30: #3f3f3f;
+    --color-light-a10: #ffffff;
+    --color-light-a20: #c0c0c0;
+    --color-primary-a0: #02e256;
+    --color-primary-a10: #4be66a;
+    --color-primary-a20: #6cea7e;
+    --color-primary-a30: #86ee90;
+    --color-primary-a40: #9df1a3;
+    --color-primary-a50: #b2f4b5;
+
+
+    --color-background: #121212;
     --color-accent: #1c1c1c;
     --color-grey: #7a7b7b;
     --color-grey-hover: #c2c2c2;
@@ -14,5 +30,9 @@ body {
 }
 
 .nav-link {
-    @apply hover:text-grey-hover transition-colors;
+    @apply hover:text-light-a10 hover:bg-surface-a30 transition-colors rounded-xl p-2;
+}
+
+.nav-link.active {
+    @apply text-primary-a20  transition-colors;
 }
