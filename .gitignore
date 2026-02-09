@@ -54,7 +54,7 @@ lerna-debug.log*
 
 # Local env files
 *.local
-*.env
+.env*
 
 # ===================
 # IDEs & Editors
