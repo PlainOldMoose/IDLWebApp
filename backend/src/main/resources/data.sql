@@ -1,12 +1,12 @@
 -- Players
 INSERT INTO player (created_at, elo, steam_id, username)
-VALUES ('2025-01-01 18:00:00', 1973, '76561198090941991', 'Moose'),
+VALUES ('2025-01-01 18:00:00', 1973, '76561198090941997', 'Moose'),
        ('2025-01-01 18:00:00', 1423, '76561198090941992', 'Jerry'),
        ('2025-01-01 18:00:00', 2312, '76561198090941993', 'MattMelon'),
        ('2025-01-01 18:00:00', 2100, '76561198090941994', 'Andrew C'),
        ('2025-01-01 18:00:00', 1960, '76561198090941995', 'ITWINETOAD'),
        ('2025-01-01 18:00:00', 2030, '76561198090941996', 'EdgarAF'),
-       ('2025-01-01 18:00:00', 1714, '76561198090941997', 'MeanyGreeny'),
+       ('2025-01-01 18:00:00', 1714, '76561198090941991', 'MeanyGreeny'),
        ('2025-01-01 18:00:00', 1567, '76561198090941998', 'Lacanos'),
        ('2025-01-01 18:00:00', 1845, '76561198090941999', 'JPK'),
        ('2025-01-01 18:00:00', 1695, '76561198090941990', 'LightOfSeven');
@@ -22,7 +22,7 @@ INSERT INTO team (team_id, name, season_id, captain_id)
 VALUES ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c1111', '4 Feeders and Bajan', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',
         '76561198090941995'),
        ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c1112', 'The Goo Crew', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',
-        '76561198090941997');
+        '76561198090941996');
 
 -- Matches
 INSERT INTO matches (match_id, season_id, match_type, status, scheduled_time, played_time, match_winner, avg_elo)

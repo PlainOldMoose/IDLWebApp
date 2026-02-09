@@ -1,5 +1,7 @@
 package com.plainoldmoose.IDLWebApp.controller.auth;
 
+import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
+import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.service.SteamAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class SteamAuthController {
 
     private final SteamAuthService steamAuthService;
+    private final PlayerRepository playerRepository;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -57,6 +60,12 @@ public class SteamAuthController {
 
         String steamId = steamAuthService.extractSteamId(params.get("openid.claimed_id"));
 
+        if (!playerRepository.existsById(steamId)) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "?error=unregistered"))
+                    .build();
+        }
+
         Authentication auth = new UsernamePasswordAuthenticationToken(steamId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
         SecurityContextHolder.getContext()
@@ -65,5 +74,19 @@ public class SteamAuthController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl))
                 .build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<SteamUserResponse> me() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String steamId = (String) auth.getPrincipal();
+        return playerRepository.findById(steamId)
+                .map(player -> ResponseEntity.ok(new SteamUserResponse(player.getSteamId(), player.getUsername())))
+                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 }
