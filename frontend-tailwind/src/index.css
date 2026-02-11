@@ -9,12 +9,16 @@
     --color-surface-a30: #3f3f3f;
     --color-light-a10: #ffffff;
     --color-light-a20: #c0c0c0;
+    --color-light-a30: #808080;
     --color-primary-a0: #02e256;
     --color-primary-a10: #4be66a;
     --color-primary-a20: #6cea7e;
     --color-primary-a30: #86ee90;
     --color-primary-a40: #9df1a3;
     --color-primary-a50: #b2f4b5;
+
+    --color-warning: #D57D11;
+    --color-danger: #B60A0A;
 
 
     --color-background: #121212;
@@ -34,7 +38,7 @@ body {
 }
 
 .nav-link.active {
-    @apply text-primary-a20  transition-colors;
+    @apply text-light-a10  transition-colors;
 }
 
 .match-summary-card {
@@ -42,5 +46,13 @@ body {
 }
 
 .match-summary-card:hover {
+    @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
+}
+
+.season-summary-card {
+    @apply grid grid-cols-2 bg-surface-a20 rounded-2xl p-6
+}
+
+.season-summary-card:hover {
     @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
 }

@@ -5,7 +5,7 @@ export default function Navbar() {
     const {data: user} = useCurrentUser();
 
     return (
-        <nav className="flex p-4 justify-between items-center bg-surface-a20">
+        <nav className="flex p-4 justify-between items-center bg-surface-a20 text-light-a30">
             {/*Logo*/}
             <div>
                 <NavLink to="/" className="nav-link">IDL Web App</NavLink>

@@ -15,7 +15,7 @@ VALUES ('2025-01-01 18:00:00', 1973, '76561198090941997', 'Moose'),
 INSERT INTO season (id, name, start_date, end_date, status)
 VALUES ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454', 'Season 1', '2025-01-02', '2025-01-03', 'ACTIVE'),
        ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', 'Season 2', '2025-01-02', '2025-01-03', 'REGISTRATION'),
-       ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3456', 'Season 3', '2025-01-02', '2025-01-03', 'REGISTRATION');
+       ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3456', 'Season 3', '2025-01-02', '2025-01-03', 'COMPLETED');
 
 -- Adding teams
 INSERT INTO team (team_id, name, season_id, captain_id)

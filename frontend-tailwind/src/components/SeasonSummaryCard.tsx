@@ -6,11 +6,19 @@ interface SeasonSummaryCardProps {
 }
 
 export default function SeasonSummaryCard({season, onClick}: SeasonSummaryCardProps) {
+    const statusBadgeStyles: Record<Season["status"], string> = {
+        REGISTRATION: "text-surface-a10 bg-primary-a20",
+        ACTIVE: "text-surface-a10 bg-warning",
+        COMPLETED: "text-light-a10 bg-danger",
+    };
+
     return (
-        <div className="flex flex-col justify-between bg-surface-a20 rounded-2xl p-8 mt-4">
+        <div className="season-summary-card">
             <p className="font-bold">{season.name}</p>
-            <p className="text-light-a20">Status: {season.status}</p>
-            <p className="text-light-a20">Start Date: {season.startDate}</p>
+            <span
+                className={`justify-self-end text-xs font-semibold px-2 py-1 rounded-full w-fit ${statusBadgeStyles[season.status]}`}>{season.status}
+            </span>
+            <p className="text-light-a20">Start Date: {new Date(season.startDate).toLocaleDateString("en-GB")}</p>
         </div>
     );
 }
