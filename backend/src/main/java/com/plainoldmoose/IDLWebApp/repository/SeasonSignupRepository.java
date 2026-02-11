@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SeasonSignupRepository extends JpaRepository<SeasonSignup, long> {
+public interface SeasonSignupRepository extends JpaRepository<SeasonSignup, Long> {
 
     List<SeasonSignup> findBySeasonId(long seasonId);
 
