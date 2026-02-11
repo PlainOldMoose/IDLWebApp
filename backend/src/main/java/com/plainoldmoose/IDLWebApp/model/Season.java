@@ -32,7 +32,8 @@ public class Season {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    // TODO captains / draft / other
+    @OneToMany(mappedBy = "season")
+    private List<SeasonSignup> signups;
 
     @OneToMany(mappedBy = "season")
     private List<Team> teams;
