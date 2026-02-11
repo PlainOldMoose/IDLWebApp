@@ -6,17 +6,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface SeasonSignupRepository extends JpaRepository<SeasonSignup, Long> {
 
-    List<SeasonSignup> findBySeasonId(long seasonId);
+    List<SeasonSignup> findBySeasonId(UUID seasonId);
 
-    Optional<SeasonSignup> findBySeasonIdAndPlayerSteamId(long seasonId, String steamId);
+    Optional<SeasonSignup> findBySeasonIdAndPlayerSteamId(UUID seasonId, String steamId);
 
-    boolean existsBySeasonIdAndPlayerSteamId(long seasonId, String steamId);
+    boolean existsBySeasonIdAndPlayerSteamId(UUID seasonId, String steamId);
 
-    long countBySeasonId(long seasonId);
+    long countBySeasonId(UUID seasonId);
 
-    long countBySeasonIdAndWillingToCaptainTrue(long seasonId);
+    long countBySeasonIdAndWillingToCaptainTrue(UUID seasonId);
 }
