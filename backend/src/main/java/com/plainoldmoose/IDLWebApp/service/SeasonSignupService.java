@@ -34,7 +34,7 @@ public class SeasonSignupService {
         }
 
         Player player = playerRepository.findById(steamId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found"));]
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found"));
 
         if (seasonSignupRepository.existsBySeasonIdAndPlayerSteamId(season.getId(), steamId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Player already signed up for this season");

@@ -17,6 +17,17 @@ VALUES ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454', 'Season 1', '2025-01-02', '2025-
        ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', 'Season 2', '2025-01-02', '2025-01-03', 'REGISTRATION'),
        ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3456', 'Season 3', '2025-01-02', '2025-01-03', 'COMPLETED');
 
+-- Season Signups (Season 2 - REGISTRATION)
+INSERT INTO season_signup (id, season_id, player_id, willing_to_captain, signed_up_at)
+VALUES ('1', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941997', true, '2025-01-01 19:00:00'),
+       ('2', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941992', false, '2025-01-01 19:05:00'),
+       ('3', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941993', false, '2025-01-01 19:10:00'),
+       ('4', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941994', true, '2025-01-01 19:15:00'),
+       ('5', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941995', false, '2025-01-01 19:20:00'),
+       ('6', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941996', true, '2025-01-01 19:25:00'),
+       ('7', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941991', false, '2025-01-01 19:30:00'),
+       ('8', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3455', '76561198090941998', false, '2025-01-01 19:35:00');
+
 -- Adding teams
 INSERT INTO team (team_id, name, season_id, captain_id)
 VALUES ('f8c3de3d-1fea-4d7c-a8b0-29f63c4c1111', '4 Feeders and Bajan', 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',

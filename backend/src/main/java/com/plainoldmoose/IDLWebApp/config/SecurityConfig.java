@@ -16,7 +16,7 @@ public class SecurityConfig {
         return http.authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/auth/**")
                             .permitAll();
-                    auth.requestMatchers("/api/players/**", "/api/seasons/**", "/api/matches/**")
+                    auth.requestMatchers("/api/**")
                             .permitAll();
                     auth.anyRequest()
                             .authenticated();
