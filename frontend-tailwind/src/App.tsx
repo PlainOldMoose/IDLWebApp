@@ -4,6 +4,7 @@ import Landing from "./pages/Landing.tsx";
 import Seasons from "./pages/Seasons.tsx";
 import Players from "./pages/Players.tsx";
 import Matches from "./pages/Matches.tsx";
+import SeasonDetail from "./pages/SeasonDetail.tsx";
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
                         <Route path="/" element={<Landing/>}/>
                         <Route path="/players" element={<Players/>}/>
                         <Route path="/seasons" element={<Seasons/>}/>
+                        <Route path="/seasons/:seasonId" element={<SeasonDetail/>}/>
                         <Route path="/matches" element={<Matches/>}/>
                     </Routes>
                 </main>

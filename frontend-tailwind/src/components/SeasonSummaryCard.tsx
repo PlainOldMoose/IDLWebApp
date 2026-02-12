@@ -13,7 +13,7 @@ export default function SeasonSummaryCard({season, onClick}: SeasonSummaryCardPr
     };
 
     return (
-        <div className="season-summary-card">
+        <div className={`season-summary-card ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
             <p className="font-bold">{season.name}</p>
             <span
                 className={`justify-self-end text-xs font-semibold px-2 py-1 rounded-full w-fit ${statusBadgeStyles[season.status]}`}>{season.status}

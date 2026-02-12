@@ -1,9 +1,11 @@
 import {useSeasons} from "../services/Queries.ts";
 import SeasonSummaryCard from "../components/SeasonSummaryCard.tsx";
 import SeasonStatCard from "../components/SeasonStatCard.tsx";
+import {useNavigate, useParams} from "react-router-dom";
 
 export default function Seasons() {
     const {data: seasons, isLoading, isError} = useSeasons();
+    const navigate = useNavigate();
 
     if (isLoading) return <div>Loading...</div>;
     if (isError) return <div>Error...</div>;
@@ -18,8 +20,9 @@ export default function Seasons() {
 
             {/*Seasons*/}
             <div className="grid grid-cols-3 gap-4 mt-12">
-            {seasons?.map((season) => (
-                <SeasonSummaryCard key={season.id} season={season}/>
+                {seasons?.map((season) => (
+                    <SeasonSummaryCard key={season.id} season={season}
+                                       onClick={() => navigate(`/seasons/${season.id}`)}/>
                 ))}
             </div>
         </div>
