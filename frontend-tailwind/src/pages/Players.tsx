@@ -7,7 +7,7 @@ export default function Players() {
     if (isError) return <div>Error...</div>;
 
     return (
-        <div className="mt-4">
+        <div>
             <div className="text-5xl text-center font-bold my-12">Players</div>
             <div className="bg-surface-a20 rounded-2xl p-8 mt-4 ">
 

@@ -9,6 +9,7 @@ export default function Matches() {
 
     return (
         <div>
+            <div className="text-5xl text-center font-bold my-12">Matches</div>
             <div className="flex justify-between mt-8 px-6">
                 <p>Match ID</p>
                 <p>Winner</p>

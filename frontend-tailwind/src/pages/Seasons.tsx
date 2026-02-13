@@ -12,6 +12,7 @@ export default function Seasons() {
 
     return (
         <div>
+            <div className="text-5xl text-center font-bold my-12">Seasons</div>
             <div className="grid grid-cols-3 gap-2 mt-4">
                 <SeasonStatCard/>
                 <SeasonStatCard/>
