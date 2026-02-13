@@ -49,3 +49,8 @@ export const postSeasonSignup = async (seasonId: string, willingToCaptain: boole
     return response.data;
 }
 
+export const getSeasonMatches = async (seasonId: string): Promise<MatchSummary[]> => {
+    const response = await axiosInstance.get<MatchSummary[]>("matches", {params: {seasonId}});
+    return response.data;
+}
+

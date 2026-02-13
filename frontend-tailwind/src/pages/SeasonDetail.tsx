@@ -1,5 +1,13 @@
 import {useParams} from "react-router-dom";
-import {useCurrentUser, useSeasonDetail, useSeasons, useSeasonSignup, useSeasonSignups} from "../services/Queries.ts";
+import {
+    useCurrentUser,
+    useSeasonDetail,
+    useSeasonMatches,
+    useSeasons,
+    useSeasonSignup,
+    useSeasonSignups
+} from "../services/Queries.ts";
+import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 
 
 export default function SeasonDetail() {
@@ -7,6 +15,7 @@ export default function SeasonDetail() {
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
     const {data: signups, isPending: signupsPending, isError: signupsError} = useSeasonSignups(seasonId);
     const {data: user} = useCurrentUser();
+    const {data: matches} = useSeasonMatches(seasonId, season?.status !== "REGISTRATION");
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
 
@@ -60,10 +69,21 @@ export default function SeasonDetail() {
                                 </div>
                             ))}
                         </div>
-
                     </div>
                 </>
             )}
+            {/*Matches*/}
+            {(season.status === "ACTIVE" || season.status === "COMPLETED") && (
+                <>
+                    <h1 className="text-2xl font-bold my-6">Matches</h1>
+                    {matches?.map((match) => (
+                        <MatchSummaryCard key={match.matchId} match={match}/>
+                    ))}
+                </>
+            )}
+            <div>
+
+            </div>
         </div>
     );
 }
