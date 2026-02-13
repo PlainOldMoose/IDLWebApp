@@ -1,5 +1,8 @@
-import {getAllMatches, getAllPlayers, getAllSeasons, getCurrentUser, getSeasonDetail, getSeasonSignups} from "./Api.ts";
-import {useQuery} from "@tanstack/react-query";
+import {
+    getAllMatches, getAllPlayers, getAllSeasons, getCurrentUser, getSeasonDetail, getSeasonSignups,
+    postSeasonSignup
+} from "./Api.ts";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
 export function usePlayers() {
     return useQuery({
@@ -43,4 +46,14 @@ export function useSeasonSignups(seasonId: string | undefined) {
         queryKey: ["seasonSignups", seasonId],
         queryFn: () => getSeasonSignups(seasonId!),
     })
+}
+
+export function useSeasonSignup(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (willingToCaptain: boolean) => postSeasonSignup(seasonId!, willingToCaptain),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
+        }
+    });
 }

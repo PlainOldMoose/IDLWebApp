@@ -12,7 +12,7 @@ export default function MatchSummaryCard({match, onClick}: MatchSummaryCardProps
             <p>{match.winner}</p>
             <p>{match.timePlayed}</p>
             <p>{match.avgElo}</p>
-            <p>{match.seasonName}</p>
+            <p>{match.seasonName ?? "In-house"}</p>
         </div>
     );
 }

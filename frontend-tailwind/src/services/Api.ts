@@ -40,6 +40,12 @@ export const getSeasonDetail = async (seasonId: string): Promise<SeasonDetail> =
 }
 
 export const getSeasonSignups = async (seasonId: string): Promise<SeasonSignup[]> => {
-    const response = await axiosInstance.get<SeasonSignup>(`seasons/${seasonId}/signups`);
+    const response = await axiosInstance.get<SeasonSignup[]>(`seasons/${seasonId}/signups`);
     return response.data;
 }
+
+export const postSeasonSignup = async (seasonId: string, willingToCaptain: boolean): Promise<SeasonSignup> => {
+    const response = await axiosInstance.post<SeasonSignup>(`seasons/${seasonId}/signups`, {willingToCaptain});
+    return response.data;
+}
+

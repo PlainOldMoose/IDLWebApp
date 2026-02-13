@@ -5,6 +5,7 @@ import Seasons from "./pages/Seasons.tsx";
 import Players from "./pages/Players.tsx";
 import Matches from "./pages/Matches.tsx";
 import SeasonDetail from "./pages/SeasonDetail.tsx";
+import Unregistered from "./pages/Unregistered.tsx";
 
 function App() {
 
@@ -20,6 +21,7 @@ function App() {
                         <Route path="/seasons" element={<Seasons/>}/>
                         <Route path="/seasons/:seasonId" element={<SeasonDetail/>}/>
                         <Route path="/matches" element={<Matches/>}/>
+                        <Route path="/unregistered" element={<Unregistered/>}/>
                     </Routes>
                 </main>
             </div>

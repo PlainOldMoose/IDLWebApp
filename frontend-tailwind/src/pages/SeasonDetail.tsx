@@ -1,18 +1,28 @@
 import {useParams} from "react-router-dom";
-import {useSeasonDetail, useSeasonSignups} from "../services/Queries.ts";
+import {useCurrentUser, useSeasonDetail, useSeasons, useSeasonSignup, useSeasonSignups} from "../services/Queries.ts";
 
 
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
     const {data: signups, isPending: signupsPending, isError: signupsError} = useSeasonSignups(seasonId);
+    const {data: user} = useCurrentUser();
+    const signup = useSeasonSignup(seasonId);
+    const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
+
+    const handleSignup = () => {
+        if (user) {
+            signup.mutate(false);
+        } else {
+            globalThis.location.href = `http://localhost:8080/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
+        }
+    };
 
     if (isPending) return <p>Loading...</p>;
     if (isError) return <p>Season not found</p>;
 
     const startDate = new Date(season.startDate).toLocaleDateString("en-GB");
     const endDate = new Date(season.endDate).toLocaleDateString("en-GB")
-
     return (
         <div className="reveal-in">
             {/*Season Header*/}
@@ -20,9 +30,10 @@ export default function SeasonDetail() {
                 <h1 className="text-4xl font-bold">{season.name}</h1>
                 {season.status === "REGISTRATION" && (
                     <button
-                        className="px-4 py-2 bg-surface-a20 text-white font-extrabold rounded-lg"
+                        className="px-4 py-2 bg-surface-a20 text-white font-extrabold rounded-lg hover:cursor-pointer disabled:opacity-50"
                         onClick={handleSignup}
-                    >Signup
+                        disabled={alreadySignedUp}
+                    >{user ? (alreadySignedUp ? "Signed Up" : "Sign Up") : ("Login to Sign Up")}
                     </button>
                 )}
             </div>
@@ -38,7 +49,8 @@ export default function SeasonDetail() {
                 <>
                     <h1 className="text-2xl font-bold my-6">Signups</h1>
                     <div className="bg-surface-a20 rounded-2xl p-8 mt-4">
-                        <p className="bg-surface-a10 max-w-32 rounded-xl text-xs text-center mx-auto mb-2 p-1">Willing to Captain</p>
+                        <p className="bg-surface-a10 max-w-32 rounded-xl text-xs text-center mx-auto mb-2 p-1">Willing
+                            to Captain</p>
                         <div className="grid grid-cols-4">
                             {signups?.map((signup) => (
                                 <div key={signup.steamId}>
