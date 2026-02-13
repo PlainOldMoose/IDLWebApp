@@ -35,8 +35,8 @@ public class SteamAuthController {
     private String frontendUrl;
 
     @GetMapping("/login")
-    public ResponseEntity<Void> login() {
-        String returnUrl = baseUrl + "/auth/callback";
+    public ResponseEntity<Void> login(@RequestParam(defaultValue = "/") String returnTo) {
+        String returnUrl = baseUrl + "/auth/callback?returnTo=" + returnTo;
 
         String steamLoginUrl = "https://steamcommunity.com/openid/login" +
                 "?openid.ns=http://specs.openid.net/auth/2.0" +
@@ -53,6 +53,8 @@ public class SteamAuthController {
 
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(@RequestParam Map<String, String> params) {
+        String returnTo = params.getOrDefault("returnTo", "/");
+
         if (!params.containsKey("openid.claimed_id") || !params.containsKey("openid.sig")) {
             return ResponseEntity.badRequest().build();
         }
@@ -66,7 +68,7 @@ public class SteamAuthController {
 
         if (!playerRepository.existsById(steamId)) {
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendUrl + "?error=unregistered"))
+                    .location(URI.create(frontendUrl + "/unregistered"))
                     .build();
         }
 
@@ -76,7 +78,7 @@ public class SteamAuthController {
                 .setAuthentication(auth);
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(frontendUrl))
+                .location(URI.create(frontendUrl + returnTo))
                 .build();
     }
 
