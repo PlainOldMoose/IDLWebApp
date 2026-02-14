@@ -10,6 +10,7 @@ import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,7 @@ public class MatchService {
 
     public MatchDetailResponse getMatchById(Long matchId) {
         Match match = matchRepository.findById(matchId)
-                .orElseThrow(() -> new RuntimeException("Match not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Match not found"));
 
         List<ParticipantResponse> participants = match.getParticipants()
                 .stream()
