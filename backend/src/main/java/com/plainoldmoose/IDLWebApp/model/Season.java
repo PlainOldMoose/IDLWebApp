@@ -37,4 +37,8 @@ public class Season {
 
     @OneToMany(mappedBy = "season")
     private List<Team> teams;
+
+    @ManyToOne
+    @JoinColumn(name = "winner_team_id")
+    private Team winner;
 }

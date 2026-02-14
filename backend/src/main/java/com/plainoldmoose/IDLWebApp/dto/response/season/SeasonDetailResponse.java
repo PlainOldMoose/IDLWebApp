@@ -13,5 +13,6 @@ public record SeasonDetailResponse(
         SeasonStatus status,
         LocalDate startDate,
         LocalDate endDate,
-        List<TeamResponse> teams) {
+        List<TeamResponse> teams,
+        String winnerTeamName) {
 }

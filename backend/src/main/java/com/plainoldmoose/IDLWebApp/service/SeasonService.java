@@ -16,11 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -63,8 +59,10 @@ public class SeasonService {
     private SeasonDetailResponse mapToDetailResponseSortedByWins(Season season) {
         List<TeamResponse> teams = mapToTeamResponse(season.getTeams());
         List<TeamResponse> sortedTeams = teams.stream()
-                .sorted(Comparator.comparingInt(TeamResponse::wins).reversed()
-                        .thenComparing(Comparator.comparingDouble(TeamResponse::winRate).reversed()))
+                .sorted(Comparator.comparingInt(TeamResponse::wins)
+                        .reversed()
+                        .thenComparing(Comparator.comparingDouble(TeamResponse::winRate)
+                                .reversed()))
                 .toList();
 
         return new SeasonDetailResponse(
@@ -73,12 +71,22 @@ public class SeasonService {
                 season.getStatus(),
                 season.getStartDate(),
                 season.getEndDate(),
-                sortedTeams
+                sortedTeams,
+                season.getWinner() != null ? season.getWinner()
+                        .getName() : null
         );
     }
 
     private SeasonDetailResponse mapToDetailResponse(Season season) {
-        return new SeasonDetailResponse(season.getName(), season.getId(), season.getStatus(), season.getStartDate(), season.getEndDate(), mapToTeamResponse(season.getTeams()));
+        return new SeasonDetailResponse(
+                season.getName(),
+                season.getId(),
+                season.getStatus(),
+                season.getStartDate(),
+                season.getEndDate(),
+                mapToTeamResponse(season.getTeams()),
+                season.getWinner() != null ? season.getWinner()
+                        .getName() : null);
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {
@@ -89,7 +97,8 @@ public class SeasonService {
         ArrayList<TeamResponse> teamsResponse = new ArrayList<>();
 
         for (Team t : teams) {
-            List<TeamMemberResponse> members = t.getMembers().stream()
+            List<TeamMemberResponse> members = t.getMembers()
+                    .stream()
                     .map(this::mapToMemberResponse)
                     .toList();
 
@@ -99,8 +108,10 @@ public class SeasonService {
             TeamResponse response = new TeamResponse(
                     t.getTeamId(),
                     t.getName(),
-                    t.getCaptain().getSteamId(),
-                    t.getCaptain().getUsername(),
+                    t.getCaptain()
+                            .getSteamId(),
+                    t.getCaptain()
+                            .getUsername(),
                     members,
                     t.getAvgElo(),
                     t.getWins(),
@@ -114,9 +125,12 @@ public class SeasonService {
 
     private TeamMemberResponse mapToMemberResponse(TeamMember member) {
         return new TeamMemberResponse(
-                member.getPlayer().getSteamId(),
-                member.getPlayer().getUsername(),
-                member.getPlayer().getElo()
+                member.getPlayer()
+                        .getSteamId(),
+                member.getPlayer()
+                        .getUsername(),
+                member.getPlayer()
+                        .getElo()
         );
     }
 }
