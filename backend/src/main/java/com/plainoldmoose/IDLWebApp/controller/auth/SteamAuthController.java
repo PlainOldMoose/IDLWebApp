@@ -1,8 +1,9 @@
 package com.plainoldmoose.IDLWebApp.controller.auth;
 
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
-import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import com.plainoldmoose.IDLWebApp.service.SteamAuthService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ import java.util.Map;
 public class SteamAuthController {
 
     private final SteamAuthService steamAuthService;
-    private final PlayerRepository playerRepository;
+    private final PlayerService playerService;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -56,7 +57,8 @@ public class SteamAuthController {
         String returnTo = params.getOrDefault("returnTo", "/");
 
         if (!params.containsKey("openid.claimed_id") || !params.containsKey("openid.sig")) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .build();
         }
 
         if (!steamAuthService.verifyResponse(params)) {
@@ -66,7 +68,7 @@ public class SteamAuthController {
 
         String steamId = steamAuthService.extractSteamId(params.get("openid.claimed_id"));
 
-        if (!playerRepository.existsById(steamId)) {
+        if (!playerService.existsBySteamId(steamId)) {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create(frontendUrl + "/unregistered"))
                     .build();
@@ -84,15 +86,17 @@ public class SteamAuthController {
 
     @GetMapping("/me")
     public ResponseEntity<SteamUserResponse> me() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Authentication auth = SecurityContextHolder.getContext()
+                .getAuthentication();
 
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .build();
         }
 
         String steamId = (String) auth.getPrincipal();
-        return playerRepository.findById(steamId)
-                .map(player -> ResponseEntity.ok(new SteamUserResponse(player.getSteamId(), player.getUsername())))
-                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+        return playerService.findSteamUser(steamId)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new EntityNotFoundException("User not signed in"));
     }
 }

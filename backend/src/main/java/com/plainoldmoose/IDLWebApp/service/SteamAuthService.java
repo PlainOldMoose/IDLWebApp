@@ -1,6 +1,6 @@
 package com.plainoldmoose.IDLWebApp.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,13 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class SteamAuthService {
-
-    @Value("${steam.api.key}")
-    // Your Steam API key
-    private String steamApiKey;
-
     private final RestTemplate restTemplate = new RestTemplate();
 
     public boolean verifyResponse(Map<String, String> params) {
@@ -48,6 +44,7 @@ public class SteamAuthService {
                     .contains("is_valid:true");
         } catch (
                 Exception e) {
+            log.error("Steam verification failed", e);
             return false;
         }
     }
