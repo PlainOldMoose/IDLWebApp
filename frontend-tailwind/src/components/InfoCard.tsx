@@ -1,6 +1,8 @@
+import type {ReactNode} from "react";
+
 interface InfoCardProps {
     title: string;
-    body: string;
+    body: ReactNode;
 }
 
 export default function InfoCard({title, body}: InfoCardProps) {
