@@ -1,8 +1,10 @@
-import {NavLink} from "react-router-dom";
+import {NavLink, useNavigate} from "react-router-dom";
 import {useCurrentUser} from "../services/Queries.ts";
 
 export default function Navbar() {
     const {data: user} = useCurrentUser();
+    const navigate = useNavigate();
+
 
     return (
         <nav className="flex p-4 justify-between items-center bg-surface-a20 text-light-a30">
@@ -13,7 +15,8 @@ export default function Navbar() {
             {/*Links*/}
             <div className="flex gap-4">
                 {user ? (
-                    <span className="nav-link">{user.username || user.steamId}</span>
+                    <button className="nav-link hover:cursor-pointer"
+                    onClick={() => navigate(`/players/${user.steamId}`)}>{user.username || user.steamId}</button>
                 ) : (
                     <button
                         onClick={() => window.location.href = 'http://localhost:8080/auth/login'}

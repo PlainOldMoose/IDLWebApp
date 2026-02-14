@@ -9,7 +9,7 @@ const handleRedirect = (matchId: number): void => {
     window.open(`https://stratz.com/matches/${matchId}`, "_blank");
 };
 
-export default function MatchSummaryCard({match, onClick}: MatchSummaryCardProps) {
+export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
     return (
         <div className="match-summary-card hover:cursor-pointer" onClick={() => handleRedirect(match.matchId)}>
             <p>{match.matchId}</p>

@@ -1,7 +1,10 @@
 import {usePlayers} from "../services/Queries.ts";
+import {useNavigate} from "react-router-dom";
 
 export default function Players() {
     const {data: players, isLoading, isError} = usePlayers();
+    const navigate = useNavigate();
+
 
     if (isLoading) return <div>Loading...</div>;
     if (isError) return <div>Error...</div>;
@@ -22,7 +25,8 @@ export default function Players() {
                     <tbody>
                     {players?.map((player, index) => (
                         <tr key={player.steamId}
-                            className="border-b border-surface-a30 hover:bg-surface-a30 hover:scale-102">
+                            className="border-b border-surface-a30 hover:bg-surface-a30 hover:scale-102"
+                            onClick={() => navigate(`/players/${player.steamId}`)}>
                             <td className="text-left py-2 px-4">{index + 1}</td>
                             <td className="text-left py-2 px-4">{player.username}</td>
                             <td className="text-left py-2 px-4 text-right">{player.elo}</td>
@@ -32,5 +36,6 @@ export default function Players() {
                 </table>
             </div>
         </div>
-    );
+    )
+        ;
 }

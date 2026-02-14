@@ -61,7 +61,7 @@ export function useSeasonSignup(seasonId: string | undefined) {
 export function useSeasonMatches(seasonId: string | undefined, enabled: boolean) {
     return useQuery({
         queryKey: ["seasonMatches", seasonId],
-        queryFn: () => getSeasonMatches(seasonId),
+        queryFn: () => getSeasonMatches(seasonId!),
         enabled: enabled && !!seasonId
     });
 

@@ -1,9 +1,8 @@
-import {useParams} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import {
     useCurrentUser,
     useSeasonDetail,
     useSeasonMatches,
-    useSeasons,
     useSeasonSignup,
     useSeasonSignups
 } from "../services/Queries.ts";
@@ -13,11 +12,12 @@ import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
-    const {data: signups, isPending: signupsPending, isError: signupsError} = useSeasonSignups(seasonId);
+    const {data: signups} = useSeasonSignups(seasonId);
     const {data: user} = useCurrentUser();
     const {data: matches} = useSeasonMatches(seasonId, season?.status !== "REGISTRATION");
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
+    const navigate = useNavigate();
 
     const handleSignup = () => {
         if (user) {
@@ -64,8 +64,9 @@ export default function SeasonDetail() {
                         <div className="grid grid-cols-4">
                             {signups?.map((signup) => (
                                 <div key={signup.steamId}>
-                                    <p className={`font-extrabold m-2 p-2 text-center rounded-xl
-                                 ${signup.willingToCaptain ? "bg-surface-a10" : "bg-surface-a30"}`}>
+                                    <p className={`font-extrabold m-2 p-2 text-center rounded-xl hover:cursor-pointer
+                                 ${signup.willingToCaptain ? "bg-surface-a10" : "bg-surface-a30"}`}
+                                       onClick={() => navigate(`/players/${signup.steamId}`)}>
                                         {signup.username}</p>
                                 </div>
                             ))}
