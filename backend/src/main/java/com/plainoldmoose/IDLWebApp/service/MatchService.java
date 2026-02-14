@@ -4,11 +4,11 @@ import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.ParticipantResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.UpcomingMatchResponse;
-import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
-import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
+import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -94,6 +94,10 @@ public class MatchService {
                 match.getPlayedTime(),
                 match.getAvgElo(),
                 match.getSeason() != null ? match.getSeason()
+                        .getName() : null,
+                match.getRadiantTeam() != null ? match.getRadiantTeam()
+                        .getName() : null,
+                match.getDireTeam() != null ? match.getDireTeam()
                         .getName() : null);
     }
 
@@ -104,7 +108,8 @@ public class MatchService {
                 .stream()
                 .filter(eh -> eh.getMatch() != null && eh.getMatch()
                         .getMatchId()
-                        .equals(participant.getMatch().getMatchId()))
+                        .equals(participant.getMatch()
+                                .getMatchId()))
                 .findFirst()
                 .orElse(null);
         int eloChange = matchEloHistory != null ? matchEloHistory.getEloChange() : 0;

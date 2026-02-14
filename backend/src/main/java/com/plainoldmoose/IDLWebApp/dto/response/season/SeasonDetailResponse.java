@@ -1,6 +1,6 @@
 package com.plainoldmoose.IDLWebApp.dto.response.season;
 
-import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.team.TeamSummaryResponse;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 
 import java.time.LocalDate;
@@ -13,6 +13,6 @@ public record SeasonDetailResponse(
         SeasonStatus status,
         LocalDate startDate,
         LocalDate endDate,
-        List<TeamResponse> teams,
+        List<TeamSummaryResponse> teams,
         String winnerTeamName) {
 }

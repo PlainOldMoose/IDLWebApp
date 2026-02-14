@@ -26,12 +26,15 @@ public class Match {
     private MatchType matchType;
 
     @ManyToOne
+    @JoinColumn(name = "season_id")
     private Season season;
 
     @ManyToOne
+    @JoinColumn(name="radiant_team_id")
     private Team radiantTeam;
 
     @ManyToOne
+    @JoinColumn(name="dire_team_id")
     private Team direTeam;
 
     private LocalDateTime scheduledTime;

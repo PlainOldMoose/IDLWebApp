@@ -9,7 +9,7 @@ export default function MatchSummaryCard({match, onClick}: MatchSummaryCardProps
     return (
         <div className="match-summary-card">
             <p>{match.matchId}</p>
-            <p>{match.winner}</p>
+            <p>{match.seasonName ? (match.winner === "RADIANT" ? match.radiantTeamName : match.direTeamName) : match.winner}</p>
             <p>{match.timePlayed}</p>
             <p>{match.avgElo}</p>
             <p>{match.seasonName ?? "In-house"}</p>

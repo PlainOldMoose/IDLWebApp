@@ -9,5 +9,7 @@ public record MatchSummaryResponse(
         Side winner,
         LocalDateTime timePlayed,
         int avgElo,
-        String seasonName) {
+        String seasonName,
+        String radiantTeamName,
+        String direTeamName) {
 }

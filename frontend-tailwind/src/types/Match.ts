@@ -4,4 +4,6 @@ export interface MatchSummary {
     timePlayed: string;
     avgElo?: number;
     seasonName?: string;
+    radiantTeamName?: string;
+    direTeamName?: string;
 }
