@@ -206,6 +206,45 @@ VALUES
 ('8652158309', NULL, 0, 2, NULL, '2026-02-13 19:30:00', 0, 1720);
 
 -- =============================================
+-- MATCH TEAM ASSIGNMENTS (radiant/dire)
+-- Derived from match_winner values and team win/loss records
+-- =============================================
+
+-- Season 3: A=Radiant Rejects(a...01), B=Dire Wolves(a...02), C=Ancient Defenders(a...03), D=Throne Crushers(a...04)
+-- A vs B (A=radiant, B=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000001', dire_team_id = 'a0000000-0000-0000-0000-000000000002' WHERE match_id IN ('8652158100','8652158101','8652158102','8652158103');
+-- A vs C (C=radiant, A=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000003', dire_team_id = 'a0000000-0000-0000-0000-000000000001' WHERE match_id IN ('8652158104','8652158105','8652158106');
+-- A vs D (D=radiant, A=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000004', dire_team_id = 'a0000000-0000-0000-0000-000000000001' WHERE match_id IN ('8652158107','8652158108','8652158109');
+-- B vs C (C=radiant, B=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000003', dire_team_id = 'a0000000-0000-0000-0000-000000000002' WHERE match_id IN ('8652158110','8652158111','8652158112','8652158113');
+-- B vs D (D=radiant, B=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000004', dire_team_id = 'a0000000-0000-0000-0000-000000000002' WHERE match_id IN ('8652158114','8652158115','8652158116');
+-- C vs D (D=radiant, C=dire)
+UPDATE matches SET radiant_team_id = 'a0000000-0000-0000-0000-000000000004', dire_team_id = 'a0000000-0000-0000-0000-000000000003' WHERE match_id IN ('8652158117','8652158118','8652158119');
+
+-- Season 1: A=4 Feeders(b...01), B=Goo Crew(b...02), C=Stack Overflow(b...03), D=Mid or Feed(b...04)
+-- A vs B
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000002', dire_team_id = 'b0000000-0000-0000-0000-000000000001' WHERE match_id = '8652158200';
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000001', dire_team_id = 'b0000000-0000-0000-0000-000000000002' WHERE match_id = '8652158201';
+-- A vs C
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000003', dire_team_id = 'b0000000-0000-0000-0000-000000000001' WHERE match_id = '8652158202';
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000001', dire_team_id = 'b0000000-0000-0000-0000-000000000003' WHERE match_id = '8652158203';
+-- A vs D
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000001', dire_team_id = 'b0000000-0000-0000-0000-000000000004' WHERE match_id = '8652158204';
+-- B vs C
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000003', dire_team_id = 'b0000000-0000-0000-0000-000000000002' WHERE match_id = '8652158205';
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000002', dire_team_id = 'b0000000-0000-0000-0000-000000000003' WHERE match_id = '8652158206';
+-- B vs D
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000004', dire_team_id = 'b0000000-0000-0000-0000-000000000002' WHERE match_id = '8652158207';
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000004', dire_team_id = 'b0000000-0000-0000-0000-000000000002' WHERE match_id = '8652158208';
+-- C vs D
+UPDATE matches SET radiant_team_id = 'b0000000-0000-0000-0000-000000000004', dire_team_id = 'b0000000-0000-0000-0000-000000000003' WHERE match_id = '8652158209';
+
+-- Inhouse matches (8652158300-309) have no teams, radiant/dire stay NULL
+
+-- =============================================
 -- MATCH PARTICIPANTS - SEASON 3 (20 matches x 10 players = 200 rows)
 -- S3A(rad): 93,2003,2006,2004,98  S3B(rad): 94,2005,2009,91,2010
 -- S3C(rad): 96,2012,97,2008,2013  S3D(rad): 95,2015,99,2002,2007
