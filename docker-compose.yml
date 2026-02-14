@@ -23,7 +23,9 @@ services:
       SPRING_SQL_INIT_MODE: always
       SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION: true
       ADMIN_CREDENTIALS: ${ADMIN_CREDENTIALS}
-      CORS_ALLOWED_ORIGINS: http://localhost
+      CORS_ALLOWED_ORIGINS: https://idl.vandermerwe.uk
+      BASE_URL: https://idl.vandermerwe.uk
+      FRONTEND_URL: https://idl.vandermerwe.uk
     depends_on:
       db:
         condition: service_healthy
