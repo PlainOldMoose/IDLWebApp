@@ -10,7 +10,7 @@ export interface SeasonDetail {
 
 export interface TeamSummary {
     teamId: string,
-    teamName: string,
+    name: string,
     captainUsername: string,
     members: Member[],
     avgElo: number;
