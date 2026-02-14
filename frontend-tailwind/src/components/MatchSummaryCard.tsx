@@ -5,9 +5,13 @@ interface MatchSummaryCardProps {
     onClick?: () => void;
 }
 
+const handleRedirect = (matchId: number): void => {
+    window.open(`https://stratz.com/matches/${matchId}`, "_blank");
+};
+
 export default function MatchSummaryCard({match, onClick}: MatchSummaryCardProps) {
     return (
-        <div className="match-summary-card">
+        <div className="match-summary-card hover:cursor-pointer" onClick={() => handleRedirect(match.matchId)}>
             <p>{match.matchId}</p>
             <p>{match.seasonName ? (match.winner === "RADIANT" ? match.radiantTeamName : match.direTeamName) : match.winner}</p>
             <p>{match.timePlayed}</p>
