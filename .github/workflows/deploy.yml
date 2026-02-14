@@ -59,10 +59,9 @@ jobs:
           chmod +x cloudflared
 
       - name: Deploy via tunnel
-        env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
           chmod 600 key
-          ssh -o StrictHostKeyChecking=no -o ProxyCommand="./cloudflared access ssh --hostname ssh.vandermerwe.uk" -i key root@ssh.vandermerwe.uk "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
+          ./cloudflared access tcp --hostname ssh.vandermerwe.uk --url localhost:2222 --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }} &
+          sleep 3
+          ssh -o StrictHostKeyChecking=no -p 2222 -i key root@localhost "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
