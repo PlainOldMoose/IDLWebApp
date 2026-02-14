@@ -1,17 +1,17 @@
 package com.plainoldmoose.IDLWebApp.dto.request;
 
-import com.plainoldmoose.IDLWebApp.model.Team;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public record CreateScheduledMatchRequest(
-        @NotBlank
-        Team teamA,
+        @NotNull
+        UUID teamAId,
 
-        @NotBlank
-        Team teamB,
+        @NotNull
+        UUID teamBId,
 
-        @NotBlank
+        @NotNull
         LocalDateTime scheduledTime) {
 }
