@@ -44,7 +44,7 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: ./frontend-tailwind
           push: true
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
@@ -59,8 +59,14 @@ jobs:
           chmod +x cloudflared
 
       - name: Deploy via tunnel
+        env:
+          TUNNEL_SERVICE_HOSTNAME: ssh.vandermerwe.uk
+          TUNNEL_SERVICE_URL: localhost:2222
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
           chmod 600 key
-          ./cloudflared access ssh-gen --hostname ssh.vandermerwe.uk
-          ssh -o StrictHostKeyChecking=no -o ProxyCommand="./cloudflared access ssh --hostname ssh.vandermerwe.uk" -i key root@ssh.vandermerwe.uk "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
+          ./cloudflared access tcp &
+          sleep 3
+          ssh -o StrictHostKeyChecking=no -p 2222 -i key root@localhost "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
