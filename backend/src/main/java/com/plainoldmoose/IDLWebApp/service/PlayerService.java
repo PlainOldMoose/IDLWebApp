@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreatePlayerRequest;
+import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
@@ -9,21 +10,26 @@ import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.EloSnapshot;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class PlayerService {
 
     private final PlayerRepository playerRepository;
+    private final EloHistoryRepository eloHistoryRepository;
 
+    @Transactional
     public PlayerSummaryResponse createPlayer(CreatePlayerRequest request) {
         validateSteamIdUnique(request.steamId());
         validateUsernameUnique(request.username());
@@ -36,13 +42,14 @@ public class PlayerService {
 
         Player saved = playerRepository.save(player);
 
-        // Create initial Elo
-        EloHistory initialHistory = new EloHistory();
-        initialHistory.setPlayer(saved);
-        initialHistory.setElo(saved.getElo());
-        initialHistory.setEloChange(0);
-        initialHistory.setTimestamp(LocalDateTime.now());
-        initialHistory.setReason(EloChangeReason.INITIAL);
+        EloHistory eloHistory = new EloHistory();
+        eloHistory.setPlayer(saved);
+        eloHistory.setElo(saved.getElo());
+        eloHistory.setTimestamp(LocalDateTime.now());
+        eloHistory.setEloChange(0);
+        eloHistory.setReason(EloChangeReason.INITIAL);
+        eloHistory.setMatch(null);
+        eloHistoryRepository.save(eloHistory);
 
         return mapToSummaryResponse(saved);
     }
@@ -57,6 +64,15 @@ public class PlayerService {
     public PlayerDetailResponse findById(String steamId) {
         Player player = findPlayerOrThrow(steamId);
         return mapToDetailResponse(player);
+    }
+
+    public boolean existsBySteamId(String steamId) {
+        return playerRepository.existsById(steamId);
+    }
+
+    public Optional<SteamUserResponse> findSteamUser(String steamId) {
+        return playerRepository.findById(steamId)
+                .map(player -> new SteamUserResponse(player.getSteamId(), player.getUsername()));
     }
 
     private Player findPlayerOrThrow(String steamId) {
@@ -98,11 +114,10 @@ public class PlayerService {
         int matchesPlayed = wins + losses;
         double winrate = matchesPlayed > 0 ? (double) wins / matchesPlayed * 100 : 0.0;
 
-        // Build elo history
         List<EloSnapshot> eloHistory = player.getEloHistory()
                 .stream()
-                .map(eh -> new EloSnapshot(eh.getMatch()
-                        .getMatchId(), eh.getElo()))
+                .map(eh -> new EloSnapshot(eh.getMatch() != null ? eh.getMatch()
+                        .getMatchId() : null, eh.getElo()))
                 .toList();
 
         // Build last 20 matches
