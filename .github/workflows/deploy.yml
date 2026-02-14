@@ -1,14 +1,11 @@
 name: Build and Push Images
-
 on:
   push:
     branches: [main]
-
 env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/plainoldmoose/idlwebapp-backend
   FRONTEND_IMAGE: ghcr.io/plainoldmoose/idlwebapp-frontend
-
 jobs:
   build-backend:
     runs-on: ubuntu-latest
@@ -17,14 +14,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
@@ -33,7 +28,6 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:latest
             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-
   build-frontend:
     runs-on: ubuntu-latest
     permissions:
@@ -41,14 +35,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
@@ -57,3 +49,18 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cloudflared
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+
+      - name: Deploy via tunnel
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
+          chmod 600 key
+          ./cloudflared access ssh-gen --hostname ssh.vandermerwe.uk
+          ssh -o StrictHostKeyChecking=no -o ProxyCommand="./cloudflared access ssh --hostname ssh.vandermerwe.uk" -i key root@ssh.vandermerwe.uk "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
