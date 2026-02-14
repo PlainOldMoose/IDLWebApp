@@ -53,13 +53,14 @@ jobs:
     needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/idlwebapp
-            docker compose pull
-            docker compose up -d
+      - name: Install cloudflared
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+
+      - name: Deploy via tunnel
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
+          chmod 600 key
+          ./cloudflared access ssh-gen --hostname ssh.vandermerwe.uk
+          ssh -o StrictHostKeyChecking=no -o ProxyCommand="./cloudflared access ssh --hostname ssh.vandermerwe.uk" -i key root@ssh.vandermerwe.uk "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
