@@ -84,7 +84,7 @@ export default function SeasonDetail() {
                         {season.teams.map((team) => (
                             <div key={team.teamId}
                                  className="flex flex-col justify-between bg-surface-a20 rounded-2xl p-8 mt-4">
-                                <p className="font-extrabold text-xl mb-2">{team.teamName}</p>
+                                <p className="font-extrabold text-xl mb-2">{team.name}</p>
                                 <div>
                                     {team.members.map(member => (
                                         <p key={member.steamId}
