@@ -31,7 +31,7 @@ services:
       - "8080:8080"
 
   frontend:
-    build: ./frontend
+    build: ./frontend-tailwind
     ports:
       - "80:80"
     depends_on:

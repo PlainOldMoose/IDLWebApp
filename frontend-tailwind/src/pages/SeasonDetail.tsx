@@ -6,6 +6,7 @@ import {
     useSeasonSignup,
     useSeasonSignups
 } from "../services/Queries.ts";
+import {AUTH_URL} from "../services/Api.ts";
 import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 
 
@@ -23,7 +24,7 @@ export default function SeasonDetail() {
         if (user) {
             signup.mutate(false);
         } else {
-            globalThis.location.href = `http://localhost:8080/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
+            globalThis.location.href = `${AUTH_URL}/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
         }
     };
 

@@ -1,5 +1,6 @@
 import {NavLink, useNavigate} from "react-router-dom";
 import {useCurrentUser} from "../services/Queries.ts";
+import {AUTH_URL} from "../services/Api.ts";
 
 export default function Navbar() {
     const {data: user} = useCurrentUser();
@@ -19,7 +20,7 @@ export default function Navbar() {
                     onClick={() => navigate(`/players/${user.steamId}`)}>{user.username || user.steamId}</button>
                 ) : (
                     <button
-                        onClick={() => window.location.href = 'http://localhost:8080/auth/login'}
+                        onClick={() => window.location.href = `${AUTH_URL}/login`}
                         className="nav-link"
                     >
                         Login with Steam
