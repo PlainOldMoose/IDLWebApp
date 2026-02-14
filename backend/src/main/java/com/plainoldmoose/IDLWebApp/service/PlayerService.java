@@ -25,9 +25,8 @@ public class PlayerService {
     private final PlayerRepository playerRepository;
 
     public PlayerSummaryResponse createPlayer(CreatePlayerRequest request) {
-        // Check for duplications before creating
-        validateSteamIdUnique(request.username());
-        validateUsernameUnique(request.steamId());
+        validateSteamIdUnique(request.steamId());
+        validateUsernameUnique(request.username());
 
         // Copy request to entity and save to repo
         Player player = new Player();
