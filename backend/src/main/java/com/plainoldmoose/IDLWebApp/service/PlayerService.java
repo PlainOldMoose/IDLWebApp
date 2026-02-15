@@ -7,6 +7,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
 import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
+import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.EloSnapshot;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
@@ -102,17 +103,22 @@ public class PlayerService {
                 .sorted(Comparator.comparing(EloHistory::getTimestamp))
                 .toList();
 
-        // Calculate wins/losses from EloHistory
-        int wins = (int) eloHistoryList.stream()
-                .filter(history -> history.getReason() == EloChangeReason.MATCH_WIN)
-                .count();
+        List<MatchParticipant> matchParticipations = player.getMatchParticipations();
 
-        int losses = (int) eloHistoryList.stream()
-                .filter(history -> history.getReason() == EloChangeReason.MATCH_LOSS)
-                .count();
+        int wins = 0;
+        int losses = 0;
+        int matchesPlayed = 0;
 
-        int matchesPlayed = wins + losses;
-        double winrate = matchesPlayed > 0 ? (double) wins / matchesPlayed * 100 : 0.0;
+        for (MatchParticipant mp : matchParticipations) {
+            if (mp.getMatch().getMatchWinner() == mp.getSide()) {
+                wins++;
+            } else {
+                losses++;
+            }
+            matchesPlayed++;
+        }
+
+        double winrate = matchesPlayed > 0 ? Math.round((double) wins / matchesPlayed * 10000) / 100.0 : 0.0;
 
         List<EloSnapshot> eloHistory = player.getEloHistory()
                 .stream()
