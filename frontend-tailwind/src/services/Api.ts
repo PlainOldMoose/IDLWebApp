@@ -1,5 +1,5 @@
 import axios from "axios";
-import type {PlayerSummary} from "../types/Player.ts";
+import type {PlayerDetail, PlayerSummary} from "../types/Player.ts";
 import type {Season} from "../types/Season.ts";
 import type {MatchSummary} from "../types/Match.ts";
 import type {SteamUser} from "../types/SteamUser.ts";
@@ -12,6 +12,11 @@ const axiosInstance = axios.create({baseURL: BASE_URL, withCredentials: true});
 
 export const getAllPlayers = async (): Promise<PlayerSummary[]> => {
     const response = await axiosInstance.get<PlayerSummary[]>("players");
+    return response.data;
+}
+
+export const getPlayer = async (steamId: string): Promise<PlayerDetail> => {
+    const response = await axiosInstance.get<PlayerDetail>(`players/${steamId}`);
     return response.data;
 }
 

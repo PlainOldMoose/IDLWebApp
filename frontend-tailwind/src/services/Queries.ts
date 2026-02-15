@@ -1,5 +1,6 @@
 import {
-    getAllMatches, getAllPlayers, getAllSeasons, getCurrentUser, getSeasonDetail, getSeasonMatches, getSeasonSignups,
+    getAllMatches, getAllPlayers, getAllSeasons, getCurrentUser,
+    getPlayer, getSeasonDetail, getSeasonMatches, getSeasonSignups,
     postSeasonSignup
 } from "./Api.ts";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
@@ -9,6 +10,14 @@ export function usePlayers() {
         queryKey: ["players"],
         queryFn: getAllPlayers,
     });
+}
+
+export function usePlayer(steamId: string | undefined) {
+    return useQuery({
+        queryKey: ["player", steamId],
+        queryFn: () => getPlayer(steamId!),
+        enabled: !!steamId
+    })
 }
 
 export function useSeasons() {
@@ -64,5 +73,5 @@ export function useSeasonMatches(seasonId: string | undefined, enabled: boolean)
         queryFn: () => getSeasonMatches(seasonId!),
         enabled: enabled && !!seasonId
     });
-
 }
+
