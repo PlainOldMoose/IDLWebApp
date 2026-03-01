@@ -22,7 +22,7 @@ Thanks for your interest in contributing! Please read this before opening a PR.
 ```bash
 git clone https://github.com/YOUR_USERNAME/IDLWebApp.git
 ```
-2. **Copy the example env file and fill credentials**
+2. **(Optional) Copy the example env file and fill credentials**
 ```bash
 cp .env.example .env
 ```
