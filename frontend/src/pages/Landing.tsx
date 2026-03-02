@@ -1,62 +1,25 @@
-import { useUpcomingMatches, useActiveSeason } from "../services/Queries";
-import UpcomingMatchCard from "../components/landing/UpcomingMatchCard";
-import CurrentSeasonCard from "../components/landing/CurrentSeasonCard";
-import SeasonStandingsCard from "../components/landing/SeasonStandingsCard";
+import InfoCard from "../components/InfoCard.tsx";
 
 export default function Landing() {
-  const { data: upcomingMatches, isLoading: matchesLoading } =
-    useUpcomingMatches(5);
-  const { data: activeSeason, isLoading: seasonLoading } = useActiveSeason();
+    const what_body = "This is a (non-vibecoded) web application make by Moose. It tracks and stores IDL data like " +
+        "seasons and matches, and formats them into a more readable format.";
+    const why_body = "The aim of this project is to replace the back-end currently used by the admins, thus ending Sabata's years of hard work manually entering data into a spreadsheets. " +
+        "In the future it also seeks to provide features and tools to players of IDL, such as an in-house balancer and our very own doodle.";
+    const how_body = "This project is made 100% by hand, using Java Springboot, React/Tailwind, and a PostgreSQL database. The project is open source, check out the source code and how to contribute";
 
-  return (
-    <div className="container py-4">
-      <div className="landing-hero text-center mb-5">
-        <h1 className="landing-title">IDL In-House League</h1>
-        <p className="landing-tagline">The I in IDL stands for IDL</p>
-      </div>
-
-      <div className="row">
-        <div className="col-lg-8">
-          {seasonLoading ? (
-            <div className="glass-panel p-4 mb-4">
-              <p className="text-secondary mb-0">Loading season data...</p>
+    return (
+        <div>
+            <h1 className="text-9xl font-extrabold my-10">IDL Web Manager</h1>
+            <div className="grid grid-cols-3 gap-4">
+                <InfoCard title={"What?"} body={what_body}/>
+                <InfoCard title={"Why?"} body={why_body}/>
+                <InfoCard title={"How?"} body={
+                    <>
+                        {how_body + " "}
+                        {<button className="font-extrabold underline hover:cursor-pointer" onClick={() => window.open(`https://github.com/PlainOldMoose/IDLWebApp`, "_blank")}>here </button>}
+                    </>
+                }/>
             </div>
-          ) : activeSeason ? (
-            <>
-              <div className="glass-panel p-4 mb-4">
-                <CurrentSeasonCard season={activeSeason} />
-              </div>
-              <div className="glass-panel p-4">
-                <SeasonStandingsCard teams={activeSeason.teams} />
-              </div>
-            </>
-          ) : (
-            <div className="glass-panel p-4 mb-4">
-              <h3 className="text-primary mb-3">No Active Season</h3>
-              <p className="text-secondary mb-0">
-                There is no active season at the moment. Check back soon!
-              </p>
-            </div>
-          )}
         </div>
-
-        <div className="col-lg-4">
-          <div className="glass-panel p-4">
-            <h4 className="upcoming-matches-title mb-4">Upcoming Matches</h4>
-            {matchesLoading ? (
-              <p className="text-secondary">Loading matches...</p>
-            ) : upcomingMatches && upcomingMatches.length > 0 ? (
-              <div className="upcoming-matches-list">
-                {upcomingMatches.map((match) => (
-                  <UpcomingMatchCard key={match.matchId} match={match} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-secondary">No upcoming matches scheduled</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
