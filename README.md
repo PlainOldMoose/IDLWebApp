@@ -8,12 +8,12 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 
 ## Features
 
-- **Season Management** — Create and manage league seasons with registration, active play, and completion phases
-- **Team Organisation** — Assign players to teams with captains, track win/loss records and average ELO
-- **Match Tracking** — Record match results for both tournament and in-house games, with Radiant/Dire side tracking
-- **ELO Rating System** — Automatic ELO calculations with full history tracking per player
-- **Steam Authentication** — Players log in via Steam OpenID, linking their Steam identity to their league profile
-- **Match Scheduling** — Schedule upcoming matches and display them to the league
+- **Season Management** - Create and manage league seasons with registration, active play, and completion phases
+- **Team Organisation** - Assign players to teams with captains, track win/loss records and average ELO
+- **Match Tracking** - Record match results for both tournament and in-house games, with Radiant/Dire side tracking
+- **ELO Rating System** - Automatic ELO calculations with full history tracking per player
+- **Steam Authentication** - Players log in via Steam OpenID, linking their Steam identity to their league profile
+- **Match Scheduling** - Schedule upcoming matches and display them to the league
 
 ## Contributing
 
