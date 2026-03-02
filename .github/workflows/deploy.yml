@@ -44,7 +44,7 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend-tailwind
+          context: ./frontend
           push: true
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
