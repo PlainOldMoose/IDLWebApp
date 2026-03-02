@@ -1,4 +1,4 @@
-# Contributing to IDLWebApp
+# Contributing to the IDL Web Application
 
 Thanks for your interest in contributing! Please read this before opening a PR.
 
@@ -43,3 +43,30 @@ npm run dev
 ```
 
 The application should be running at `http://localhost:5173`
+
+## Making changes
+
+### Branch naming
+Always branch off of `main` using this format:
+
+| Type | Format | Example |
+|------|--------|---------|
+| Feature | `feat/short-description` | `feat/match-history-page` |
+| Bug fix | `fix/short-description` | `fix/auth-redirect-loop` |
+| Chore | `chore/short-description` | `chore/update-dependencies` |
+
+### Code Style
+- **Backend:** Follow existing Spring Boot patterns — service/repository/controller separation
+- Keep components small and focused — one responsibility per component/service
+- No commented-out code in PRs
+
+---
+
+## Reporting Bugs
+
+Open an issue using the **Bug Report** template. Include:
+- Steps to reproduce
+- Expected vs actual behaviour
+- Screenshots if relevant
+
+---
