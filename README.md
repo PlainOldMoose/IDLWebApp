@@ -15,6 +15,10 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 - **Steam Authentication** — Players log in via Steam OpenID, linking their Steam identity to their league profile
 - **Match Scheduling** — Schedule upcoming matches and display them to the league
 
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before opening a PR.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -24,53 +28,6 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 | **Database** | PostgreSQL 16 |
 | **Auth** | Steam OpenID |
 | **DevOps** | Docker Compose, GitHub Actions, GitHub Container Registry |
-
-## Getting Started
-
-### Using Docker (Recommended)
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/PlainOldMoose/IDLWebApp.git
-   cd IDLWebApp
-   ```
-
-2. Start all services:
-   ```bash
-   docker-compose up
-   ```
-
-4. Access the application:
-   - **Frontend:** http://localhost
-   - **Backend API:** http://localhost:8080/api
-
-### Local Development
-
-#### Prerequisites
-
-- Java 17
-- Node.js 18+
-- PostgreSQL 16
-- Maven
-
-#### Backend
-
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-The API will be available at http://localhost:8080.
-
-#### Frontend
-
-```bash
-cd frontend-tailwind
-npm install
-npm run dev
-```
-
-The dev server will be available at http://localhost:5173.
 
 ## Project Structure
 
@@ -135,57 +92,3 @@ IDLWebApp/
 | `GET` | `/auth/login` | Initiate Steam OpenID login |
 | `GET` | `/auth/callback` | Steam login callback |
 | `GET` | `/auth/me` | Get current authenticated user |
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins | `http://localhost:5173` |
-| `SPRING_DATASOURCE_URL` | PostgreSQL connection URL | — |
-| `SPRING_DATASOURCE_USERNAME` | Database username | — |
-| `SPRING_DATASOURCE_PASSWORD` | Database password | — |
-
-### Database
-
-- Development uses `create-drop` DDL strategy — the schema is recreated on every restart
-- Sample data loads automatically from `backend/src/main/resources/data.sql`
-
-## Development Commands
-
-### Backend
-
-```bash
-cd backend
-mvn spring-boot:run       # Run locally
-mvn clean package         # Build JAR
-mvn test                  # Run tests
-```
-
-### Frontend
-
-```bash
-cd frontend-tailwind
-npm install               # Install dependencies
-npm run dev               # Start dev server
-npm run build             # Production build
-npm run lint              # Run ESLint
-```
-
-### Docker
-
-```bash
-docker-compose up              # Start all services
-docker-compose up -d           # Start in background
-docker-compose up --build      # Rebuild and start
-docker-compose down            # Stop and remove containers
-```
-
-## Contributing
-
-Coming Soon
-
-## License
-
-MIT
