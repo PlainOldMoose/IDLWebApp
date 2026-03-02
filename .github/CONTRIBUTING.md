@@ -56,8 +56,8 @@ Always branch off of `main` using this format:
 | Chore | `chore/short-description` | `chore/update-dependencies` |
 
 ### Code Style
-- **Backend:** Follow existing Spring Boot patterns — service/repository/controller separation
-- Keep components small and focused — one responsibility per component/service
+- **Backend:** Follow existing Spring Boot patterns - service/repository/controller separation
+- Keep components small and focused - one responsibility per component/service
 - No commented-out code in PRs
 
 ---
