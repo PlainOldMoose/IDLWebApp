@@ -7,8 +7,6 @@ Thanks for your interest in contributing! Please read this before opening a PR.
 - **Backend:** Java 17, Springboot, PostgreSQL
 - **Frontend:** React, TailwindCSS, Axios, TanStack Query
 
----
-
 ## Getting Started
 
 ### Prerequisites
@@ -60,7 +58,6 @@ Always branch off of `main` using this format:
 - Keep components small and focused - one responsibility per component/service
 - No commented-out code in PRs
 
----
 
 ## Reporting Bugs
 
@@ -68,5 +65,3 @@ Open an issue using the **Bug Report** template. Include:
 - Steps to reproduce
 - Expected vs actual behaviour
 - Screenshots if relevant
-
----
