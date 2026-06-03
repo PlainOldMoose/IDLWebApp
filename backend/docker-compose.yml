@@ -5,6 +5,7 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
+      POSTGRES_DB: idlwebapp
       PGDATA: /data/postgres
     volumes:
       - db:/data/postgres
