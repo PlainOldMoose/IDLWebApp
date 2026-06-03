@@ -8,7 +8,7 @@ export default function Landing() {
     const how_body = "This project is made 100% by hand, using Java Springboot, React/Tailwind, and a PostgreSQL database. The project is open source, check out the source code and how to contribute";
 
     return (
-        <div>
+        <div className="my-10">
             <h1 className="text-9xl font-extrabold my-10">IDL Web Manager</h1>
             <div className="grid grid-cols-3 gap-4">
                 <InfoCard title={"What?"} body={what_body}/>
