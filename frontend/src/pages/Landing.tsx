@@ -9,7 +9,7 @@ export default function Landing() {
 
     return (
         <div className="my-10">
-            <h1 className="text-9xl font-extrabold my-10">IDL Web Manager</h1>
+            <h1 className="text-8xl font-extrabold my-10">IDL Web Manager</h1>
             <div className="grid grid-cols-3 gap-4">
                 <InfoCard title={"What?"} body={what_body}/>
                 <InfoCard title={"Why?"} body={why_body}/>
