@@ -8,6 +8,7 @@ import {
 } from "../services/Queries.ts";
 import {AUTH_URL} from "../services/Api.ts";
 import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
+import { statusBadgeStyles } from "../util/statusStyles.ts";
 
 
 export default function SeasonDetail() {
@@ -52,7 +53,7 @@ export default function SeasonDetail() {
             <div className="flex justify-between bg-surface-a20 rounded-2xl p-8 mt-4">
                 <p>{startDate} - {endDate}</p>
                 {season.winnerTeamName && <p>Winner: {season.winnerTeamName}</p>}
-                <p>Status: {season.status}</p>
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full w-fit ${statusBadgeStyles[season.status]}`}>{season.status}</span>
             </div>
 
             {/*Signups*/}

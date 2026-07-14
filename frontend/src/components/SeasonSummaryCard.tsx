@@ -1,4 +1,5 @@
 import type {Season} from "../types/Season.ts";
+import { statusBadgeStyles } from "../util/statusStyles.ts";
 
 interface SeasonSummaryCardProps {
     season: Season;
@@ -6,12 +7,6 @@ interface SeasonSummaryCardProps {
 }
 
 export default function SeasonSummaryCard({season, onClick}: SeasonSummaryCardProps) {
-    const statusBadgeStyles: Record<Season["status"], string> = {
-        REGISTRATION: "text-surface-a10 bg-primary-a20",
-        ACTIVE: "text-surface-a10 bg-warning",
-        COMPLETED: "text-light-a10 bg-danger",
-    };
-
     return (
         <div className={`season-summary-card ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
             <p className="font-bold">{season.name}</p>
