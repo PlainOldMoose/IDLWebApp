@@ -27,11 +27,6 @@ public class SeasonController {
         return seasonService.getAllSeasons();
     }
 
-//    @GetMapping("/active")
-//    public SeasonDetailResponse getActiveSeason() {
-//        return seasonService.getActiveSeason();
-//    }
-
     @GetMapping("/{id}")
     public SeasonDetailResponse getSeasonById(@PathVariable UUID id) {
         return seasonService.getSeasonById(id);
