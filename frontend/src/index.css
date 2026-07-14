@@ -56,3 +56,7 @@ body {
 .season-summary-card:hover {
     @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
 }
+
+.basic-button {
+    @apply text-light-a20 hover:text-light-a10 hover:bg-surface-a30 bg-surface-a20 rounded-2xl
+}
