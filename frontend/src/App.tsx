@@ -12,7 +12,6 @@ function App() {
 
     return (
         <BrowserRouter>
-
             <div className="text-light-a10 font-inter">
                 <Navbar/>
                 <main className="max-w-5xl mx-auto">
