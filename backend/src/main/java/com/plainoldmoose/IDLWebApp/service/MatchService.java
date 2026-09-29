@@ -113,9 +113,9 @@ public class MatchService {
                                 .getMatchId()))
                 .findFirst()
                 .orElse(null);
-        int eloChange = matchEloHistory != null ? matchEloHistory.getEloChange() : 0;
+        double eloChange = matchEloHistory != null ? matchEloHistory.getEloChange() : 0;
 
-        int eloAtMatchTime = matchEloHistory != null ? matchEloHistory.getElo() - matchEloHistory.getEloChange() : player.getElo();
+        double eloAtMatchTime = matchEloHistory != null ? matchEloHistory.getElo() - matchEloHistory.getEloChange() : player.getElo();
 
         return new ParticipantResponse(
                 player.getSteamId(),

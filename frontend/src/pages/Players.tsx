@@ -32,7 +32,7 @@ export default function Players() {
               >
                 <td className="text-left py-2 px-4">{index + 1}</td>
                 <td className="text-left py-2 px-4">{player.username}</td>
-                <td className="text-left py-2 px-4 text-right">{player.elo}</td>
+                <td className="text-left py-2 px-4 text-right">{player.elo.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>

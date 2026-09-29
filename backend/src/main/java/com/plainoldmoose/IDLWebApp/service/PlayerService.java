@@ -138,13 +138,13 @@ public class PlayerService {
                     boolean won = mp.getSide() == match.getMatchWinner();
 
                     // Find eloChange for this match from eloHistory
-                    int eloChange = eloHistoryList.stream()
+                    double eloChange = eloHistoryList.stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
                                     .getMatchId()
                                     .equals(match.getMatchId()))
                             .findFirst()
                             .map(EloHistory::getEloChange)
-                            .orElse(0);
+                            .orElse(0.0);
                     return new RecentMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),
                             won,

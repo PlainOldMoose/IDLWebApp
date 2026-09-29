@@ -13,7 +13,7 @@ export default function PlayerMatchCard({match}: PlayerMatchCardProps) {
         <div className="match-summary-card hover:cursor-pointer" onClick={() => handleRedirect(match.matchId)}>
             <p>{match.matchId}</p>
             <p>{match.won ? "Win" : "Loss"}</p>
-            <p>{match.eloChange}</p>
+            <p>{match.eloChange.toFixed(1)}</p>
             <p>{match.timePlayed}</p>
             <p>{match.seasonName ?? "In-house"}</p>
         </div>

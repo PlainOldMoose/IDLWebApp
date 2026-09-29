@@ -6,7 +6,7 @@ public record RecentMatchResponse(
         Long matchId,
         LocalDateTime timePlayed,
         boolean won,
-        int eloChange,
+        double eloChange,
         String seasonName
 ) {
 }

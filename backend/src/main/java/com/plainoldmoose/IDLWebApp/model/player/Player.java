@@ -24,7 +24,7 @@ public class Player {
     private String username;
 
     @Column(nullable = false)
-    private int elo;
+    private double elo;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

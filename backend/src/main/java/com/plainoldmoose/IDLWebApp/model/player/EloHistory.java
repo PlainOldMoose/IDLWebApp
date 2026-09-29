@@ -26,10 +26,10 @@ public class EloHistory {
 
     // Elo after change
     @Column(nullable = false)
-    private int elo;
+    private double elo;
 
     @Column(nullable = false)
-    private int eloChange;
+    private double eloChange;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;

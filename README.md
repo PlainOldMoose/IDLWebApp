@@ -41,7 +41,8 @@ IDLWebApp/
 │       ├── model/                    # JPA entities and enums
 │       ├── dto/                      # Data transfer objects
 │       └── config/                   # Security and app configuration
-├── frontend-tailwind/                # React SPA (active frontend)
+│   └── scripts/reset-db.sh           # Reset a DB to the seed snapshot
+├── frontend/                         # React SPA
 │   └── src/
 │       ├── components/               # Reusable UI components
 │       ├── pages/                    # Route-level page components
@@ -50,6 +51,37 @@ IDLWebApp/
 ├── docker-compose.yml                # Container orchestration
 └── .github/workflows/deploy.yml      # CI/CD pipeline
 ```
+
+## Local Development
+
+Requires Docker (with Compose), Java 17 and Node.js.
+
+```bash
+# 1. Database (Postgres on port 5332, data kept in a Docker volume)
+cd backend
+docker compose up -d
+
+# 2. Backend on http://localhost:8080 (creates/updates tables on startup)
+./mvnw spring-boot:run
+
+# 3. Frontend on http://localhost:5173
+cd ../frontend
+npm install
+npm run dev
+```
+
+### Seed data
+
+The database is never wiped or seeded on startup. Data persists until you reset it with:
+
+```bash
+backend/scripts/reset-db.sh          # dev DB
+IDL_PROD_SSH=<host> backend/scripts/reset-db.sh prod   # prod DB, asks for confirmation
+```
+
+This empties every table and reloads `backend/src/main/resources/data.sql` in a single transaction. The backend must have started once against the DB so the tables exist.
+
+Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won't change a column's type, rename or drop anything. After that kind of entity change, recreate the dev DB with `docker compose down -v && docker compose up -d` in `backend/`, start the backend, then run the reset script.
 
 ## API Reference
 

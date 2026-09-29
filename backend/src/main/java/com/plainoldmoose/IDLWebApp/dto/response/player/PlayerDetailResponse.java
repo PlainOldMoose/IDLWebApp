@@ -7,7 +7,7 @@ import java.util.List;
 public record PlayerDetailResponse(
         String steamId,
         String username,
-        int elo,
+        double elo,
         int matchesPlayed,
         int wins,
         int losses,
