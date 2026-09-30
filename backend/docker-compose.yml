@@ -10,7 +10,8 @@ services:
     volumes:
       - db:/data/postgres
     ports:
-      - "5332:5432"
+      # This machine only, not the LAN
+      - "127.0.0.1:5332:5432"
     restart: unless-stopped
 
 volumes:

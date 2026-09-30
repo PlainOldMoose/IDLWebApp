@@ -1,5 +1,5 @@
 import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router-dom";
-import {useCurrentUser} from "./services/Queries.ts";
+import {useCurrentUser, useSignOut} from "./services/Queries.ts";
 import Landing from "./pages/Landing.tsx";
 import Seasons from "./pages/Seasons.tsx";
 import Players from "./pages/Players.tsx";
@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound.tsx";
 
 function App() {
     const {data: user} = useCurrentUser();
+    const signOut = useSignOut();
 
     return (
         <BrowserRouter>
@@ -29,11 +30,14 @@ function App() {
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
                     </div>
                     <div className="ml-auto flex h-12 shrink-0 items-center">
-                        {user ? (
+                        {user ? (<>
                             <NavLink to={`/players/${user.steamId}`} className="nav-link">
                                 {user.username || user.steamId}
                             </NavLink>
-                        ) : (
+                            <button type="button" onClick={() => signOut.mutate()} className="nav-link cursor-pointer">
+                                Sign out
+                            </button>
+                        </>) : (
                             <a href="/auth/login" className="primary-button px-3 py-1 text-sm">
                                 Sign in with Steam
                             </a>

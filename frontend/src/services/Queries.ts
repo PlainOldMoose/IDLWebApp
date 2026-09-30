@@ -3,9 +3,13 @@ import type {MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, Sea
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-    const response = await fetch(path, init);
+    // Spring's CSRF check wants the XSRF-TOKEN cookie echoed back as a header on writes
+    const headers = new Headers(init?.headers);
+    const xsrfToken = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1];
+    if (xsrfToken) headers.set("X-XSRF-TOKEN", decodeURIComponent(xsrfToken));
+
+    const response = await fetch(path, {...init, headers});
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
-    // 204 No Content has no body to parse
     return response.status === 204 ? undefined as T : response.json();
 };
 
@@ -76,6 +80,16 @@ export function useCurrentUser() {
         queryKey: ["currentUser"],
         queryFn: () => request<SteamUser>("/auth/me").catch(() => null),
         retry: false,
+    });
+}
+
+export function useSignOut() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>("/auth/logout", {method: "POST"}),
+        onSuccess: () => {
+            queryClient.setQueryData(["currentUser"], null);
+        }
     });
 }
 
