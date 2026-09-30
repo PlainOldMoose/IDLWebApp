@@ -9,14 +9,14 @@ import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
-import com.plainoldmoose.IDLWebApp.model.player.EloSnapshot;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -32,8 +32,12 @@ public class PlayerService {
 
     @Transactional
     public PlayerSummaryResponse createPlayer(CreatePlayerRequest request) {
-        validateSteamIdUnique(request.steamId());
-        validateUsernameUnique(request.username());
+        if (playerRepository.existsById(request.steamId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SteamID already exists");
+        }
+        if (playerRepository.existsByUsername(request.username())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
+        }
 
         // Copy request to entity and save to repo
         Player player = new Player();
@@ -55,20 +59,18 @@ public class PlayerService {
         return mapToSummaryResponse(saved);
     }
 
+    // Highest ELO first, so list position is rank
     public List<PlayerSummaryResponse> getAllPlayersSummary() {
-        return playerRepository.findAll()
+        return playerRepository.findAllByOrderByEloDesc()
                 .stream()
                 .map(this::mapToSummaryResponse)
                 .toList();
     }
 
     public PlayerDetailResponse findById(String steamId) {
-        Player player = findPlayerOrThrow(steamId);
-        return mapToDetailResponse(player);
-    }
-
-    public boolean existsBySteamId(String steamId) {
-        return playerRepository.existsById(steamId);
+        return playerRepository.findById(steamId)
+                .map(this::mapToDetailResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found with SteamID: " + steamId));
     }
 
     public Optional<SteamUserResponse> findSteamUser(String steamId) {
@@ -76,58 +78,21 @@ public class PlayerService {
                 .map(player -> new SteamUserResponse(player.getSteamId(), player.getUsername()));
     }
 
-    private Player findPlayerOrThrow(String steamId) {
-        return playerRepository.findById(steamId)
-                .orElseThrow(() -> new EntityNotFoundException("Player not found with SteamID: " + steamId));
-    }
-
-    private void validateUsernameUnique(String username) {
-        if (playerRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("Username already exists");
-        }
-    }
-
-    private void validateSteamIdUnique(String steamId) {
-        if (playerRepository.existsById(steamId)) {
-            throw new IllegalArgumentException("SteamID already exists");
-        }
-    }
-
     private PlayerSummaryResponse mapToSummaryResponse(Player player) {
         return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
     }
 
     private PlayerDetailResponse mapToDetailResponse(Player player) {
-        List<EloHistory> eloHistoryList = player.getEloHistory()
-                .stream()
-                .sorted(Comparator.comparing(EloHistory::getTimestamp))
-                .toList();
-
         List<MatchParticipant> matchParticipations = player.getMatchParticipations();
 
-        int wins = 0;
-        int losses = 0;
-        int matchesPlayed = 0;
-
-        for (MatchParticipant mp : matchParticipations) {
-            if (mp.getMatch().getMatchWinner() == mp.getSide()) {
-                wins++;
-            } else {
-                losses++;
-            }
-            matchesPlayed++;
-        }
-
-        double winrate = matchesPlayed > 0 ? Math.round((double) wins / matchesPlayed * 10000) / 100.0 : 0.0;
-
-        List<EloSnapshot> eloHistory = player.getEloHistory()
-                .stream()
-                .map(eh -> new EloSnapshot(eh.getMatch() != null ? eh.getMatch()
-                        .getMatchId() : null, eh.getElo()))
-                .toList();
+        int wins = (int) matchParticipations.stream()
+                .filter(mp -> mp.getMatch().getMatchWinner() == mp.getSide())
+                .count();
+        int losses = matchParticipations.size() - wins;
+        double winrate = matchParticipations.isEmpty() ? 0.0 : Math.round((double) wins / matchParticipations.size() * 10000) / 100.0;
 
         // Build last 20 matches
-        List<RecentMatchResponse> recentMatches = player.getMatchParticipations()
+        List<RecentMatchResponse> recentMatches = matchParticipations
                 .stream()
                 .filter(mp -> mp.getMatch()
                         .getPlayedTime() != null)
@@ -138,7 +103,7 @@ public class PlayerService {
                     boolean won = mp.getSide() == match.getMatchWinner();
 
                     // Find eloChange for this match from eloHistory; null if the match has no ELO record
-                    Double eloChange = eloHistoryList.stream()
+                    Double eloChange = player.getEloHistory().stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
                                     .getMatchId()
                                     .equals(match.getMatchId()))
@@ -159,12 +124,10 @@ public class PlayerService {
                 player.getSteamId(),
                 player.getUsername(),
                 player.getElo(),
-                matchesPlayed,
                 wins,
                 losses,
                 winrate,
-                recentMatches,
-                eloHistory
+                recentMatches
         );
     }
 }
