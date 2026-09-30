@@ -1,28 +1,26 @@
-import {Link, useNavigate} from "react-router-dom";
+import {Link} from "react-router-dom";
 import EloLadder from "../components/EloLadder.tsx";
 import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import {useCurrentUser, useMatches, usePlayers, useSeasons} from "../services/Queries.ts";
 import {formatDateRange} from "../util/format.ts";
-import {newestFirst} from "../util/sort.ts";
 import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
-import type {Season} from "../types/Season.ts";
+import type {Season} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 5;
 
-// The season people most likely want: one taking sign-ups, else one in progress, else the latest
+// The season people most likely want: one taking sign-ups, else one in progress, else the latest (API sends newest first)
 const pickCurrentSeason = (seasons: Season[]): Season | undefined =>
     seasons.find(s => s.status === "REGISTRATION")
     ?? seasons.find(s => s.status === "ACTIVE")
-    ?? [...seasons].sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+    ?? seasons[0];
 
 export default function Landing() {
     const {data: players} = usePlayers();
     const {data: matches} = useMatches();
     const {data: seasons} = useSeasons();
     const {data: user} = useCurrentUser();
-    const navigate = useNavigate();
 
     const currentSeason = seasons && pickCurrentSeason(seasons);
 
@@ -49,18 +47,13 @@ export default function Landing() {
                 <div className="min-w-0 space-y-4">
                     {players && players.length > 0 && (
                         <Panel title="Ladder" meta={<Link to="/players" className="hover:text-bone">{players.length} players</Link>}>
-                            <EloLadder
-                                players={players}
-                                highlightSteamId={user?.steamId}
-                                highlightLabel="You"
-                                onSelect={(player) => navigate(`/players/${player.steamId}`)}
-                            />
+                            <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
                         </Panel>
                     )}
                     {matches && matches.length > 0 && (
                         <Panel title="Recent matches" meta={<Link to="/matches" className="hover:text-bone">See all {matches.length}</Link>}
                                padded={false}>
-                            {newestFirst(matches).slice(0, RECENT_MATCH_COUNT).map(match => (
+                            {matches.slice(0, RECENT_MATCH_COUNT).map(match => (
                                 <MatchSummaryCard key={match.matchId} match={match}/>
                             ))}
                         </Panel>
