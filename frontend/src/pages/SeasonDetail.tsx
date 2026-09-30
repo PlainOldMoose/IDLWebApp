@@ -1,3 +1,4 @@
+import type {FormEvent} from "react";
 import {Link, useParams} from "react-router-dom";
 import {
     useCurrentUser,
@@ -24,12 +25,17 @@ export default function SeasonDetail() {
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
 
-    const handleSignup = () => {
-        if (user) {
-            signup.mutate(false);
-        } else {
-            globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
-        }
+    const handleSignup = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        signup.mutate({
+            rolePreference: String(form.get("rolePreference")),
+            willingToCaptain: form.has("willingToCaptain"),
+        });
+    };
+
+    const signIn = () => {
+        globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
     };
 
     // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
@@ -59,10 +65,37 @@ export default function SeasonDetail() {
             aside={
                 season.status === "REGISTRATION" ? (
                     <div className="sm:text-right">
-                        <button className="primary-button" onClick={handleSignup}
-                                disabled={alreadySignedUp || signup.isPending}>
-                            {user ? (alreadySignedUp ? "Signed up" : "Sign up") : "Sign in with Steam"}
-                        </button>
+                        {user && !alreadySignedUp ? (
+                            <form onSubmit={handleSignup} className="grid gap-2 sm:justify-items-end">
+                                <label htmlFor="role-preference" className="text-sm text-ash">Your roles, most wanted first</label>
+                                {/*Same pattern as SeasonSignupRequest on the backend*/}
+                                <input
+                                    id="role-preference"
+                                    name="rolePreference"
+                                    required
+                                    pattern="(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
+                                    title="Roles 1 to 5, each once, joined by > or /, e.g. 1 > 2 > 3/4"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    placeholder="1 > 2 > 3/4"
+                                    aria-describedby="role-hint"
+                                    className="w-52 rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent"
+                                />
+                                <p id="role-hint" className="text-sm text-ash">
+                                    1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
+                                    &gt; prefer, / equal
+                                </p>
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" name="willingToCaptain" className="accent-accent"/>
+                                    Willing to captain
+                                </label>
+                                <button className="primary-button" disabled={signup.isPending}>Sign up</button>
+                            </form>
+                        ) : (
+                            <button className="primary-button" onClick={signIn} disabled={alreadySignedUp}>
+                                {user ? "Signed up" : "Sign in with Steam"}
+                            </button>
+                        )}
                         {signup.isError && <p role="alert" className="mt-2 text-sm text-ash">Sign-up failed. Refresh and try again.</p>}
                     </div>
                 ) : season.winnerTeamName && (
@@ -83,6 +116,7 @@ export default function SeasonDetail() {
                                     <li key={s.steamId}>
                                         <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block truncate px-2 py-1.5">
                                             {s.username}
+                                            {s.rolePreference && <span className="ml-2 text-sm text-ash">{s.rolePreference}</span>}
                                             {s.willingToCaptain && <span className="ml-2 text-sm text-ash">captain</span>}
                                         </Link>
                                     </li>

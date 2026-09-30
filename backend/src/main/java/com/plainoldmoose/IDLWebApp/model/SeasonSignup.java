@@ -30,6 +30,9 @@ public class SeasonSignup {
     @JoinColumn(name = "player_id", nullable = false)
     private Player player;
 
+    // Nullable: sign-ups from before role preferences existed have none
+    private String rolePreference;
+
     @Column(nullable = false)
     private boolean willingToCaptain = false;
 

@@ -78,10 +78,10 @@ export function useSeasonSignups(seasonId: string | undefined) {
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (willingToCaptain: boolean) => request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {
+        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) => request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({willingToCaptain}),
+            body: JSON.stringify(body),
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});

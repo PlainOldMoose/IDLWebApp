@@ -24,7 +24,7 @@ public class SeasonSignupService {
     private final SeasonRepository seasonRepository;
     private final PlayerRepository playerRepository;
 
-    public SeasonSignupResponse signup(UUID seasonId, String steamId, boolean willingToCaptain) {
+    public SeasonSignupResponse signup(UUID seasonId, String steamId, String rolePreference, boolean willingToCaptain) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
 
@@ -42,6 +42,7 @@ public class SeasonSignupService {
         SeasonSignup seasonSignup = new SeasonSignup();
         seasonSignup.setSeason(season);
         seasonSignup.setPlayer(player);
+        seasonSignup.setRolePreference(rolePreference);
         seasonSignup.setWillingToCaptain(willingToCaptain);
 
         SeasonSignup saved = seasonSignupRepository.save(seasonSignup);
@@ -62,6 +63,7 @@ public class SeasonSignupService {
                         .getSteamId(),
                 signup.getPlayer()
                         .getUsername(),
+                signup.getRolePreference(),
                 signup.isWillingToCaptain(),
                 signup.getSignedUpAt()
         );

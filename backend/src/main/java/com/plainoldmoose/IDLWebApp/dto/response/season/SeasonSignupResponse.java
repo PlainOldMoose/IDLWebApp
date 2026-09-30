@@ -6,6 +6,7 @@ public record SeasonSignupResponse(
         Long id,
         String steamId,
         String username,
+        String rolePreference,
         boolean willingToCaptain,
         LocalDateTime signedUpAt
 ) {

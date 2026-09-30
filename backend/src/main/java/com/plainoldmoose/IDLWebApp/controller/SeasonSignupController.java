@@ -3,6 +3,7 @@ package com.plainoldmoose.IDLWebApp.controller;
 import com.plainoldmoose.IDLWebApp.dto.request.SeasonSignupRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSignupResponse;
 import com.plainoldmoose.IDLWebApp.service.SeasonSignupService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +22,11 @@ public class SeasonSignupController {
 
     // principal is null for anonymous requests
     @PostMapping
-    public SeasonSignupResponse signup(@PathVariable UUID seasonId, @RequestBody SeasonSignupRequest request, Principal principal) {
+    public SeasonSignupResponse signup(@PathVariable UUID seasonId, @Valid @RequestBody SeasonSignupRequest request, Principal principal) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
-        return seasonSignupService.signup(seasonId, principal.getName(), request.willingToCaptain());
+        return seasonSignupService.signup(seasonId, principal.getName(), request.rolePreference().trim(), request.willingToCaptain());
     }
 
     @GetMapping
