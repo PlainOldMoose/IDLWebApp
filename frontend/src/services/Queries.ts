@@ -1,21 +1,24 @@
-import {
-    getAllMatches, getAllPlayers, getAllSeasons, getCurrentUser,
-    getPlayer, getSeasonDetail, getSeasonMatches, getSeasonSignups,
-    postSeasonSignup
-} from "./Api.ts";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import type {MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+
+// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
+const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+    const response = await fetch(path, init);
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
+    return response.json();
+};
 
 export function usePlayers() {
     return useQuery({
         queryKey: ["players"],
-        queryFn: getAllPlayers,
+        queryFn: () => request<PlayerSummary[]>("/api/players"),
     });
 }
 
 export function usePlayer(steamId: string | undefined) {
     return useQuery({
         queryKey: ["player", steamId],
-        queryFn: () => getPlayer(steamId!),
+        queryFn: () => request<PlayerDetail>(`/api/players/${steamId}`),
         enabled: !!steamId
     })
 }
@@ -23,21 +26,22 @@ export function usePlayer(steamId: string | undefined) {
 export function useSeasons() {
     return useQuery({
         queryKey: ["seasons"],
-        queryFn: getAllSeasons,
+        queryFn: () => request<Season[]>("/api/seasons"),
     });
 }
 
 export function useMatches() {
     return useQuery({
         queryKey: ["matches"],
-        queryFn: getAllMatches,
+        queryFn: () => request<MatchSummary[]>("/api/matches"),
     });
 }
 
+// null when signed out
 export function useCurrentUser() {
     return useQuery({
         queryKey: ["currentUser"],
-        queryFn: getCurrentUser,
+        queryFn: () => request<SteamUser>("/auth/me").catch(() => null),
         retry: false,
     });
 }
@@ -45,7 +49,7 @@ export function useCurrentUser() {
 export function useSeasonDetail(seasonId: string | undefined) {
     return useQuery({
         queryKey: ["season", seasonId],
-        queryFn: () => getSeasonDetail(seasonId!),
+        queryFn: () => request<SeasonDetail>(`/api/seasons/${seasonId}`),
         enabled: !!seasonId
     });
 }
@@ -53,14 +57,18 @@ export function useSeasonDetail(seasonId: string | undefined) {
 export function useSeasonSignups(seasonId: string | undefined) {
     return useQuery({
         queryKey: ["seasonSignups", seasonId],
-        queryFn: () => getSeasonSignups(seasonId!),
+        queryFn: () => request<SeasonSignup[]>(`/api/seasons/${seasonId}/signups`),
     })
 }
 
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (willingToCaptain: boolean) => postSeasonSignup(seasonId!, willingToCaptain),
+        mutationFn: (willingToCaptain: boolean) => request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({willingToCaptain}),
+        }),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
         }
@@ -70,8 +78,7 @@ export function useSeasonSignup(seasonId: string | undefined) {
 export function useSeasonMatches(seasonId: string | undefined, enabled: boolean) {
     return useQuery({
         queryKey: ["seasonMatches", seasonId],
-        queryFn: () => getSeasonMatches(seasonId!),
+        queryFn: () => request<MatchSummary[]>(`/api/matches?seasonId=${seasonId}`),
         enabled: enabled && !!seasonId
     });
 }
-
