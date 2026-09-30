@@ -8,7 +8,9 @@ import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class SeasonService {
 
     private SeasonRepository seasonRepository;
+    private MatchRepository matchRepository;
 
     public SeasonSummaryResponse createSeason(CreateSeasonRequest request) {
         Season season = new Season();
@@ -45,6 +48,19 @@ public class SeasonService {
         return seasonRepository.findById(id)
                 .map(this::mapToDetailResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+    }
+
+    // Only seasons nothing has been played in: teams and matches carry elo history we don't want to lose
+    @Transactional
+    public void deleteSeason(UUID id) {
+        Season season = seasonRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+
+        if (!season.getTeams().isEmpty() || matchRepository.existsBySeasonId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seasons with teams or matches can't be deleted");
+        }
+
+        seasonRepository.delete(season);
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {

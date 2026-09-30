@@ -6,6 +6,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
 import com.plainoldmoose.IDLWebApp.service.SeasonService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,5 +31,11 @@ public class SeasonController {
     @GetMapping("/{id}")
     public SeasonDetailResponse getSeasonById(@PathVariable UUID id) {
         return seasonService.getSeasonById(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteSeason(@PathVariable UUID id) {
+        seasonService.deleteSeason(id);
     }
 }
