@@ -5,9 +5,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSignupResponse;
 import com.plainoldmoose.IDLWebApp.service.SeasonSignupService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.List;
@@ -20,12 +18,9 @@ public class SeasonSignupController {
 
     private final SeasonSignupService seasonSignupService;
 
-    // principal is null for anonymous requests
+    // SecurityConfig only lets signed-in players through, so principal is never null
     @PostMapping
     public SeasonSignupResponse signup(@PathVariable UUID seasonId, @Valid @RequestBody SeasonSignupRequest request, Principal principal) {
-        if (principal == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
         return seasonSignupService.signup(seasonId, principal.getName(), request.rolePreference().trim(), request.willingToCaptain());
     }
 
