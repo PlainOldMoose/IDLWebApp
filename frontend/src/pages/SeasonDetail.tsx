@@ -264,7 +264,7 @@ export default function SeasonDetail() {
                         <label className="block">
                             Type <strong>delete</strong> to confirm
                             <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
-                                   className="mt-1 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent"/>
+                                   className="mt-2 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent"/>
                         </label>
                         {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
                         <div className="flex justify-end gap-3">
