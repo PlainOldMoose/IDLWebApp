@@ -2,6 +2,37 @@
 
 A full-stack web application for managing an **in-house Dota 2 league (IDL)**. Built to replace manual spreadsheet tracking with a proper platform for seasons, teams, matches, player ELO ratings, and Steam-authenticated signups.
 
+## To do for `security-followups` (remove this section before merging)
+
+Manual steps the code changes on this branch can't do.
+
+**Before merging**
+
+- [ ] Add the `SSH_KNOWN_HOSTS` Actions secret, or deploys stop at the SSH step (prod stays as it was). On the server:
+  ```bash
+  for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
+  ```
+  Paste the output into GitHub → Settings → Secrets and variables → Actions.
+- [ ] Review the branch, commit, open the PR.
+
+**Any time**
+
+- [ ] Cloudflare → SSL/TLS → Edge Certificates → turn on **Always Use HTTPS**. Check: `curl -I http://idl.vandermerwe.uk/` returns 301.
+- [ ] Rotate the prod DB password. Changing the env var alone does nothing to an existing database, so in `/opt/idlwebapp`:
+  1. `openssl rand -hex 24`
+  2. `docker compose exec db psql -U admin -d idlwebapp -c "ALTER USER admin PASSWORD '<new>'"`
+  3. Put the new password in the prod compose for both `POSTGRES_PASSWORD` and `SPRING_DATASOURCE_PASSWORD` (or a `.env` beside it)
+  4. `docker compose up -d`
+- [ ] Prod compose: if cloudflared runs on the same machine, bind the frontend as `127.0.0.1:80:80`. Make sure the router doesn't forward port 80 (`curl -m5 http://<home IP>/` from outside should time out).
+- [ ] Recreate the dev DB so it only listens on localhost: `cd backend && docker compose up -d` (data is kept).
+- [ ] If you use the root `docker-compose.yml`, put `DB_PASSWORD=...` in a `.env` next to it; it no longer has a default.
+
+**Undecided**
+
+- Removing the fallback admin Steam ID from `application.properties`: set `ADMIN_STEAM_IDS` in the prod compose first, or you lose admin on the next deploy.
+- Unused columns `Match.status`/`scheduledTime` and `TeamMember.season`: deleting them means editing `data.sql` too, and dropping `team_member.season_id` (NOT NULL) by hand on prod.
+- `@EnableWebSecurity` on `SecurityConfig` is redundant (Spring Boot applies it), but Claude's permission check blocked removing it. Delete the annotation and its import yourself if you want it gone.
+
 ## Why This Exists
 
 Running an in-house Dota 2 league means juggling spreadsheets for player stats, match results, ELO calculations, and season standings. IDL WebApp centralises all of that into a single application where players can authenticate with Steam, sign up for seasons, and track their performance over time.
