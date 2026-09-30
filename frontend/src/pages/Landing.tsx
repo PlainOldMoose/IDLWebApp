@@ -1,25 +1,100 @@
-import InfoCard from "../components/InfoCard.tsx";
+import {Link, useNavigate} from "react-router-dom";
+import EloLadder from "../components/EloLadder.tsx";
+import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
+import Page from "../components/Page.tsx";
+import Panel from "../components/Panel.tsx";
+import {useCurrentUser, useMatches, usePlayers, useSeasons} from "../services/Queries.ts";
+import {formatDateRange} from "../util/format.ts";
+import {newestFirst} from "../util/sort.ts";
+import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
+import type {Season} from "../types/Season.ts";
+
+const RECENT_MATCH_COUNT = 5;
+
+// The season people most likely want: one taking sign-ups, else one in progress, else the latest
+const pickCurrentSeason = (seasons: Season[]): Season | undefined =>
+    seasons.find(s => s.status === "REGISTRATION")
+    ?? seasons.find(s => s.status === "ACTIVE")
+    ?? [...seasons].sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 
 export default function Landing() {
-    const what_body = "This is a (non-vibecoded) web application make by Moose. It tracks and stores IDL data like " +
+    const {data: players} = usePlayers();
+    const {data: matches} = useMatches();
+    const {data: seasons} = useSeasons();
+    const {data: user} = useCurrentUser();
+    const navigate = useNavigate();
+
+    const currentSeason = seasons && pickCurrentSeason(seasons);
+
+    const what_body = "This is a (non-vibecoded) web application made by Moose. It tracks and stores IDL data like " +
         "seasons and matches, and formats them into a more readable format.";
-    const why_body = "The aim of this project is to replace the back-end currently used by the admins, thus ending Sabata's years of hard work manually entering data into a spreadsheets. " +
+    const why_body = "The aim of this project is to replace the back-end currently used by the admins, thus ending Sabata's years of hard work manually entering data into spreadsheets. " +
         "In the future it also seeks to provide features and tools to players of IDL, such as an in-house balancer and our very own doodle.";
     const how_body = "This project is made 100% by hand, using Java Springboot, React/Tailwind, and a PostgreSQL database. The project is open source, check out the source code and how to contribute";
+    const about = [
+        {title: "What?", body: what_body},
+        {title: "Why?", body: why_body},
+        {
+            title: "How?", body: <>
+                {how_body + " "}
+                <a href="https://github.com/PlainOldMoose/IDLWebApp" target="_blank" rel="noopener noreferrer"
+                   className="font-semibold text-accent underline underline-offset-2 hover:text-bone">here</a>
+            </>
+        },
+    ];
 
     return (
-        <div className="my-10">
-            <h1 className="text-8xl font-extrabold my-10">IDL Web Manager</h1>
-            <div className="grid grid-cols-3 gap-4">
-                <InfoCard title={"What?"} body={what_body}/>
-                <InfoCard title={"Why?"} body={why_body}/>
-                <InfoCard title={"How?"} body={
-                    <>
-                        {how_body + " "}
-                        {<button className="font-extrabold underline hover:cursor-pointer" onClick={() => window.open(`https://github.com/PlainOldMoose/IDLWebApp`, "_blank")}>here </button>}
-                    </>
-                }/>
+        <Page title="IDL Web Manager" subtitle="In-house Dota 2 league, UK">
+            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                <div className="min-w-0 space-y-4">
+                    {players && players.length > 0 && (
+                        <Panel title="Ladder" meta={<Link to="/players" className="hover:text-bone">{players.length} players</Link>}>
+                            <EloLadder
+                                players={players}
+                                highlightSteamId={user?.steamId}
+                                highlightLabel="You"
+                                onSelect={(player) => navigate(`/players/${player.steamId}`)}
+                            />
+                        </Panel>
+                    )}
+                    {matches && matches.length > 0 && (
+                        <Panel title="Recent matches" meta={<Link to="/matches" className="hover:text-bone">See all {matches.length}</Link>}
+                               padded={false}>
+                            {newestFirst(matches).slice(0, RECENT_MATCH_COUNT).map(match => (
+                                <MatchSummaryCard key={match.matchId} match={match}/>
+                            ))}
+                        </Panel>
+                    )}
+                </div>
+
+                <aside className="space-y-4">
+                    {currentSeason && (
+                        <Panel title="Current season">
+                            <p className="font-display text-3xl font-bold leading-none">{currentSeason.name}</p>
+                            <p className="mt-2 text-sm text-ash">
+                                <span className="figures">{formatDateRange(currentSeason.startDate, currentSeason.endDate)}</span>
+                                <span className={`ml-3 font-medium ${statusTextStyles[currentSeason.status]}`}>
+                                    {statusLabels[currentSeason.status]}
+                                </span>
+                            </p>
+                            <Link to={`/seasons/${currentSeason.id}`}
+                                  className={`mt-4 w-full justify-center ${currentSeason.status === "REGISTRATION" ? "primary-button" : "secondary-button"}`}>
+                                {currentSeason.status === "REGISTRATION" ? "View and sign up" : "View season"}
+                            </Link>
+                        </Panel>
+                    )}
+                    <Panel title="About">
+                        <div className="space-y-4">
+                            {about.map(({title, body}) => (
+                                <div key={title}>
+                                    <h3 className="font-semibold">{title}</h3>
+                                    <p className="mt-1 leading-relaxed text-ash">{body}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </Panel>
+                </aside>
             </div>
-        </div>
+        </Page>
     );
 }

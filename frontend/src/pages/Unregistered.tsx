@@ -1,10 +1,11 @@
+import Page from "../components/Page.tsx";
+
 export default function Unregistered() {
     return (
-        <div>
-            <h1 className="text-7xl font-extrabold my-10">Oops! You don't exist?!</h1>
-            <div className="bg-surface-a20 rounded-2xl p-8 mt-4">
+        <Page title="Oops! You don't exist?!">
+            <p className="max-w-2xl text-lg leading-relaxed text-ash">
                 It appears your steam account is not registered to play in IDL, please contact an admin to sign up for our league.
-            </div>
-        </div>
+            </p>
+        </Page>
     );
 }
