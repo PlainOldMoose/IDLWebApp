@@ -78,7 +78,7 @@ backend/scripts/reset-db.sh          # dev DB
 IDL_PROD_SSH=<host> backend/scripts/reset-db.sh prod   # prod DB, asks for confirmation
 ```
 
-This empties every table and reloads `backend/src/main/resources/data.sql` in a single transaction. The backend must have started once against the DB so the tables exist.
+This empties every table and reloads `backend/src/main/resources/data.sql` in a single transaction. This data is a snapshot of actual IDL Elos with some fake seasons/matches and serves only as a placeholder until I import the real data.
 
 Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won't change a column's type, rename or drop anything. After that kind of entity change, recreate the dev DB with `docker compose down -v && docker compose up -d` in `backend/`, start the backend, then run the reset script.
 
