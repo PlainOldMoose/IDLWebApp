@@ -70,6 +70,8 @@ export default function SeasonDetail() {
     const started = season.status === "ACTIVE" || season.status === "COMPLETED";
     const standings = [...season.teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
     const captains = signups?.filter(s => s.willingToCaptain).length ?? 0;
+    // Same rule as the API, so the button is greyed out instead of failing
+    const deletable = !season.teams.length && !matches?.length;
 
     return (
         <Page
@@ -80,8 +82,9 @@ export default function SeasonDetail() {
                     <span className={`ml-4 font-medium ${statusTextStyles[season.status]}`}>{statusLabels[season.status]}</span>
                     {/* Only admins get the button; the API enforces the same rule */}
                     {user?.admin && (
-                        <button aria-label="Delete season" title="Delete season" onClick={openDeleteDialog}
-                                className="ml-3 cursor-pointer rounded-md p-1 align-middle text-danger transition-colors hover:bg-white/5">
+                        <button aria-label="Delete season" onClick={openDeleteDialog} disabled={!deletable}
+                                title={deletable ? "Delete season" : "Seasons with teams or matches can't be deleted"}
+                                className="ml-3 rounded-md p-1 align-middle text-danger transition-colors enabled:cursor-pointer enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:text-ash disabled:opacity-50">
                             <Trash size={20} aria-hidden="true"/>
                         </button>
                     )}
