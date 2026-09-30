@@ -30,6 +30,20 @@ export function useSeasons() {
     });
 }
 
+export function useCreateSeason() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (season: Pick<Season, "name" | "startDate" | "endDate">) => request<Season>("/api/seasons", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(season),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["seasons"]});
+        }
+    });
+}
+
 export function useMatches() {
     return useQuery({
         queryKey: ["matches"],
