@@ -7,7 +7,6 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
-import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import jakarta.transaction.Transactional;
@@ -85,10 +84,7 @@ public class SeasonService {
     private TeamResponse mapToTeamResponse(Team team) {
         List<PlayerSummaryResponse> members = team.getMembers()
                 .stream()
-                .map(member -> {
-                    Player player = member.getPlayer();
-                    return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
-                })
+                .map(member -> PlayerSummaryResponse.from(member.getPlayer()))
                 .toList();
 
         return new TeamResponse(
