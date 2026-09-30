@@ -16,7 +16,7 @@ export default function Players() {
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get("q") ?? "";
 
-    const header = {title: "Players", aside: <button className="primary-button">Add player</button>};
+    const header = {title: "Players", aside: user?.admin && <button className="primary-button">Add player</button>};
     if (isPending) return <Page {...header}><Loader label="Loading players"/></Page>;
     if (isError) return <Page {...header}><QueryError message="Couldn't load players."/></Page>;
 
