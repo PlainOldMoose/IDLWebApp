@@ -2,10 +2,12 @@ name: Build and Push Images
 on:
   push:
     branches: [main]
+  # Only the test job runs for PRs, so Dependabot bumps are checked before they're merged
+  pull_request:
 env:
   REGISTRY: ghcr.io
 jobs:
-  # A failing test or lint error stops the deploy before any image is pushed
+  # A failing test, lint or build error stops the deploy before any image is pushed
   test:
     runs-on: ubuntu-latest
     permissions:
@@ -24,10 +26,12 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci && npm run lint
+      - run: npm ci && npm run lint && npm run build
         working-directory: frontend
   build:
     needs: test
+    # deploy needs build, so skipping it here skips both on PRs
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
