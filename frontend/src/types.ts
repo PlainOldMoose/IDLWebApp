@@ -49,6 +49,7 @@ export interface TeamSummary {
 export interface SeasonSignup {
     steamId: string;
     username: string;
+    rolePreference: string | null;
     willingToCaptain: boolean;
     signedUpAt: string;
 }
