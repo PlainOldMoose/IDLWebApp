@@ -13,7 +13,6 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 - **Match Tracking** - Record match results for both tournament and in-house games, with Radiant/Dire side tracking
 - **ELO Rating System** - Automatic ELO calculations with full history tracking per player
 - **Steam Authentication** - Players log in via Steam OpenID, linking their Steam identity to their league profile
-- **Match Scheduling** - Schedule upcoming matches and display them to the league
 
 ## Contributing
 
@@ -46,8 +45,8 @@ IDLWebApp/
 │   └── src/
 │       ├── components/               # Reusable UI components
 │       ├── pages/                    # Route-level page components
-│       ├── services/                 # API client and query hooks
-│       └── types/                    # TypeScript type definitions
+│       ├── services/                 # API query hooks
+│       └── types.ts                  # TypeScript type definitions
 ├── docker-compose.yml                # Container orchestration
 └── .github/workflows/deploy.yml      # CI/CD pipeline
 ```
@@ -64,7 +63,7 @@ docker compose up -d
 # 2. Backend on http://localhost:8080 (creates/updates tables on startup)
 ./mvnw spring-boot:run
 
-# 3. Frontend on http://localhost:5173
+# 3. Frontend on http://localhost:5173 (proxies /api and /auth to the backend, like nginx in prod)
 cd ../frontend
 npm install
 npm run dev
@@ -89,7 +88,7 @@ Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/players` | List all players (summary) |
+| `GET` | `/api/players` | List all players (summary), highest ELO first |
 | `GET` | `/api/players/{steamId}` | Get player details |
 | `POST` | `/api/players` | Create a new player |
 
@@ -97,23 +96,20 @@ Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/seasons` | List all seasons |
-| `GET` | `/api/seasons/{id}` | Get season details |
+| `GET` | `/api/seasons` | List all seasons, newest first |
+| `GET` | `/api/seasons/{id}` | Get season details, including teams |
 | `POST` | `/api/seasons` | Create a new season |
 
 ### Matches
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/matches` | List matches (filterable by season, team, or player) |
-| `GET` | `/api/matches/{matchId}` | Get match details |
-| `GET` | `/api/matches/upcoming` | Get upcoming scheduled matches |
+| `GET` | `/api/matches` | List matches, newest first (optional `seasonId` filter) |
 
-### Teams & Signups
+### Signups
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/seasons/{seasonId}/teams` | Get all teams for a season |
 | `GET` | `/api/seasons/{seasonId}/signups` | Get signups for a season |
 | `POST` | `/api/seasons/{seasonId}/signups` | Sign up for a season (requires auth) |
 
