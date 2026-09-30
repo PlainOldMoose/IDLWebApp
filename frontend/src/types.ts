@@ -63,3 +63,18 @@ export interface MatchSummary {
     radiantTeamName?: string;
     direTeamName?: string;
 }
+
+export interface MatchDetail {
+    match: MatchSummary;
+    players: MatchPlayer[]; // By ELO going in, highest first
+}
+
+export interface MatchPlayer {
+    steamId: string;
+    username: string;
+    side: "RADIANT" | "DIRE";
+    sub: boolean;
+    subbingFor: string | null;
+    eloBefore: number | null; // null when the match has no ELO record
+    eloChange: number | null;
+}

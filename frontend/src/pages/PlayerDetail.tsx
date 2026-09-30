@@ -1,4 +1,4 @@
-import {useParams} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {Moon, Sun, Trophy, UsersThree} from "@phosphor-icons/react";
 import {usePlayer, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -7,7 +7,7 @@ import StatStrip from "../components/StatStrip.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, formatRelative, stratzMatchUrl} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange, formatRelative} from "../util/format.ts";
 
 const RECENT_MATCH_COUNT = 10;
 
@@ -61,8 +61,8 @@ export default function PlayerDetail() {
                                     const gained = change === null || change >= 0;
                                     const radiant = match.side === "RADIANT";
                                     return (
-                                        <a key={match.matchId} href={stratzMatchUrl(match.matchId)} target="_blank" rel="noopener noreferrer"
-                                           className="grid grid-cols-[1.5rem_1rem_3.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-2.5 transition-colors hover:bg-panel-raised focus-visible:-outline-offset-2
+                                        <Link key={match.matchId} to={`/matches/${match.matchId}`}
+                                              className="grid grid-cols-[1.5rem_1rem_3.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-2.5 transition-colors hover:bg-panel-raised focus-visible:-outline-offset-2
                                                       sm:grid-cols-[1.5rem_7rem_3.5rem_6rem_minmax(0,1fr)_7.5rem]">
                                             <span title={match.won ? "Won" : "Lost"}
                                                   className={`inline-flex size-6 items-center justify-center rounded-[3px] text-xs font-bold text-night ${
@@ -106,7 +106,7 @@ export default function PlayerDetail() {
                                                 <span className="figures block text-sm">{formatDate(match.timePlayed)}</span>
                                                 <span className="block text-xs text-ash">{formatRelative(match.timePlayed)}</span>
                                             </p>
-                                        </a>
+                                        </Link>
                                     );
                                 })}
                             </div>
@@ -134,15 +134,15 @@ export default function PlayerDetail() {
                         <Panel title={`Last ${Math.min(matches.length, RECENT_MATCH_COUNT)} matches`} meta="Newest first">
                             <ol className="grid grid-cols-10 gap-1">
                                 {matches.slice(0, RECENT_MATCH_COUNT).map(match => {
-                                    const label = `${match.won ? "Won" : "Lost"} on ${formatDate(match.timePlayed)}, opens on Stratz`;
+                                    const label = `${match.won ? "Won" : "Lost"} on ${formatDate(match.timePlayed)}`;
                                     return (
                                         <li key={match.matchId}>
-                                            <a href={stratzMatchUrl(match.matchId)} target="_blank" rel="noopener noreferrer"
-                                               aria-label={label} title={label}
+                                            <Link to={`/matches/${match.matchId}`}
+                                                  aria-label={label} title={label}
                                                className={`flex aspect-square w-full items-center justify-center rounded-[3px] text-xs font-bold text-night ${
                                                    match.won ? "bg-win" : "bg-loss"}`}>
                                                 <span aria-hidden="true">{match.won ? "W" : "L"}</span>
-                                            </a>
+                                            </Link>
                                         </li>
                                     );
                                 })}
