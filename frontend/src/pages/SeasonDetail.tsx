@@ -1,4 +1,4 @@
-import {useNavigate, useParams} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {
     useCurrentUser,
     useSeasonDetail,
@@ -7,8 +7,15 @@ import {
     useSeasonSignups
 } from "../services/Queries.ts";
 import {AUTH_URL} from "../services/Api.ts";
-import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
-import { statusBadgeStyles } from "../util/statusStyles.ts";
+import MatchSummaryCard, {matchColumns} from "../components/MatchSummaryCard.tsx";
+import Page from "../components/Page.tsx";
+import Panel from "../components/Panel.tsx";
+import StatStrip from "../components/StatStrip.tsx";
+import Loader from "../components/Loader.tsx";
+import QueryError from "../components/QueryError.tsx";
+import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
+import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
+import {newestFirst} from "../util/sort.ts";
 
 
 export default function SeasonDetail() {
@@ -19,7 +26,6 @@ export default function SeasonDetail() {
     const {data: matches} = useSeasonMatches(seasonId, season?.status !== "REGISTRATION");
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
-    const navigate = useNavigate();
 
     const handleSignup = () => {
         if (user) {
@@ -29,84 +35,166 @@ export default function SeasonDetail() {
         }
     };
 
-    if (isPending) return <p>Loading...</p>;
-    if (isError) return <p>Season not found</p>;
+    // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
+    if (isPending) return (
+        <Page title={<>
+            <span aria-hidden="true" className="inline-block h-[0.8em] w-72 max-w-full rounded-md bg-white/10 motion-safe:animate-pulse"/>
+            <span className="sr-only">Season</span>
+        </>}>
+            <Loader label="Loading season"/>
+        </Page>
+    );
+    if (isError) return <Page title="Season not found"><QueryError message="Couldn't find this season."/></Page>;
 
-    const startDate = new Date(season.startDate).toLocaleDateString("en-GB");
-    const endDate = new Date(season.endDate).toLocaleDateString("en-GB")
+    const started = season.status === "ACTIVE" || season.status === "COMPLETED";
+    const standings = [...season.teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+    const captains = signups?.filter(s => s.willingToCaptain).length ?? 0;
+
     return (
-        <div className="reveal-in">
-            {/*Season Header*/}
-            <div className="flex justify-between items-center my-12">
-                <h1 className="text-4xl font-bold">{season.name}</h1>
-                {season.status === "REGISTRATION" && (
-                    <button
-                        className="px-4 py-2 bg-surface-a20 text-white font-extrabold rounded-lg hover:cursor-pointer disabled:opacity-50"
-                        onClick={handleSignup}
-                        disabled={alreadySignedUp}
-                    >{user ? (alreadySignedUp ? "Signed Up" : "Sign Up") : ("Login to Sign Up")}
-                    </button>
-                )}
-            </div>
-
-            {/* Season info*/}
-            <div className="flex justify-between bg-surface-a20 rounded-2xl p-8 mt-4">
-                <p>{startDate} - {endDate}</p>
-                {season.winnerTeamName && <p>Winner: {season.winnerTeamName}</p>}
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full w-fit ${statusBadgeStyles[season.status]}`}>{season.status}</span>
-            </div>
-
+        <Page
+            title={season.name}
+            subtitle={
+                <>
+                    <span className="figures">{formatDateRange(season.startDate, season.endDate)}</span>
+                    <span className={`ml-4 font-medium ${statusTextStyles[season.status]}`}>{statusLabels[season.status]}</span>
+                </>
+            }
+            aside={
+                season.status === "REGISTRATION" ? (
+                    <div className="sm:text-right">
+                        <button className="primary-button" onClick={handleSignup}
+                                disabled={alreadySignedUp || signup.isPending}>
+                            {user ? (alreadySignedUp ? "Signed up" : "Sign up") : "Sign in with Steam"}
+                        </button>
+                        {signup.isError && <p role="alert" className="mt-2 text-sm text-ash">Sign-up failed. Refresh and try again.</p>}
+                    </div>
+                ) : season.winnerTeamName && (
+                    <div className="border-l-3 border-aegis pl-4">
+                        <p className="text-sm text-ash">Champions</p>
+                        <p className="font-display text-3xl font-bold text-aegis">{season.winnerTeamName}</p>
+                    </div>
+                )
+            }
+        >
             {/*Signups*/}
             {season.status === "REGISTRATION" && (
-                <>
-                    <h1 className="text-2xl font-bold my-6">Signups</h1>
-                    <div className="bg-surface-a20 rounded-2xl p-8 mt-4">
-                        <p className="bg-surface-a10 max-w-32 rounded-xl text-xs text-center mx-auto mb-2 p-1">Willing
-                            to Captain</p>
-                        <div className="grid grid-cols-4">
-                            {signups?.map((signup) => (
-                                <div key={signup.steamId}>
-                                    <p className={`font-extrabold m-2 p-2 text-center rounded-xl hover:cursor-pointer
-                                 ${signup.willingToCaptain ? "bg-surface-a10" : "bg-surface-a30"}`}
-                                       onClick={() => navigate(`/players/${signup.steamId}`)}>
-                                        {signup.username}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </>
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                    <Panel title="Signed up" meta={`${signups?.length ?? 0} players`}>
+                        {signups?.length ? (
+                            <ul className="columns-2 gap-x-4 sm:columns-3">
+                                {signups.map((s) => (
+                                    <li key={s.steamId}>
+                                        <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block truncate px-2 py-1.5">
+                                            {s.username}
+                                            {s.willingToCaptain && <span className="ml-2 text-sm text-ash">captain</span>}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-ash">Nobody has signed up yet.</p>
+                        )}
+                    </Panel>
+                    <Panel title="Sign-ups">
+                        <StatStrip stats={[
+                            {label: "Players", value: signups?.length ?? 0},
+                            {label: "Willing to captain", value: captains},
+                        ]}/>
+                        <p className="mt-4 border-t border-rule pt-3 text-sm text-ash">
+                            The season starts on {formatDate(season.startDate)}.
+                        </p>
+                    </Panel>
+                </div>
             )}
 
-            {/*Teams*/}
-            {(season.status === "ACTIVE" || season.status === "COMPLETED") && (
+            {started && (
                 <>
-                    <h1 className="text-2xl font-bold my-6">Teams</h1>
-                    <div className="grid grid-cols-3 gap-4">
-                        {season.teams.map((team) => (
-                            <div key={team.teamId}
-                                 className="flex flex-col justify-between bg-surface-a20 rounded-2xl p-8 mt-4">
-                                <p className="font-extrabold text-xl mb-2">{team.name}</p>
-                                <div>
-                                    {team.members.map(member => (
-                                        <p key={member.steamId}
-                                           className={member.username === team.captainUsername ? "font-bold" : "text-light-a20/90"}>{member.username}</p>
+                    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                        <Panel title="Matches" meta={matches?.length ? `${matches.length} played` : undefined}
+                               padded={false} className="min-w-0">
+                            {matches?.length ? (
+                                <>
+                                    {/*Column headings, hidden on small screens where the rows stack*/}
+                                    <div aria-hidden="true" className={`hidden gap-x-3 border-b border-rule px-3 pb-2 text-sm text-ash md:grid ${matchColumns}`}>
+                                        <p className="text-right">Radiant</p>
+                                        <span className="w-0.5"/>
+                                        <p>Dire</p>
+                                        <p className="text-right">Played</p>
+                                        <p className="text-right">Avg ELO</p>
+                                        <p className="text-right">Season</p>
+                                    </div>
+                                    {newestFirst(matches).map((match) => (
+                                        <MatchSummaryCard key={match.matchId} match={match}/>
                                     ))}
-                                </div>
+                                </>
+                            ) : (
+                                <p className="p-3 text-ash">No matches played yet.</p>
+                            )}
+                        </Panel>
+
+                        <Panel title="Standings" padded={false}>
+                            <div aria-hidden="true" className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 px-3 pt-1.5 pb-2 text-sm text-ash">
+                                <p/>
+                                <p>Team</p>
+                                <p className="text-right">W</p>
+                                <p className="text-right">L</p>
                             </div>
-                        ))}
+                            <ol>
+                                {standings.map((team, index) => (
+                                    <li key={team.teamId}
+                                        className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 rounded-md px-3 py-2">
+                                        <span className="figures text-right text-ash">{index + 1}</span>
+                                        <span className={`truncate ${team.name === season.winnerTeamName ? "text-aegis" : ""}`}>
+                                            {team.name}
+                                        </span>
+                                        <span className="figures text-right">{team.wins}</span>
+                                        <span className="figures text-right text-ash">{team.losses}</span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </Panel>
+                    </div>
+
+                    <h2 className="mt-10 mb-4 font-display text-3xl font-bold">Teams</h2>
+                    <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {season.teams.map((team) => {
+                            const captainFirst = [...team.members].sort((a, b) =>
+                                Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
+                            const isChampion = team.name === season.winnerTeamName;
+                            return (
+                                <Panel key={team.teamId}
+                                       title={<span className="font-display text-2xl font-bold">{team.name}</span>}
+                                       meta={isChampion
+                                           ? <span className="font-medium text-aegis">Champions</span>
+                                           : <span className="figures">{team.wins}W {team.losses}L</span>}
+                                       className={isChampion ? "ring-1 ring-aegis/70" : ""}
+                                       level={3}
+                                       padded={false}>
+                                    <ul>
+                                        {captainFirst.map(member => (
+                                            <li key={member.steamId}>
+                                                <Link to={`/players/${member.steamId}`}
+                                                      className="row-link flex justify-between gap-3 px-3 py-1.5">
+                                                    <span className="truncate">
+                                                        {member.username}
+                                                        {member.username === team.captainUsername &&
+                                                            <span className="ml-2 text-sm text-ash">captain</span>}
+                                                    </span>
+                                                    <span className="figures text-ash">{formatElo(member.elo)}</span>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="figures mt-1.5 flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
+                                        <span>Average ELO</span>
+                                        <span>{formatElo(team.avgElo)}</span>
+                                    </p>
+                                </Panel>
+                            );
+                        })}
                     </div>
                 </>
             )}
-
-            {/*Matches*/}
-            {(season.status === "ACTIVE" || season.status === "COMPLETED") && (
-                <>
-                    <h1 className="text-2xl font-bold my-6">Matches</h1>
-                    {matches?.map((match) => (
-                        <MatchSummaryCard key={match.matchId} match={match}/>
-                    ))}
-                </>
-            )}
-        </div>
+        </Page>
     );
 }

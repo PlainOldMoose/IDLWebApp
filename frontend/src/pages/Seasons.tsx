@@ -1,25 +1,40 @@
+import {Link} from "react-router-dom";
 import {useSeasons} from "../services/Queries.ts";
-import SeasonSummaryCard from "../components/SeasonSummaryCard.tsx";
-import {useNavigate} from "react-router-dom";
+import Page from "../components/Page.tsx";
+import Loader from "../components/Loader.tsx";
+import QueryError from "../components/QueryError.tsx";
+import {formatDateRange} from "../util/format.ts";
+import {statusLabels, statusNodeStyles, statusTextStyles} from "../util/statusStyles.ts";
 
 export default function Seasons() {
     const {data: seasons, isLoading, isError} = useSeasons();
-    const navigate = useNavigate();
 
-    if (isLoading) return <div>Loading...</div>;
-    if (isError) return <div>Error...</div>;
+    if (isLoading) return <Page title="Seasons"><Loader label="Loading seasons"/></Page>;
+    if (isError) return <Page title="Seasons"><QueryError message="Couldn't load seasons."/></Page>;
+
+    const newestFirst = [...(seasons ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate));
 
     return (
-        <div>
-            <div className="text-5xl text-center font-bold my-12">Seasons</div>
-
-            {/*Seasons*/}
-            <div className="grid grid-cols-3 gap-4 mt-12">
-                {seasons?.map((season) => (
-                    <SeasonSummaryCard key={season.id} season={season}
-                                       onClick={() => navigate(`/seasons/${season.id}`)}/>
-                ))}
-            </div>
-        </div>
+        <Page title="Seasons" subtitle={`${newestFirst.length} seasons, newest first`}>
+            {newestFirst.length ? (
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {newestFirst.map((season) => (
+                        <li key={season.id}>
+                            <Link to={`/seasons/${season.id}`}
+                                  className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
+                                <p className={`flex items-center gap-2 text-sm font-medium ${statusTextStyles[season.status]}`}>
+                                    <span aria-hidden="true" className={`size-2.5 rounded-full border-2 ${statusNodeStyles[season.status]}`}/>
+                                    {statusLabels[season.status]}
+                                </p>
+                                <h2 className="mt-3 font-display text-4xl font-bold leading-none">{season.name}</h2>
+                                <p className="figures mt-2 text-ash">{formatDateRange(season.startDate, season.endDate)}</p>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-ash">No seasons yet. The first one appears here when an admin creates it.</p>
+            )}
+        </Page>
     );
 }

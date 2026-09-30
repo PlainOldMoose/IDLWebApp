@@ -1,0 +1,26 @@
+import type {ReactNode} from "react";
+
+interface PageProps {
+    title: ReactNode;
+    subtitle?: ReactNode;
+    aside?: ReactNode;
+    children: ReactNode;
+}
+
+// Full-width banner with the page title, then the page's panels
+export default function Page({title, subtitle, aside, children}: PageProps) {
+    return (
+        <>
+            <header className="top-band border-b border-rule">
+                <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-4 pt-6 pb-5 sm:pt-8 sm:pb-6">
+                    <div className="min-w-0">
+                        <h1 className="font-display text-5xl font-bold leading-none text-balance break-words sm:text-6xl">{title}</h1>
+                        {subtitle && <div className="mt-3 text-ash">{subtitle}</div>}
+                    </div>
+                    {aside}
+                </div>
+            </header>
+            <div className="mx-auto max-w-6xl px-4 py-6">{children}</div>
+        </>
+    );
+}

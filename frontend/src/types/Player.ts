@@ -17,7 +17,9 @@ export interface PlayerDetail {
 export type PlayerMatchSummary = {
     matchId: number;
     timePlayed: string;
-    won: boolean
-    eloChange: number
-    seasonName: string;
+    won: boolean;
+    side: "RADIANT" | "DIRE";
+    sub: boolean;
+    eloChange: number | null; // null when the match has no ELO record
+    seasonName: string | null;
 }

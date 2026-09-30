@@ -1,62 +1,126 @@
 @import "tailwindcss";
 
 @theme {
-    --font-ibm: "IBM Plex Mono", monospace;
-    --font-roboto: "Roboto", sans-serif;
-    --font-inter: "Inter", sans-serif;
-    --color-surface-a10: #121212;
-    --color-surface-a20: #282828;
-    --color-surface-a30: #3f3f3f;
-    --color-light-a10: #ffffff;
-    --color-light-a20: #c0c0c0;
-    --color-light-a30: #808080;
-    --color-primary-a0: #02e256;
-    --color-primary-a10: #4be66a;
-    --color-primary-a20: #6cea7e;
-    --color-primary-a30: #86ee90;
-    --color-primary-a40: #9df1a3;
-    --color-primary-a50: #b2f4b5;
+    --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Grenze", Georgia, serif;
 
-    --color-warning: #D57D11;
-    --color-danger: #B60A0A;
+    /* Surfaces and ink: warm charcoal, close to black */
+    --color-night: #0B0909;
+    --color-panel: #181515;
+    --color-panel-raised: #231F1F;
+    --color-rule: #2F2828;
+    --color-bone: #EFEAE8;
+    --color-ash: #A09695;
 
+    /* Oxblood: atmosphere behind the page header, and error states. Never a control colour. */
+    --color-blood: #8A2626;
 
-    --color-background: #121212;
-    --color-accent: #1c1c1c;
-    --color-grey: #7a7b7b;
-    --color-grey-hover: #c2c2c2;
-    --color-blue: #0b131e;
-    --color-light-blue: #202b3b;
+    /* The logo's blue, lifted for dark backgrounds. Used sparingly: you, focus, links, open sign-ups. */
+    --color-accent: #5B84FF;
+
+    /* Radiant and Dire. The same green and red also mark wins and losses, so side is always shown with a label or position too. */
+    --color-radiant: #8FCB4F;
+    --color-dire: #E0533D;
+    --color-win: #8FCB4F;
+    --color-loss: #E0533D;
+
+    /* Season champions only, always next to the word "Champions" */
+    --color-aegis: #E6B94F;
 }
 
-body {
-    background-color: var(--color-background);
+@layer base {
+    html {
+        color-scheme: dark;
+        /* Keeps anchors and keyboard focus from scrolling under the sticky navbar */
+        scroll-padding-top: calc(var(--nav-height) + 1rem);
+    }
+
+    :root {
+        /* Matches the navbar: two rows on small screens, one from sm up */
+        --nav-height: 88px;
+        @media (width >= 40rem) {
+            --nav-height: 48px;
+        }
+    }
+
+    body {
+        @apply bg-night text-bone font-sans antialiased;
+    }
+
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-accent rounded-sm;
+    }
 }
 
-.nav-link {
-    @apply hover:text-light-a10 hover:bg-surface-a30 transition-colors rounded-xl p-2;
+/* Numbers that line up in columns: ELO, ranks, durations */
+@utility figures {
+    font-variant-numeric: tabular-nums;
+    font-stretch: 80%;
 }
 
-.nav-link.active {
-    @apply text-light-a10  transition-colors;
+/*
+ * Component classes live in the components layer so utilities on the same element can still override them.
+ * Corner radius scale: panels and cards 8px (rounded-lg), rows, buttons and inputs 6px (rounded-md),
+ * result badges 3px, bars fully rounded.
+ */
+@layer components {
+    .nav-link {
+        @apply rounded-md px-2.5 py-1 text-sm font-medium text-ash hover:bg-white/5 hover:text-bone transition-colors;
+    }
+
+    .nav-link.active {
+        @apply bg-white/10 text-bone;
+    }
+
+    .primary-button {
+        @apply inline-flex items-center gap-2 rounded-md bg-bone px-4 py-2 font-semibold text-night
+        hover:bg-white disabled:bg-panel-raised disabled:text-ash disabled:cursor-default cursor-pointer transition-colors;
+    }
+
+    .secondary-button {
+        @apply inline-flex items-center gap-2 rounded-md border border-rule px-4 py-2 font-medium text-ash
+        hover:text-bone hover:border-ash cursor-pointer transition-colors;
+    }
+
+    .row-link {
+        @apply rounded-md transition-colors hover:bg-panel-raised;
+    }
+
+    /* Hidden until focused, then shown above the navbar */
+    .skip-link {
+        @apply sr-only;
+    }
+
+    .skip-link:focus {
+        @apply not-sr-only fixed top-2 left-4 z-40 rounded-md bg-bone px-4 py-2 font-semibold text-night;
+    }
 }
 
-.match-summary-card {
-    @apply flex justify-between bg-surface-a20 rounded-xl p-6 mt-4
+/*
+ * Page banner with the red glow. It starts at the very top of the page, underneath the sticky navbar,
+ * so the navbar's blur picks up the glow while still reading as its own bar.
+ */
+.top-band {
+    margin-top: calc(-1 * var(--nav-height));
+    padding-top: var(--nav-height);
+    background-image: radial-gradient(ellipse 30% 110% at 0% 50%, rgb(150 30 30 / 0.7), rgb(150 30 30 / 0.22) 55%, transparent),
+    radial-gradient(ellipse 45% 120% at 82% 40%, rgb(150 30 30 / 0.3), rgb(150 30 30 / 0.1) 55%, transparent);
 }
 
-.match-summary-card:hover {
-    @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
+/* The one orchestrated moment: the ladder's ticks rise from left to right on first load */
+@keyframes tick-rise {
+    from {
+        transform: scaleY(0);
+    }
 }
 
-.season-summary-card {
-    @apply grid grid-cols-2 bg-surface-a20 rounded-2xl p-6
+.ladder-tick {
+    transform-origin: bottom;
+    animation: tick-rise 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-.season-summary-card:hover {
-    @apply translate-y-0.5 translate-x-0.5 bg-surface-a30
-}
-
-.basic-button {
-    @apply text-light-a20 hover:text-light-a10 hover:bg-surface-a30 bg-surface-a20 rounded-2xl
+@media (prefers-reduced-motion: reduce) {
+    .ladder-tick {
+        animation: none;
+    }
 }

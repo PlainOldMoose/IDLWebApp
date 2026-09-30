@@ -3,7 +3,7 @@ export interface SeasonDetail {
     name: string;
     startDate: string;
     endDate: string;
-    status: string;
+    status: "REGISTRATION" | "ACTIVE" | "COMPLETED";
     teams: TeamSummary[]
     winnerTeamName?: string;
 }

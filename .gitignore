@@ -95,3 +95,6 @@ HELP.md
 *.sln
 
 CLAUDE.md
+.agents/
+.playwright/
+skills-lock.json
