@@ -20,7 +20,7 @@ export default function Matches() {
     return (
         <Page title="Matches" subtitle={`${matches.length} matches recorded`}>
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                <Panel title="All matches" meta="Winners in bold. Opens on Stratz." padded={false} className="min-w-0">
+                <Panel title="All matches" meta="Winners in bold." padded={false} className="min-w-0">
                     {matches.length ? (
                         <>
                             {/*Column headings, hidden on small screens where the rows stack*/}
