@@ -1,21 +1,20 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreateSeasonRequest;
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
-import com.plainoldmoose.IDLWebApp.dto.response.team.TeamMemberResponse;
-import com.plainoldmoose.IDLWebApp.dto.response.team.TeamSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
-import com.plainoldmoose.IDLWebApp.model.TeamMember;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
-import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,7 +23,7 @@ public class SeasonService {
 
     private SeasonRepository seasonRepository;
 
-    public SeasonSummaryResponse createSeason(@Valid CreateSeasonRequest request) {
+    public SeasonSummaryResponse createSeason(CreateSeasonRequest request) {
         Season season = new Season();
         season.setName(request.name());
         season.setStartDate(request.startDate());
@@ -36,17 +35,16 @@ public class SeasonService {
     }
 
     public List<SeasonSummaryResponse> getAllSeasons() {
-        return seasonRepository.findAll()
+        return seasonRepository.findAllByOrderByStartDateDesc()
                 .stream()
                 .map(this::mapToSummaryResponse)
                 .toList();
     }
 
     public SeasonDetailResponse getSeasonById(UUID id) {
-        Optional<Season> season = seasonRepository.findById(id);
-
-        return season.map(this::mapToDetailResponse)
-                .orElse(null);
+        return seasonRepository.findById(id)
+                .map(this::mapToDetailResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {
@@ -60,39 +58,32 @@ public class SeasonService {
                 season.getStatus(),
                 season.getStartDate(),
                 season.getEndDate(),
-                mapToTeamSummaryResponse(season.getTeams()),
+                season.getTeams()
+                        .stream()
+                        .map(this::mapToTeamResponse)
+                        .toList(),
                 season.getWinner() != null ? season.getWinner()
                         .getName() : null);
     }
 
-    private List<TeamSummaryResponse> mapToTeamSummaryResponse(List<Team> teams) {
-        ArrayList<TeamSummaryResponse> teamsResponse = new ArrayList<>();
+    private TeamResponse mapToTeamResponse(Team team) {
+        List<PlayerSummaryResponse> members = team.getMembers()
+                .stream()
+                .map(member -> {
+                    Player player = member.getPlayer();
+                    return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
+                })
+                .toList();
 
-        for (Team t : teams) {
-            List<TeamMemberResponse> members = t.getMembers()
-                    .stream()
-                    .map(this::mapToMemberResponse)
-                    .toList();
-
-            TeamSummaryResponse response = new TeamSummaryResponse(
-                    t.getName(),
-                    t.getCaptain()
-                            .getUsername(),
-                    members
-            );
-            teamsResponse.add(response);
-        }
-        return teamsResponse;
-    }
-
-    private TeamMemberResponse mapToMemberResponse(TeamMember member) {
-        return new TeamMemberResponse(
-                member.getPlayer()
-                        .getSteamId(),
-                member.getPlayer()
+        return new TeamResponse(
+                team.getTeamId(),
+                team.getName(),
+                team.getCaptain()
                         .getUsername(),
-                member.getPlayer()
-                        .getElo()
+                members,
+                team.getAvgElo(),
+                team.getWins(),
+                team.getLosses()
         );
     }
 }

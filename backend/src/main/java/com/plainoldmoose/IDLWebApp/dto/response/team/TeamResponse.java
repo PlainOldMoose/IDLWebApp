@@ -1,17 +1,17 @@
 package com.plainoldmoose.IDLWebApp.dto.response.team;
 
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
+
 import java.util.List;
 import java.util.UUID;
 
 public record TeamResponse(
         UUID teamId,
-        String teamName,
-        String captainSteamId,
+        String name,
         String captainUsername,
-        List<TeamMemberResponse> members,
+        List<PlayerSummaryResponse> members,
         int avgElo,
         int wins,
-        int losses,
-        double winRate
+        int losses
 ) {
 }
