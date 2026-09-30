@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +69,7 @@ public class SteamAuthController {
 
         String steamId = steamAuthService.extractSteamId(params.get("openid.claimed_id"));
 
-        if (playerService.findSteamUser(steamId).isEmpty()) {
+        if (playerService.findSteamUser(steamId, false).isEmpty()) {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create(baseUrl + "/unregistered"))
                     .build();
@@ -89,15 +88,18 @@ public class SteamAuthController {
                 .build();
     }
 
-    // principal is null for anonymous requests
+    // authentication is null for anonymous requests
     @GetMapping("/me")
-    public ResponseEntity<SteamUserResponse> me(Principal principal) {
-        if (principal == null) {
+    public ResponseEntity<SteamUserResponse> me(Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .build();
         }
 
-        return playerService.findSteamUser(principal.getName())
+        boolean admin = authentication.getAuthorities()
+                .contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+
+        return playerService.findSteamUser(authentication.getName(), admin)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not signed in"));
     }

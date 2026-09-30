@@ -21,7 +21,7 @@ export interface PlayerMatchSummary {
     seasonName: string | null;
 }
 
-export type SteamUser = Pick<PlayerSummary, "steamId" | "username">;
+export type SteamUser = Pick<PlayerSummary, "steamId" | "username"> & {admin: boolean};
 
 export interface Season {
     id: string;
