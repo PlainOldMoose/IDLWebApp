@@ -137,17 +137,19 @@ public class PlayerService {
                     Match match = mp.getMatch();
                     boolean won = mp.getSide() == match.getMatchWinner();
 
-                    // Find eloChange for this match from eloHistory
-                    double eloChange = eloHistoryList.stream()
+                    // Find eloChange for this match from eloHistory; null if the match has no ELO record
+                    Double eloChange = eloHistoryList.stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
                                     .getMatchId()
                                     .equals(match.getMatchId()))
                             .findFirst()
                             .map(EloHistory::getEloChange)
-                            .orElse(0.0);
+                            .orElse(null);
                     return new RecentMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),
                             won,
+                            mp.getSide(),
+                            mp.getIsSub() != null && mp.getIsSub(),
                             eloChange,
                             match.getSeason() != null ? match.getSeason()
                                     .getName() : null);
