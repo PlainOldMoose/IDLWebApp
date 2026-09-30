@@ -96,11 +96,12 @@ export default function SeasonDetail() {
                         {user && !alreadySignedUp ? (
                             <form onSubmit={handleSignup} className="grid gap-2 sm:justify-items-end">
                                 <label htmlFor="role-preference" className="text-sm text-ash">Your roles, most wanted first</label>
-                                {/*Same pattern as SeasonSignupRequest on the backend*/}
+                                {/*Same pattern and length as SeasonSignupRequest on the backend*/}
                                 <input
                                     id="role-preference"
                                     name="rolePreference"
                                     required
+                                    maxLength={32}
                                     pattern="(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
                                     title="Roles 1 to 5, each once, joined by > or /, e.g. 1 > 2 > 3/4"
                                     autoComplete="off"

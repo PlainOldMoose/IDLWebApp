@@ -22,7 +22,7 @@ Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Spring Boot 4.0.1, Java 17, Spring Security, Spring Data JPA |
+| **Backend** | Spring Boot 4.0.8, Java 17, Spring Security, Spring Data JPA |
 | **Frontend** | React 19, TypeScript, Tailwind CSS 4, Vite, React Router 7, TanStack Query 5 |
 | **Database** | PostgreSQL 16 |
 | **Auth** | Steam OpenID |

@@ -52,7 +52,7 @@ export default function Seasons() {
                     <form onSubmit={handleCreate} className="mt-4 space-y-4">
                         <label className="block">
                             Name
-                            <input name="name" required autoComplete="off" className={inputClass}/>
+                            <input name="name" required maxLength={64} autoComplete="off" className={inputClass}/>
                         </label>
                         <div className="grid grid-cols-2 gap-4">
                             <label className="block">

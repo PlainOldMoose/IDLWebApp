@@ -3,7 +3,8 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+      # From the environment or a .env next to this file (gitignored); the repo is public, so no default
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       POSTGRES_DB: idlwebapp
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -18,7 +19,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/idlwebapp
       SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       BASE_URL: https://idl.vandermerwe.uk
     depends_on:
       db:

@@ -33,9 +33,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # Pinned and checksummed, since this binary runs with the deploy secrets. Dependabot can't see it:
+      # bump the version and hash from the release notes when Cloudflare deprecates this one
       - name: Install cloudflared
         run: |
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/download/2026.9.3/cloudflared-linux-amd64 -o cloudflared
+          echo "77e26d8d900e0b8469f416239d14b5f296525fdf79fee6f511ef55609e3fbac2  cloudflared" | sha256sum -c -
           chmod +x cloudflared
 
       - name: Deploy via tunnel
@@ -47,6 +50,8 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
           chmod 600 key
+          # The server's host key, so ssh refuses anything else answering on the tunnel
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > known_hosts
           ./cloudflared access tcp &
           sleep 3
-          ssh -o StrictHostKeyChecking=no -p 2222 -i key root@localhost "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
+          ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=known_hosts -p 2222 -i key root@localhost "cd /opt/idlwebapp && docker compose pull && docker compose up -d"
