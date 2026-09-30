@@ -1,5 +1,6 @@
+import {Link} from "react-router-dom";
 import type {MatchSummary} from "../types.ts";
-import {formatDate, stratzMatchUrl} from "../util/format.ts";
+import {formatDate} from "../util/format.ts";
 
 interface MatchSummaryCardProps {
     match: MatchSummary;
@@ -13,8 +14,8 @@ export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
     const radiantWon = match.winner === "RADIANT";
     const direWon = match.winner === "DIRE";
     return (
-        <a href={stratzMatchUrl(match.matchId)} target="_blank" rel="noopener noreferrer"
-           className={`row-link grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 px-3 py-3 ${matchColumns}`}>
+        <Link to={`/matches/${match.matchId}`}
+              className={`row-link grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 px-3 py-3 ${matchColumns}`}>
             <p className="truncate text-right">
                 <span className={`border-l-3 pl-2.5 ${radiantWon ? "border-l-radiant font-semibold text-bone" : "border-transparent text-ash"}`}>
                     {match.radiantTeamName ?? "Radiant"}
@@ -35,6 +36,6 @@ export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
                 </span>
                 <span className="truncate md:text-right">{match.seasonName ?? "In-house"}</span>
             </p>
-        </a>
+        </Link>
     );
 }

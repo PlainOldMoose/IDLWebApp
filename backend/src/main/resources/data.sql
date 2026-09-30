@@ -489,3 +489,22 @@ VALUES
 -- IH 309 (Feb 13): Radiant wins
 ('8652158309','76561198090941997',0,false),('8652158309','76561198090941992',0,false),('8652158309','76561198090942003',0,false),('8652158309','76561198090942005',0,false),('8652158309','76561198090942014',0,false),
 ('8652158309','76561198090941998',1,false),('8652158309','76561198090942004',1,false),('8652158309','76561198090942013',1,false),('8652158309','76561198090942018',1,false),('8652158309','76561198090942019',1,false);
+
+-- =============================================
+-- MATCH ELO HISTORY
+-- +25 for a win, -25 for a loss, in date order (reason 0 = MATCH_WIN, 1 = MATCH_LOSS).
+-- Offset so each player's last match ends at their current ELO
+-- =============================================
+INSERT INTO elo_history (player_id, elo, elo_change, timestamp, reason, match_id)
+SELECT r.player_id,
+       p.elo - SUM(r.change) OVER (PARTITION BY r.player_id)
+             + SUM(r.change) OVER (PARTITION BY r.player_id ORDER BY r.played_time),
+       r.change,
+       r.played_time,
+       CASE WHEN r.change > 0 THEN 0 ELSE 1 END,
+       r.match_id
+FROM (SELECT mp.player_id, m.match_id, m.played_time,
+             CASE WHEN mp.side = m.match_winner THEN 25 ELSE -25 END AS change
+      FROM match_participant mp
+      JOIN matches m ON m.match_id = mp.match_id) r
+JOIN player p ON p.steam_id = r.player_id;

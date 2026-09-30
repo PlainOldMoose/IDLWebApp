@@ -4,10 +4,12 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
 
@@ -22,5 +24,10 @@ public class MatchController {
     @GetMapping
     public List<MatchSummaryResponse> getAllMatches(@RequestParam(required = false) UUID seasonId) {
         return matchService.getAllMatches(seasonId);
+    }
+
+    @GetMapping("/{matchId}")
+    public MatchDetailResponse getMatch(@PathVariable Long matchId) {
+        return matchService.getMatch(matchId);
     }
 }
