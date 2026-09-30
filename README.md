@@ -15,6 +15,10 @@ Manual steps the code changes on this branch can't do.
   Paste the output into GitHub → Settings → Secrets and variables → Actions.
 - [ ] Review the branch, commit, open the PR.
 
+**Right after the merge deploys**
+
+- [ ] Run `backend/scripts/migrate-enum-names.sql` on prod (the command is at the top of the file), then delete the file. Until it runs, the match and player pages fail on the old columns. It runs in one transaction, so if it errors nothing changes (`character varying + integer` means the tables were already recreated and there's nothing to migrate).
+
 **Any time**
 
 - [ ] Cloudflare → SSL/TLS → Edge Certificates → turn on **Always Use HTTPS**. Check: `curl -I http://idl.vandermerwe.uk/` returns 301.
@@ -24,13 +28,12 @@ Manual steps the code changes on this branch can't do.
   3. Put the new password in the prod compose for both `POSTGRES_PASSWORD` and `SPRING_DATASOURCE_PASSWORD` (or a `.env` beside it)
   4. `docker compose up -d`
 - [ ] Prod compose: if cloudflared runs on the same machine, bind the frontend as `127.0.0.1:80:80`. Make sure the router doesn't forward port 80 (`curl -m5 http://<home IP>/` from outside should time out).
-- [ ] Recreate the dev DB so it only listens on localhost: `cd backend && docker compose up -d` (data is kept).
+- [ ] Recreate the dev DB, which wipes it. It now runs Postgres 16 like prod (it was on `latest`, 18, whose data 16 can't open) and only listens on localhost: `cd backend && docker compose down -v && docker compose up -d`, start the backend once, then `scripts/reset-db.sh`.
 - [ ] If you use the root `docker-compose.yml`, put `DB_PASSWORD=...` in a `.env` next to it; it no longer has a default.
 
 **Undecided**
 
 - Removing the fallback admin Steam ID from `application.properties`: set `ADMIN_STEAM_IDS` in the prod compose first, or you lose admin on the next deploy.
-- Unused columns `Match.status`/`scheduledTime` and `TeamMember.season`: deleting them means editing `data.sql` too, and dropping `team_member.season_id` (NOT NULL) by hand on prod.
 - `@EnableWebSecurity` on `SecurityConfig` is redundant (Spring Boot applies it), but Claude's permission check blocked removing it. Delete the annotation and its import yourself if you want it gone.
 
 ## Why This Exists
