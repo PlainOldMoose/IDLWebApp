@@ -1,7 +1,9 @@
-import type {FormEvent} from "react";
-import {Link, useParams} from "react-router-dom";
+import {type FormEvent, useRef, useState} from "react";
+import {Link, useNavigate, useParams} from "react-router-dom";
+import {Trash} from "@phosphor-icons/react";
 import {
     useCurrentUser,
+    useDeleteSeason,
     useSeasonDetail,
     useSeasonMatches,
     useSeasonSignup,
@@ -24,6 +26,11 @@ export default function SeasonDetail() {
     const {data: matches} = useSeasonMatches(seasonId, season?.status !== "REGISTRATION");
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
+    const deleteSeason = useDeleteSeason(seasonId);
+    const deleteDialogRef = useRef<HTMLDialogElement>(null);
+    // The admin has to type "delete" before the button unlocks
+    const [confirmText, setConfirmText] = useState("");
+    const navigate = useNavigate();
 
     const handleSignup = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -32,6 +39,17 @@ export default function SeasonDetail() {
             rolePreference: String(form.get("rolePreference")),
             willingToCaptain: form.has("willingToCaptain"),
         });
+    };
+
+    const openDeleteDialog = () => {
+        deleteSeason.reset();
+        setConfirmText("");
+        deleteDialogRef.current?.showModal();
+    };
+
+    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        deleteSeason.mutate(undefined, {onSuccess: () => navigate("/seasons")});
     };
 
     const signIn = () => {
@@ -60,6 +78,13 @@ export default function SeasonDetail() {
                 <>
                     <span className="figures">{formatDateRange(season.startDate, season.endDate)}</span>
                     <span className={`ml-4 font-medium ${statusTextStyles[season.status]}`}>{statusLabels[season.status]}</span>
+                    {/* Only admins get the button; the API enforces the same rule */}
+                    {user?.admin && (
+                        <button aria-label="Delete season" title="Delete season" onClick={openDeleteDialog}
+                                className="ml-3 cursor-pointer rounded-md p-1 align-middle text-danger transition-colors hover:bg-white/5">
+                            <Trash size={20} aria-hidden="true"/>
+                        </button>
+                    )}
                 </>
             }
             aside={
@@ -225,6 +250,26 @@ export default function SeasonDetail() {
                         })}
                     </div>
                 </>
+            )}
+
+            {user?.admin && (
+                <dialog ref={deleteDialogRef} aria-labelledby="delete-season-title"
+                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                    <h2 id="delete-season-title" className="font-display text-3xl font-bold">Delete season</h2>
+                    <form onSubmit={handleDelete} className="mt-4 space-y-4">
+                        <p>This permanently deletes <strong>{season.name}</strong> and its sign-ups.</p>
+                        <label className="block">
+                            Type <strong>delete</strong> to confirm
+                            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
+                                   className="mt-1 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent"/>
+                        </label>
+                        {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
+                        </div>
+                    </form>
+                </dialog>
             )}
         </Page>
     );

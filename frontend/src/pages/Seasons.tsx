@@ -1,13 +1,11 @@
 import {type FormEvent, useRef, useState} from "react";
 import {Link} from "react-router-dom";
-import {Trash} from "@phosphor-icons/react";
-import {useCreateSeason, useCurrentUser, useDeleteSeason, useSeasons} from "../services/Queries.ts";
+import {useCreateSeason, useCurrentUser, useSeasons} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {formatDateRange} from "../util/format.ts";
 import {statusLabels, statusNodeStyles, statusTextStyles} from "../util/statusStyles.ts";
-import type {Season} from "../types.ts";
 
 export default function Seasons() {
     // Newest first, as the API returns them
@@ -17,26 +15,6 @@ export default function Seasons() {
     const dialogRef = useRef<HTMLDialogElement>(null);
     // Tracked so the end date can't be picked before it
     const [startDate, setStartDate] = useState("");
-    const deleteSeason = useDeleteSeason();
-    const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    const [seasonToDelete, setSeasonToDelete] = useState<Season | null>(null);
-    // The admin has to type "delete" before the button unlocks
-    const [confirmText, setConfirmText] = useState("");
-
-    const openDeleteDialog = (season: Season) => {
-        deleteSeason.reset();
-        setConfirmText("");
-        setSeasonToDelete(season);
-        deleteDialogRef.current?.showModal();
-    };
-
-    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!seasonToDelete) return;
-        deleteSeason.mutate(seasonToDelete.id, {
-            onSuccess: () => deleteDialogRef.current?.close()
-        });
-    };
 
     const openDialog = () => {
         createSeason.reset();
@@ -106,7 +84,7 @@ export default function Seasons() {
             {seasons.length ? (
                 <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {seasons.map((season) => (
-                        <li key={season.id} className="relative">
+                        <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
                                   className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
                                 <p className={`flex items-center gap-2 text-sm font-medium ${statusTextStyles[season.status]}`}>
@@ -116,37 +94,11 @@ export default function Seasons() {
                                 <h2 className="mt-3 font-display text-4xl font-bold leading-none">{season.name}</h2>
                                 <p className="figures mt-2 text-ash">{formatDateRange(season.startDate, season.endDate)}</p>
                             </Link>
-                            {/* Beside the link rather than inside it, since a button can't sit in an <a>. The API enforces admin too */}
-                            {user?.admin && (
-                                <button aria-label={`Delete ${season.name}`} onClick={() => openDeleteDialog(season)}
-                                        className="absolute top-3 right-3 cursor-pointer rounded-md p-1.5 text-danger transition-colors hover:bg-white/5">
-                                    <Trash size={20} aria-hidden="true"/>
-                                </button>
-                            )}
                         </li>
                     ))}
                 </ul>
             ) : (
                 <p className="text-ash">No seasons yet. The first one appears here when an admin creates it.</p>
-            )}
-            {user?.admin && (
-                <dialog ref={deleteDialogRef} aria-labelledby="delete-season-title"
-                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
-                    <h2 id="delete-season-title" className="font-display text-3xl font-bold">Delete season</h2>
-                    <form onSubmit={handleDelete} className="mt-4 space-y-4">
-                        <p>This permanently deletes <strong>{seasonToDelete?.name}</strong> and its sign-ups.</p>
-                        <label className="block">
-                            Type <strong>delete</strong> to confirm
-                            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)}
-                                   autoComplete="off" className={inputClass}/>
-                        </label>
-                        {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
-                        </div>
-                    </form>
-                </dialog>
             )}
         </Page>
     );

@@ -45,10 +45,10 @@ export function useCreateSeason() {
     });
 }
 
-export function useDeleteSeason() {
+export function useDeleteSeason(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (seasonId: string) => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}),
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasons"]});
         }
