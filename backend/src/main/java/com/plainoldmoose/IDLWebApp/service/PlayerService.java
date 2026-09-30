@@ -114,7 +114,7 @@ public class PlayerService {
                             match.getPlayedTime(),
                             won,
                             mp.getSide(),
-                            mp.getIsSub() != null && mp.getIsSub(),
+                            mp.isSub(),
                             eloChange,
                             match.getSeason() != null ? match.getSeason()
                                     .getName() : null);

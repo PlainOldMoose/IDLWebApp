@@ -51,7 +51,7 @@ public class MatchService {
                             mp.getPlayer().getSteamId(),
                             mp.getPlayer().getUsername(),
                             mp.getSide(),
-                            mp.getIsSub() != null && mp.getIsSub(),
+                            mp.isSub(),
                             mp.getSubbingFor() != null ? mp.getSubbingFor().getUsername() : null,
                             // History stores the ELO after the match
                             elo != null ? elo.getElo() - elo.getEloChange() : null,

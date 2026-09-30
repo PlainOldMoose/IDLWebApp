@@ -2,7 +2,6 @@ package com.plainoldmoose.IDLWebApp.model.match;
 
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,13 +22,13 @@ public class MatchParticipant {
     @JoinColumn(name = "player_id")
     private Player player;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private Side side;
 
-    private Boolean isSub;
+    private boolean isSub;
 
+    // Null unless they stood in for someone
     @ManyToOne
     @JoinColumn(name = "subbing_for_id")
-    @Nullable
     private Player subbingFor;
 }

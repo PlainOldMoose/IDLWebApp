@@ -34,6 +34,6 @@ public class EloHistory {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private EloChangeReason reason;
 }

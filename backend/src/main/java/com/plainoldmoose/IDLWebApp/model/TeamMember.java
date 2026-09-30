@@ -28,8 +28,4 @@ public class TeamMember {
     @ManyToOne
     @JoinColumn(name = "player_id", nullable = false)
     private Player player;
-
-    @ManyToOne
-    @JoinColumn(name = "season_id", nullable = false)
-    private Season season;
 }

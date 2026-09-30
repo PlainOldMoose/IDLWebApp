@@ -15,7 +15,7 @@ import java.util.List;
 @Setter
 public class Player {
     @Id
-    @Column(length = 17, unique = true, nullable = false)
+    @Column(length = 17)
     private String steamId;
 
     @Column(unique = true, nullable = false)
