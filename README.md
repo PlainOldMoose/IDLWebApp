@@ -4,21 +4,6 @@ A full-stack web application for managing an **in-house Dota 2 league (IDL)**. B
 
 ## To do for `security-followups` (remove this section before merging)
 
-Manual steps the code changes on this branch can't do.
-
-**Before merging**
-
-- [ ] Add the `SSH_KNOWN_HOSTS` Actions secret, or deploys stop at the SSH step (prod stays as it was). On the server:
-  ```bash
-  for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
-  ```
-  Paste the output into GitHub → Settings → Secrets and variables → Actions.
-- [ ] Review the branch, commit, open the PR.
-
-**Right after the merge deploys**
-
-- [ ] Run `backend/scripts/migrate-enum-names.sql` on prod (the command is at the top of the file), then delete the file. Until it runs, the match and player pages fail on the old columns. It runs in one transaction, so if it errors nothing changes (`character varying + integer` means the tables were already recreated and there's nothing to migrate).
-
 **Any time**
 
 - [ ] Cloudflare → SSL/TLS → Edge Certificates → turn on **Always Use HTTPS**. Check: `curl -I http://idl.vandermerwe.uk/` returns 301.
