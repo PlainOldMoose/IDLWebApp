@@ -58,7 +58,6 @@ public class SeasonSignupService {
 
     private SeasonSignupResponse mapToResponse(SeasonSignup signup) {
         return new SeasonSignupResponse(
-                signup.getId(),
                 signup.getPlayer()
                         .getSteamId(),
                 signup.getPlayer()

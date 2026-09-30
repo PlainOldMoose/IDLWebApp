@@ -2,10 +2,8 @@ package com.plainoldmoose.IDLWebApp.model.match;
 
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
-import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,7 +16,6 @@ import java.util.List;
 @Table(name = "matches")
 public class Match {
     @Id
-    @Min(value = 1, message = "Match ID must be positive")
     private Long matchId;
 
     // No season means an in-house match
@@ -34,15 +31,9 @@ public class Match {
     @JoinColumn(name="dire_team_id")
     private Team direTeam;
 
-    private LocalDateTime scheduledTime;
-
     private LocalDateTime playedTime;
 
-    @Enumerated
-    private MatchStatus status;
-
-    // TODO - think about this
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private Side matchWinner;
 
     private int avgElo;

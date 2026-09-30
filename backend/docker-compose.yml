@@ -1,7 +1,7 @@
 services:
   db:
     container_name: IDLWebApp
-    image: postgres:latest
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password

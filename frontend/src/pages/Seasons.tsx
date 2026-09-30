@@ -38,7 +38,7 @@ export default function Seasons() {
         });
     };
 
-    const inputClass = "mt-1 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent";
+    const inputClass = "text-input mt-1 block w-full";
 
     // Only admins get the button; the API enforces the same rule
     const header = {
@@ -52,7 +52,7 @@ export default function Seasons() {
                     <form onSubmit={handleCreate} className="mt-4 space-y-4">
                         <label className="block">
                             Name
-                            <input name="name" required autoComplete="off" className={inputClass}/>
+                            <input name="name" required maxLength={64} autoComplete="off" className={inputClass}/>
                         </label>
                         <div className="grid grid-cols-2 gap-4">
                             <label className="block">

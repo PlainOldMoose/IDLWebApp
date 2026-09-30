@@ -2,7 +2,6 @@ package com.plainoldmoose.IDLWebApp.model;
 
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +16,6 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class TeamMember {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -30,8 +28,4 @@ public class TeamMember {
     @ManyToOne
     @JoinColumn(name = "player_id", nullable = false)
     private Player player;
-
-    @ManyToOne
-    @JoinColumn(name = "season_id", nullable = false)
-    private Season season;
 }

@@ -59,10 +59,12 @@ export function useDeleteSeason(seasonId: string | undefined) {
     });
 }
 
-export function useMatches() {
+// Every match, or only one season's
+export function useMatches(seasonId?: string, enabled = true) {
     return useQuery({
-        queryKey: ["matches"],
-        queryFn: () => request<MatchSummary[]>("/api/matches"),
+        queryKey: ["matches", seasonId],
+        queryFn: () => request<MatchSummary[]>(seasonId ? `/api/matches?seasonId=${seasonId}` : "/api/matches"),
+        enabled,
     });
 }
 
@@ -101,10 +103,11 @@ export function useSeasonDetail(seasonId: string | undefined) {
     });
 }
 
-export function useSeasonSignups(seasonId: string | undefined) {
+export function useSeasonSignups(seasonId: string | undefined, enabled: boolean) {
     return useQuery({
         queryKey: ["seasonSignups", seasonId],
         queryFn: () => request<SeasonSignup[]>(`/api/seasons/${seasonId}/signups`),
+        enabled: enabled && !!seasonId
     })
 }
 
@@ -119,13 +122,5 @@ export function useSeasonSignup(seasonId: string | undefined) {
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
         }
-    });
-}
-
-export function useSeasonMatches(seasonId: string | undefined, enabled: boolean) {
-    return useQuery({
-        queryKey: ["seasonMatches", seasonId],
-        queryFn: () => request<MatchSummary[]>(`/api/matches?seasonId=${seasonId}`),
-        enabled: enabled && !!seasonId
     });
 }

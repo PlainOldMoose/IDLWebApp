@@ -32,7 +32,7 @@ export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
             <p className="col-span-3 flex justify-center gap-4 text-sm text-ash md:contents">
                 <span className="figures md:text-right">{formatDate(match.timePlayed)}</span>
                 <span className="figures md:text-right">
-                    {match.avgElo != null && <>{match.avgElo.toLocaleString("en-GB")}<span className="md:sr-only"> avg ELO</span></>}
+                    {match.avgElo.toLocaleString("en-GB")}<span className="md:sr-only"> avg ELO</span>
                 </span>
                 <span className="truncate md:text-right">{match.seasonName ?? "In-house"}</span>
             </p>

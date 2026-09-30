@@ -56,14 +56,14 @@ public class PlayerService {
         eloHistory.setMatch(null);
         eloHistoryRepository.save(eloHistory);
 
-        return mapToSummaryResponse(saved);
+        return PlayerSummaryResponse.from(saved);
     }
 
     // Highest ELO first, so list position is rank
     public List<PlayerSummaryResponse> getAllPlayersSummary() {
         return playerRepository.findAllByOrderByEloDesc()
                 .stream()
-                .map(this::mapToSummaryResponse)
+                .map(PlayerSummaryResponse::from)
                 .toList();
     }
 
@@ -76,10 +76,6 @@ public class PlayerService {
     public Optional<SteamUserResponse> findSteamUser(String steamId, boolean admin) {
         return playerRepository.findById(steamId)
                 .map(player -> new SteamUserResponse(player.getSteamId(), player.getUsername(), admin));
-    }
-
-    private PlayerSummaryResponse mapToSummaryResponse(Player player) {
-        return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
     }
 
     private PlayerDetailResponse mapToDetailResponse(Player player) {
@@ -114,7 +110,7 @@ public class PlayerService {
                             match.getPlayedTime(),
                             won,
                             mp.getSide(),
-                            mp.getIsSub() != null && mp.getIsSub(),
+                            mp.isSub(),
                             eloChange,
                             match.getSeason() != null ? match.getSeason()
                                     .getName() : null);

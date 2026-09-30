@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -21,7 +22,15 @@ public class SteamAuthService {
     public static final String STEAM_LOGIN = "https://steamcommunity.com/openid/login";
     private static final Pattern CLAIMED_ID = Pattern.compile("https://steamcommunity\\.com/openid/id/(\\d{17})");
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Without timeouts a slow Steam holds a server thread per login attempt for as long as it stalls
+    private final RestTemplate restTemplate = new RestTemplate(steamTimeouts());
+
+    private static SimpleClientHttpRequestFactory steamTimeouts() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(5));
+        return factory;
+    }
 
     // The SteamID64 of a Steam login made for this site, empty otherwise. Steam's check only proves that Steam
     // signed the login, so without the return_to check a login to any other Steam site could be replayed here
