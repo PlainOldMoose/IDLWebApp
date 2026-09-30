@@ -39,15 +39,17 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 
 ## Features
 
-- **Season Management** - Create and manage league seasons with registration, active play, and completion phases
-- **Team Organisation** - Assign players to teams with captains, track win/loss records and average ELO
-- **Match Tracking** - Record match results for both tournament and in-house games, with Radiant/Dire side tracking
-- **ELO Rating System** - Automatic ELO calculations with full history tracking per player
-- **Steam Authentication** - Players log in via Steam OpenID, linking their Steam identity to their league profile
+- **Seasons** - Admins create seasons; players sign up with their role preferences and whether they'd captain
+- **Teams and standings** - Each season's teams, captains, win/loss records and average ELO
+- **Matches** - Season and in-house results with Radiant/Dire sides and each player's ELO change
+- **Players** - An ELO ladder, plus each player's record and match history
+- **Steam login** - Players sign in with Steam OpenID; admins are set by Steam ID
+
+Teams, matches and ELO come from the seed data for now. Entering them in the app, and calculating ELO, is still to come.
 
 ## Contributing
 
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before opening a PR.
+Contributions are welcome! Please read the [Contributing Guide](.github/CONTRIBUTING.md) before opening a PR.
 
 ## Tech Stack
 
@@ -121,7 +123,7 @@ Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won
 |--------|----------|-------------|
 | `GET` | `/api/players` | List all players (summary), highest ELO first |
 | `GET` | `/api/players/{steamId}` | Get player details |
-| `POST` | `/api/players` | Create a new player |
+| `POST` | `/api/players` | Create a new player (admin) |
 
 ### Seasons
 
@@ -129,13 +131,15 @@ Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won
 |--------|----------|-------------|
 | `GET` | `/api/seasons` | List all seasons, newest first |
 | `GET` | `/api/seasons/{id}` | Get season details, including teams |
-| `POST` | `/api/seasons` | Create a new season |
+| `POST` | `/api/seasons` | Create a new season (admin) |
+| `DELETE` | `/api/seasons/{id}` | Delete a season with no teams or matches (admin) |
 
 ### Matches
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/matches` | List matches, newest first (optional `seasonId` filter) |
+| `GET` | `/api/matches/{matchId}` | Get match details, including each player's ELO change |
 
 ### Signups
 
@@ -151,3 +155,4 @@ Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won
 | `GET` | `/auth/login` | Initiate Steam OpenID login |
 | `GET` | `/auth/callback` | Steam login callback |
 | `GET` | `/auth/me` | Get current authenticated user |
+| `POST` | `/auth/logout` | Sign out |

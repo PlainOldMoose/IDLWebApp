@@ -11,7 +11,7 @@ Thanks for your interest in contributing! Please read this before opening a PR.
 
 ### Prerequisites
 - Java 17+
-- Node.js 18+
+- Node.js 20.19+
 - Docker 28+
 
 ### Local setup
@@ -22,11 +22,11 @@ git clone https://github.com/YOUR_USERNAME/IDLWebApp.git
 ```
 2. **Start docker and the database**
 ```bash
-docker compose up -d 
+cd backend
+docker compose up -d
 ```
 3. **Run the backend**
 ```bash
-cd backend
 ./mvnw spring-boot:run
 ```
 4. **Run the frontend**
