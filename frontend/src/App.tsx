@@ -1,6 +1,5 @@
 import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router-dom";
 import {useCurrentUser} from "./services/Queries.ts";
-import {AUTH_URL} from "./services/Api.ts";
 import Landing from "./pages/Landing.tsx";
 import Seasons from "./pages/Seasons.tsx";
 import Players from "./pages/Players.tsx";
@@ -27,7 +26,6 @@ function App() {
                         <NavLink to="/players" className="nav-link">Players</NavLink>
                         <NavLink to="/seasons" className="nav-link">Seasons</NavLink>
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
-                        <NavLink to="/tools" className="nav-link">Tools</NavLink>
                     </div>
                     <div className="ml-auto flex h-12 shrink-0 items-center">
                         {user ? (
@@ -35,7 +33,7 @@ function App() {
                                 {user.username || user.steamId}
                             </NavLink>
                         ) : (
-                            <a href={`${AUTH_URL}/login`} className="primary-button px-3 py-1 text-sm">
+                            <a href="/auth/login" className="primary-button px-3 py-1 text-sm">
                                 Sign in with Steam
                             </a>
                         )}

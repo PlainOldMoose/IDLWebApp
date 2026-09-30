@@ -43,6 +43,9 @@ node_modules/
 dist/
 dist-ssr/
 
+# Vite dependency cache
+.vite/
+
 # Logs
 logs/
 *.log
@@ -55,7 +58,6 @@ lerna-debug.log*
 # Local env files
 *.local
 .env*
-!frontend-tailwind/.env.production
 
 # ===================
 # IDEs & Editors

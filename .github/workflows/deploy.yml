@@ -4,14 +4,15 @@ on:
     branches: [main]
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/plainoldmoose/idlwebapp-backend
-  FRONTEND_IMAGE: ghcr.io/plainoldmoose/idlwebapp-frontend
 jobs:
-  build-backend:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        service: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GitHub Container Registry
@@ -20,37 +21,16 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push backend
+      - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ./${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-  build-frontend:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/plainoldmoose/idlwebapp-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/plainoldmoose/idlwebapp-${{ matrix.service }}:${{ github.sha }}
   deploy:
-    needs: [build-backend, build-frontend]
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Install cloudflared

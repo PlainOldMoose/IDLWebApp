@@ -4,6 +4,8 @@ const dayMonthFormat = new Intl.DateTimeFormat("en-GB", {day: "numeric", month: 
 
 export const formatElo = (elo: number): string => eloFormat.format(elo);
 
+export const stratzMatchUrl = (matchId: number): string => `https://stratz.com/matches/${matchId}`;
+
 // Uses a true minus sign so positive and negative changes line up
 export const formatEloChange = (change: number): string =>
     (change > 0 ? "+" : change < 0 ? "−" : "") + eloFormat.format(Math.abs(change));

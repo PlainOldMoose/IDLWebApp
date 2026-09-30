@@ -1,4 +1,4 @@
-import {useNavigate, useParams} from "react-router-dom";
+import {useParams} from "react-router-dom";
 import {Moon, Sun, Trophy, UsersThree} from "@phosphor-icons/react";
 import {usePlayer, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -7,9 +7,7 @@ import StatStrip from "../components/StatStrip.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, formatRelative} from "../util/format.ts";
-import {stratzMatchUrl} from "../util/links.ts";
-import {newestFirst, rankPlayers} from "../util/sort.ts";
+import {formatDate, formatElo, formatEloChange, formatRelative, stratzMatchUrl} from "../util/format.ts";
 
 const RECENT_MATCH_COUNT = 10;
 
@@ -17,7 +15,6 @@ export default function PlayerDetail() {
     const {steamId} = useParams<{ steamId: string }>();
     const {data: player, isLoading, isError} = usePlayer(steamId);
     const {data: players} = usePlayers();
-    const navigate = useNavigate();
 
     // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
     if (isLoading) return (
@@ -30,8 +27,9 @@ export default function PlayerDetail() {
     );
     if (isError || !player) return <Page title="Player not found"><QueryError message="Couldn't find this player."/></Page>;
 
-    const rank = players ? rankPlayers(players).findIndex(p => p.steamId === player.steamId) + 1 : 0;
-    const matches = newestFirst(player.recentMatches ?? []);
+    // Both lists come from the API already ordered: players by ELO, matches newest first
+    const rank = players ? players.findIndex(p => p.steamId === player.steamId) + 1 : 0;
+    const matches = player.recentMatches;
     // Largest ELO swing in the list, so the history bars share one scale
     const maxChange = Math.max(0, ...matches.map(m => Math.abs(m.eloChange ?? 0)));
 
@@ -50,12 +48,7 @@ export default function PlayerDetail() {
                 <div className="min-w-0 space-y-4">
                     {players && (
                         <Panel title="On the ladder" meta={`${players.length} players`}>
-                            <EloLadder
-                                players={players}
-                                highlightSteamId={player.steamId}
-                                highlightLabel={player.username}
-                                onSelect={(selected) => navigate(`/players/${selected.steamId}`)}
-                            />
+                            <EloLadder players={players} highlightSteamId={player.steamId} highlightLabel={player.username}/>
                         </Panel>
                     )}
                     <Panel title="Match history" meta={matches.length ? `Last ${matches.length} matches` : undefined} flush>

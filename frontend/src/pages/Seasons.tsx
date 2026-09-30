@@ -7,18 +7,17 @@ import {formatDateRange} from "../util/format.ts";
 import {statusLabels, statusNodeStyles, statusTextStyles} from "../util/statusStyles.ts";
 
 export default function Seasons() {
-    const {data: seasons, isLoading, isError} = useSeasons();
+    // Newest first, as the API returns them
+    const {data: seasons, isPending, isError} = useSeasons();
 
-    if (isLoading) return <Page title="Seasons"><Loader label="Loading seasons"/></Page>;
+    if (isPending) return <Page title="Seasons"><Loader label="Loading seasons"/></Page>;
     if (isError) return <Page title="Seasons"><QueryError message="Couldn't load seasons."/></Page>;
 
-    const newestFirst = [...(seasons ?? [])].sort((a, b) => b.startDate.localeCompare(a.startDate));
-
     return (
-        <Page title="Seasons" subtitle={`${newestFirst.length} seasons, newest first`}>
-            {newestFirst.length ? (
+        <Page title="Seasons" subtitle={`${seasons.length} seasons, newest first`}>
+            {seasons.length ? (
                 <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {newestFirst.map((season) => (
+                    {seasons.map((season) => (
                         <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
                                   className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">

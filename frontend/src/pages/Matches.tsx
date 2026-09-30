@@ -5,15 +5,14 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {newestFirst} from "../util/sort.ts";
 
 export default function Matches() {
-    const {data, isLoading, isError} = useMatches();
+    // Newest first, as the API returns them
+    const {data: matches, isPending, isError} = useMatches();
 
-    if (isLoading) return <Page title="Matches"><Loader label="Loading matches"/></Page>;
+    if (isPending) return <Page title="Matches"><Loader label="Loading matches"/></Page>;
     if (isError) return <Page title="Matches"><QueryError message="Couldn't load matches."/></Page>;
 
-    const matches = newestFirst(data ?? []);
     const radiantWins = matches.filter(m => m.winner === "RADIANT").length;
     const direWins = matches.length - radiantWins;
     const seasonMatches = matches.filter(m => m.seasonName).length;

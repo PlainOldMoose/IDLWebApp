@@ -1,4 +1,4 @@
-import type {Season} from "../types/Season.ts";
+import type {Season} from "../types.ts";
 
 type SeasonStatus = Season["status"];
 

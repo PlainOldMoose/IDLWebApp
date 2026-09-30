@@ -6,7 +6,6 @@ import {
     useSeasonSignup,
     useSeasonSignups
 } from "../services/Queries.ts";
-import {AUTH_URL} from "../services/Api.ts";
 import MatchSummaryCard, {matchColumns} from "../components/MatchSummaryCard.tsx";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
@@ -15,8 +14,6 @@ import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
 import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
-import {newestFirst} from "../util/sort.ts";
-
 
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
@@ -31,7 +28,7 @@ export default function SeasonDetail() {
         if (user) {
             signup.mutate(false);
         } else {
-            globalThis.location.href = `${AUTH_URL}/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
+            globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
         }
     };
 
@@ -123,7 +120,7 @@ export default function SeasonDetail() {
                                         <p className="text-right">Avg ELO</p>
                                         <p className="text-right">Season</p>
                                     </div>
-                                    {newestFirst(matches).map((match) => (
+                                    {matches.map((match) => (
                                         <MatchSummaryCard key={match.matchId} match={match}/>
                                     ))}
                                 </>

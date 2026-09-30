@@ -5,7 +5,7 @@ Thanks for your interest in contributing! Please read this before opening a PR.
 ## Tech Stack
 
 - **Backend:** Java 17, Springboot, PostgreSQL
-- **Frontend:** React, TailwindCSS, Axios, TanStack Query
+- **Frontend:** React, TailwindCSS, TanStack Query
 
 ## Getting Started
 
@@ -20,20 +20,16 @@ Thanks for your interest in contributing! Please read this before opening a PR.
 ```bash
 git clone https://github.com/YOUR_USERNAME/IDLWebApp.git
 ```
-2. **(Optional) Copy the example env file and fill credentials**
-```bash
-cp .env.example .env
-```
-3. **Start docker and the database**
+2. **Start docker and the database**
 ```bash
 docker compose up -d 
 ```
-4. **Run the backend**
+3. **Run the backend**
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
-5. **Run the frontend**
+4. **Run the frontend**
 ```bash
 cd ../frontend
 npm install

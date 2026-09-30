@@ -1,6 +1,5 @@
-import type {MatchSummary} from "../types/Match.ts";
-import {formatDate} from "../util/format.ts";
-import {stratzMatchUrl} from "../util/links.ts";
+import type {MatchSummary} from "../types.ts";
+import {formatDate, stratzMatchUrl} from "../util/format.ts";
 
 interface MatchSummaryCardProps {
     match: MatchSummary;

@@ -1,5 +1,4 @@
-import {useMemo} from "react";
-import {Link, useNavigate, useSearchParams} from "react-router-dom";
+import {Link, useSearchParams} from "react-router-dom";
 import {useCurrentUser, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
@@ -8,39 +7,31 @@ import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {formatElo} from "../util/format.ts";
-import {rankPlayers} from "../util/sort.ts";
 
 export default function Players() {
-    const {data: players, isLoading, isError} = usePlayers();
+    // Highest ELO first, as the API returns them, so position is rank
+    const {data: players, isPending, isError} = usePlayers();
     const {data: user} = useCurrentUser();
     // The search lives in the URL (?q=) so a filtered list can be shared or bookmarked
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get("q") ?? "";
-    const navigate = useNavigate();
-
-    const ranked = useMemo(() => rankPlayers(players ?? []), [players]);
 
     const header = {title: "Players", aside: <button className="primary-button">Add player</button>};
-    if (isLoading) return <Page {...header}><Loader label="Loading players"/></Page>;
+    if (isPending) return <Page {...header}><Loader label="Loading players"/></Page>;
     if (isError) return <Page {...header}><QueryError message="Couldn't load players."/></Page>;
 
     const query = search.trim().toLowerCase();
-    const visible = ranked
+    const visible = players
         .map((player, index) => ({player, rank: index + 1}))
         .filter(({player}) => player.username.toLowerCase().includes(query));
 
-    const yourRank = ranked.findIndex(p => p.steamId === user?.steamId) + 1;
-    const median = ranked.length ? ranked[Math.floor(ranked.length / 2)].elo : 0;
+    const yourRank = players.findIndex(p => p.steamId === user?.steamId) + 1;
+    const median = players.length ? players[Math.floor(players.length / 2)].elo : 0;
 
     return (
-        <Page {...header} subtitle={`${ranked.length} players, ranked by ELO`}>
+        <Page {...header} subtitle={`${players.length} players, ranked by ELO`}>
             <Panel title="Ladder" meta="Hover to see who, click to open their page" className="mb-4">
-                <EloLadder
-                    players={ranked}
-                    highlightSteamId={user?.steamId}
-                    highlightLabel="You"
-                    onSelect={(player) => navigate(`/players/${player.steamId}`)}
-                />
+                <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
             </Panel>
 
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -93,16 +84,16 @@ export default function Players() {
                         <Panel title="Your standing">
                             <StatStrip stats={[
                                 {label: "Rank", value: yourRank},
-                                {label: "ELO", value: formatElo(ranked[yourRank - 1].elo)},
-                                {label: "Percentile", value: `Top ${Math.ceil((yourRank / ranked.length) * 100)}%`},
+                                {label: "ELO", value: formatElo(players[yourRank - 1].elo)},
+                                {label: "Percentile", value: `Top ${Math.ceil((yourRank / players.length) * 100)}%`},
                             ]}/>
                         </Panel>
                     )}
                     <Panel title="League">
                         <StatStrip stats={[
-                            {label: "Players", value: ranked.length},
+                            {label: "Players", value: players.length},
                             {label: "Median", value: formatElo(median)},
-                            {label: "Highest", value: ranked.length ? formatElo(ranked[0].elo) : "None"},
+                            {label: "Highest", value: players.length ? formatElo(players[0].elo) : "None"},
                         ]}/>
                     </Panel>
                 </aside>

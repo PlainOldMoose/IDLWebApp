@@ -3,7 +3,6 @@ package com.plainoldmoose.IDLWebApp.model.match;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.enums.MatchStatus;
-import com.plainoldmoose.IDLWebApp.model.enums.MatchType;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
@@ -22,9 +21,7 @@ public class Match {
     @Min(value = 1, message = "Match ID must be positive")
     private Long matchId;
 
-    @Enumerated
-    private MatchType matchType;
-
+    // No season means an in-house match
     @ManyToOne
     @JoinColumn(name = "season_id")
     private Season season;
