@@ -3,6 +3,7 @@ package com.plainoldmoose.IDLWebApp.controller.auth;
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import com.plainoldmoose.IDLWebApp.service.SteamAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,8 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,13 +42,13 @@ public class SteamAuthController {
 
     @GetMapping("/login")
     public ResponseEntity<Void> login(@RequestParam(defaultValue = "/") String returnTo) {
-        String returnUrl = baseUrl + "/auth/callback?returnTo=" + returnTo;
+        String returnUrl = baseUrl + "/auth/callback?returnTo=" + URLEncoder.encode(localPath(returnTo), UTF_8);
 
-        String steamLoginUrl = "https://steamcommunity.com/openid/login" +
+        String steamLoginUrl = SteamAuthService.STEAM_LOGIN +
                 "?openid.ns=http://specs.openid.net/auth/2.0" +
                 "&openid.mode=checkid_setup" +
-                "&openid.return_to=" + returnUrl +
-                "&openid.realm=" + baseUrl +
+                "&openid.return_to=" + URLEncoder.encode(returnUrl, UTF_8) +
+                "&openid.realm=" + URLEncoder.encode(baseUrl, UTF_8) +
                 "&openid.identity=http://specs.openid.net/auth/2.0/identifier_select" +
                 "&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select";
 
@@ -54,20 +58,15 @@ public class SteamAuthController {
     }
 
     @GetMapping("/callback")
-    public ResponseEntity<Void> callback(@RequestParam Map<String, String> params) {
-        String returnTo = params.getOrDefault("returnTo", "/");
+    public ResponseEntity<Void> callback(@RequestParam Map<String, String> params, HttpServletRequest request) {
+        String returnTo = localPath(params.getOrDefault("returnTo", "/"));
 
-        if (!params.containsKey("openid.claimed_id") || !params.containsKey("openid.sig")) {
-            return ResponseEntity.badRequest()
-                    .build();
-        }
-
-        if (!steamAuthService.verifyResponse(params)) {
+        String steamId = steamAuthService.verify(params, baseUrl + "/auth/callback")
+                .orElse(null);
+        if (steamId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .build();
         }
-
-        String steamId = steamAuthService.extractSteamId(params.get("openid.claimed_id"));
 
         if (playerService.findSteamUser(steamId, false).isEmpty()) {
             return ResponseEntity.status(HttpStatus.FOUND)
@@ -80,12 +79,21 @@ public class SteamAuthController {
                 : List.of(new SimpleGrantedAuthority("ROLE_USER"));
         Authentication auth = new UsernamePasswordAuthenticationToken(steamId, null, roles);
 
+        // New session id at login, so a session id planted in the browser beforehand is useless afterwards
+        if (request.getSession(false) != null) {
+            request.changeSessionId();
+        }
         SecurityContextHolder.getContext()
                 .setAuthentication(auth);
 
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(baseUrl + returnTo))
                 .build();
+    }
+
+    // Paths on this site only: baseUrl + ".evil.com" or "@evil.com" would send the browser to evil.com
+    static String localPath(String path) {
+        return path.startsWith("/") ? path : "/";
     }
 
     // authentication is null for anonymous requests
