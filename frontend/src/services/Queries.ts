@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import type {MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+import type {MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
@@ -48,6 +48,14 @@ export function useMatches() {
     return useQuery({
         queryKey: ["matches"],
         queryFn: () => request<MatchSummary[]>("/api/matches"),
+    });
+}
+
+export function useMatchDetail(matchId: string | undefined) {
+    return useQuery({
+        queryKey: ["match", matchId],
+        queryFn: () => request<MatchDetail>(`/api/matches/${matchId}`),
+        enabled: !!matchId
     });
 }
 
