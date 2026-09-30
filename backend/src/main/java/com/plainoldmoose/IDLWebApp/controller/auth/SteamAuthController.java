@@ -34,6 +34,9 @@ public class SteamAuthController {
     @Value("${app.base-url}")
     private String baseUrl;
 
+    @Value("${app.admin-steam-ids}")
+    private List<String> adminSteamIds;
+
     @GetMapping("/login")
     public ResponseEntity<Void> login(@RequestParam(defaultValue = "/") String returnTo) {
         String returnUrl = baseUrl + "/auth/callback?returnTo=" + returnTo;
@@ -73,7 +76,10 @@ public class SteamAuthController {
                     .build();
         }
 
-        Authentication auth = new UsernamePasswordAuthenticationToken(steamId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        List<SimpleGrantedAuthority> roles = adminSteamIds.contains(steamId)
+                ? List.of(new SimpleGrantedAuthority("ROLE_USER"), new SimpleGrantedAuthority("ROLE_ADMIN"))
+                : List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        Authentication auth = new UsernamePasswordAuthenticationToken(steamId, null, roles);
 
         SecurityContextHolder.getContext()
                 .setAuthentication(auth);
