@@ -19,12 +19,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/idlwebapp
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_SQL_INIT_MODE: never
-      ADMIN_CREDENTIALS: ${ADMIN_CREDENTIALS}
-      CORS_ALLOWED_ORIGINS: https://idl.vandermerwe.uk
       BASE_URL: https://idl.vandermerwe.uk
-      FRONTEND_URL: https://idl.vandermerwe.uk
     depends_on:
       db:
         condition: service_healthy
