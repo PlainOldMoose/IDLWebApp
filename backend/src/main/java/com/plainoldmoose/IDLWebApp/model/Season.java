@@ -32,7 +32,8 @@ public class Season {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    @OneToMany(mappedBy = "season")
+    // Sign-ups go with the season; teams and matches block deleting it instead
+    @OneToMany(mappedBy = "season", cascade = CascadeType.REMOVE)
     private List<SeasonSignup> signups;
 
     @OneToMany(mappedBy = "season")

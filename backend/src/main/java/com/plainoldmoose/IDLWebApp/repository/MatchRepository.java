@@ -10,4 +10,6 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findAllByOrderByPlayedTimeDesc();
 
     List<Match> findBySeasonIdOrderByPlayedTimeDesc(UUID seasonId);
+
+    boolean existsBySeasonId(UUID seasonId);
 }

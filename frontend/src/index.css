@@ -24,6 +24,9 @@
     --color-win: #8FCB4F;
     --color-loss: #E0533D;
 
+    /* Destructive actions, like deleting a season. Same red as Dire, named for what it means here */
+    --color-danger: #E0533D;
+
     /* Season champions only, always next to the word "Champions" */
     --color-aegis: #E6B94F;
 }

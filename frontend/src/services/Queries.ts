@@ -5,7 +5,8 @@ import type {MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, Se
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const response = await fetch(path, init);
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
-    return response.json();
+    // 204 No Content has no body to parse
+    return response.status === 204 ? undefined as T : response.json();
 };
 
 export function usePlayers() {
@@ -38,6 +39,16 @@ export function useCreateSeason() {
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify(season),
         }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["seasons"]});
+        }
+    });
+}
+
+export function useDeleteSeason() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (seasonId: string) => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasons"]});
         }

@@ -16,6 +16,7 @@ public class SecurityConfig {
         // First match wins, so the admin rule must come before the /api/** permitAll
         return http.authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/players", "/api/seasons").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/seasons/*").hasRole("ADMIN")
                         .requestMatchers("/auth/**", "/api/**").permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.disable())
