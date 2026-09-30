@@ -5,7 +5,7 @@ import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, stratzMatchUrl} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
@@ -35,12 +35,12 @@ export default function MatchDetail() {
                 <span className="flex flex-wrap gap-x-4 gap-y-1">
                     <span className="figures">{formatDate(match.timePlayed)}</span>
                     <span>{match.seasonName ?? "In-house"}</span>
-                    {match.avgElo != null && <span className="figures">{match.avgElo.toLocaleString("en-GB")} avg ELO</span>}
+                    <span className="figures">{match.avgElo.toLocaleString("en-GB")} avg ELO</span>
                     <span className="figures">Match {match.matchId}</span>
                 </span>
             }
             aside={match.seasonName && (
-                <a href={stratzMatchUrl(match.matchId)} target="_blank" rel="noopener noreferrer" className="primary-button">
+                <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
                     Open on Stratz
                 </a>
             )}

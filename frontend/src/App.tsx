@@ -32,7 +32,7 @@ function App() {
                     <div className="ml-auto flex h-12 shrink-0 items-center">
                         {user ? (<>
                             <NavLink to={`/players/${user.steamId}`} className="nav-link">
-                                {user.username || user.steamId}
+                                {user.username}
                             </NavLink>
                             <button type="button" onClick={() => signOut.mutate()} className="nav-link cursor-pointer">
                                 Sign out

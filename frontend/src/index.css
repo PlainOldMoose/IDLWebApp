@@ -85,6 +85,11 @@
         hover:text-bone hover:border-ash cursor-pointer transition-colors;
     }
 
+    /* Width and spacing are left to utilities on each input */
+    .text-input {
+        @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent;
+    }
+
     .row-link {
         @apply rounded-md transition-colors hover:bg-panel-raised;
     }

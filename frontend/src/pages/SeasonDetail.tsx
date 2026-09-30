@@ -4,8 +4,8 @@ import {Trash} from "@phosphor-icons/react";
 import {
     useCurrentUser,
     useDeleteSeason,
+    useMatches,
     useSeasonDetail,
-    useSeasonMatches,
     useSeasonSignup,
     useSeasonSignups
 } from "../services/Queries.ts";
@@ -21,9 +21,11 @@ import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
-    const {data: signups} = useSeasonSignups(seasonId);
+    // Sign-ups only matter before the season starts, matches only after
+    const started = season?.status === "ACTIVE" || season?.status === "COMPLETED";
+    const {data: signups} = useSeasonSignups(seasonId, season?.status === "REGISTRATION");
     const {data: user} = useCurrentUser();
-    const {data: matches} = useSeasonMatches(seasonId, season?.status !== "REGISTRATION");
+    const {data: matches} = useMatches(seasonId, !!seasonId && started);
     const signup = useSeasonSignup(seasonId);
     const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
     const deleteSeason = useDeleteSeason(seasonId);
@@ -67,7 +69,6 @@ export default function SeasonDetail() {
     );
     if (isError) return <Page title="Season not found"><QueryError message="Couldn't find this season."/></Page>;
 
-    const started = season.status === "ACTIVE" || season.status === "COMPLETED";
     const standings = [...season.teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
     const captains = signups?.filter(s => s.willingToCaptain).length ?? 0;
     // Same rule as the API, so the button is greyed out instead of failing
@@ -108,7 +109,7 @@ export default function SeasonDetail() {
                                     spellCheck={false}
                                     placeholder="1 > 2 > 3/4"
                                     aria-describedby="role-hint"
-                                    className="w-52 rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent"
+                                    className="text-input w-52"
                                 />
                                 <p id="role-hint" className="text-sm text-ash">
                                     1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
@@ -265,7 +266,7 @@ export default function SeasonDetail() {
                         <label className="block">
                             Type <strong>delete</strong> to confirm
                             <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
-                                   className="mt-2 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent"/>
+                                   className="text-input mt-2 block w-full"/>
                         </label>
                         {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
                         <div className="flex justify-end gap-3">

@@ -38,7 +38,7 @@ export default function Seasons() {
         });
     };
 
-    const inputClass = "mt-1 block w-full rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone focus:border-accent";
+    const inputClass = "text-input mt-1 block w-full";
 
     // Only admins get the button; the API enforces the same rule
     const header = {

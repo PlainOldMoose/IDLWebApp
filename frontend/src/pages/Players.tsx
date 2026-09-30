@@ -16,9 +16,8 @@ export default function Players() {
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get("q") ?? "";
 
-    const header = {title: "Players", aside: user?.admin && <button className="primary-button">Add player</button>};
-    if (isPending) return <Page {...header}><Loader label="Loading players"/></Page>;
-    if (isError) return <Page {...header}><QueryError message="Couldn't load players."/></Page>;
+    if (isPending) return <Page title="Players"><Loader label="Loading players"/></Page>;
+    if (isError) return <Page title="Players"><QueryError message="Couldn't load players."/></Page>;
 
     const query = search.trim().toLowerCase();
     const visible = players
@@ -29,7 +28,7 @@ export default function Players() {
     const median = players.length ? players[Math.floor(players.length / 2)].elo : 0;
 
     return (
-        <Page {...header} subtitle={`${players.length} players, ranked by ELO`}>
+        <Page title="Players" subtitle={`${players.length} players, ranked by ELO`}>
             <Panel title="Ladder" meta="Hover to see who, click to open their page" className="mb-4">
                 <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
             </Panel>
@@ -47,7 +46,7 @@ export default function Players() {
                             value={search}
                             onChange={(e) => setSearchParams(e.target.value ? {q: e.target.value} : {}, {replace: true})}
                             placeholder="Find a player…"
-                            className="w-52 rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent"
+                            className="text-input w-52"
                         />
                     </>
                 }>

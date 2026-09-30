@@ -11,7 +11,7 @@ export interface PlayerDetail extends PlayerSummary {
     recentMatches: PlayerMatchSummary[];
 }
 
-export interface PlayerMatchSummary {
+interface PlayerMatchSummary {
     matchId: number;
     timePlayed: string;
     won: boolean;
@@ -36,7 +36,7 @@ export interface SeasonDetail extends Season {
     winnerTeamName?: string;
 }
 
-export interface TeamSummary {
+interface TeamSummary {
     teamId: string;
     name: string;
     captainUsername: string;
@@ -58,7 +58,7 @@ export interface MatchSummary {
     matchId: number;
     winner: "RADIANT" | "DIRE";
     timePlayed: string;
-    avgElo?: number;
+    avgElo: number;
     seasonName?: string;
     radiantTeamName?: string;
     direTeamName?: string;
@@ -69,7 +69,7 @@ export interface MatchDetail {
     players: MatchPlayer[]; // By ELO going in, highest first
 }
 
-export interface MatchPlayer {
+interface MatchPlayer {
     steamId: string;
     username: string;
     side: "RADIANT" | "DIRE";

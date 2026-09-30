@@ -24,17 +24,21 @@ export default function Landing() {
 
     const currentSeason = seasons && pickCurrentSeason(seasons);
 
-    const what_body = "This is a (non-vibecoded) web application made by Moose. It tracks and stores IDL data like " +
-        "seasons and matches, and formats them into a more readable format.";
-    const why_body = "The aim of this project is to replace the back-end currently used by the admins, thus ending Sabata's years of hard work manually entering data into spreadsheets. " +
-        "In the future it also seeks to provide features and tools to players of IDL, such as an in-house balancer and our very own doodle.";
-    const how_body = "This project is made 100% by hand, using Java Springboot, React/Tailwind, and a PostgreSQL database. The project is open source, check out the source code and how to contribute";
     const about = [
-        {title: "What?", body: what_body},
-        {title: "Why?", body: why_body},
+        {
+            title: "What?",
+            body: "This is a (non-vibecoded) web application made by Moose. It tracks and stores IDL data like " +
+                "seasons and matches, and formats them into a more readable format.",
+        },
+        {
+            title: "Why?",
+            body: "The aim of this project is to replace the back-end currently used by the admins, thus ending Sabata's years of hard work manually entering data into spreadsheets. " +
+                "In the future it also seeks to provide features and tools to players of IDL, such as an in-house balancer and our very own doodle.",
+        },
         {
             title: "How?", body: <>
-                {how_body + " "}
+                This project is made 100% by hand, using Java Springboot, React/Tailwind, and a PostgreSQL database.
+                The project is open source, check out the source code and how to contribute{" "}
                 <a href="https://github.com/PlainOldMoose/IDLWebApp" target="_blank" rel="noopener noreferrer"
                    className="font-semibold text-accent underline underline-offset-2 hover:text-bone">here</a>
             </>
