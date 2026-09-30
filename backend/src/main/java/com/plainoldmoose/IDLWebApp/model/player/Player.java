@@ -2,7 +2,6 @@ package com.plainoldmoose.IDLWebApp.model.player;
 
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,7 +10,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
