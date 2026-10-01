@@ -1,5 +1,4 @@
 import {Link, useParams} from "react-router-dom";
-import {Moon, Sun} from "@phosphor-icons/react";
 import {useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
@@ -56,10 +55,7 @@ export default function MatchDetail() {
                     return (
                         <Panel key={side}
                                title={
-                                   <span className="flex items-center gap-2">
-                                       {radiant
-                                           ? <Sun aria-hidden="true" size={18} className="shrink-0"/>
-                                           : <Moon aria-hidden="true" size={18} className="shrink-0"/>}
+                                   <span className="flex items-baseline gap-2">
                                        {teamName ?? (radiant ? "Radiant" : "Dire")}
                                        {teamName && <span className="text-sm font-normal text-ash">{radiant ? "Radiant" : "Dire"}</span>}
                                    </span>
