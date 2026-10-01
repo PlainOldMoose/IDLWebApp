@@ -23,7 +23,8 @@ jobs:
         working-directory: backend
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          # Same as frontend/Dockerfile
+          node-version: 26
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci && npm run lint && npm run build
@@ -57,6 +58,8 @@ jobs:
             ghcr.io/plainoldmoose/idlwebapp-${{ matrix.service }}:${{ github.sha }}
   deploy:
     needs: build
+    # One deploy at a time, so two quick merges can't interleave on the server
+    concurrency: deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,15 +79,20 @@ jobs:
           TUNNEL_SERVICE_URL: localhost:2222
           TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          # Read from the environment rather than pasted into the script
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          # The images this run built, rather than whatever :latest is by now
+          TAG: ${{ github.sha }}
         run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > key
           chmod 600 key
           # The server's host key, so ssh refuses anything else answering on the tunnel
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > known_hosts
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > known_hosts
           ./cloudflared access tcp &
-          sleep 3
-          # Copies the repo's compose file over first, so the server never runs its own copy. Pruning drops the
-          # images each deploy replaces, which would otherwise fill the disk
-          ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=known_hosts -p 2222 -i key root@localhost \
-            "cat > /opt/idlwebapp/docker-compose.yml && cd /opt/idlwebapp && docker compose pull && docker compose up -d && docker image prune -f" \
+          timeout 30 bash -c 'until (: > /dev/tcp/localhost/2222) 2>/dev/null; do sleep 1; done'
+          # Copies the repo's compose file over first, so the server never runs its own copy. Each deploy's images
+          # have their own tag, so pruning needs -a to drop the old ones; images of running containers are kept
+          ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=known_hosts -p 2222 -i key deploy@localhost \
+            "cat > /opt/idlwebapp/docker-compose.yml && cd /opt/idlwebapp && export TAG=$TAG && docker compose pull && docker compose up -d && docker image prune -af" \
             < docker-compose.yml

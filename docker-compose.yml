@@ -1,5 +1,6 @@
 # Prod runs this file: the deploy copies it to the server, which pulls the images instead of building them.
 # Locally, `docker compose up --build` builds from source.
+# TAG is the commit the deploy built (latest locally). To roll back, run `TAG=<sha> docker compose up -d` on the server
 services:
   db:
     image: postgres:16-alpine
@@ -18,13 +19,15 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/plainoldmoose/idlwebapp-backend:latest
+    image: ghcr.io/plainoldmoose/idlwebapp-backend:${TAG:-latest}
     build: ./backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/idlwebapp
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       BASE_URL: https://idl-uk.com
+      # Moose, LightofSeven, Lacanos
+      ADMIN_STEAM_IDS: 76561198090941997,76561198004530856,76561198083132868
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +35,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/plainoldmoose/idlwebapp-frontend:latest
+    image: ghcr.io/plainoldmoose/idlwebapp-frontend:${TAG:-latest}
     build: ./frontend
     # Localhost only: the Cloudflare Tunnel is the way in
     ports:

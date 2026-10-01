@@ -79,5 +79,6 @@ class SteamAuthTest {
         assertEquals("/seasons/1", SteamAuthController.localPath("/seasons/1"));
         assertEquals("/", SteamAuthController.localPath(".evil.com"));
         assertEquals("/", SteamAuthController.localPath("@evil.com"));
+        assertEquals("/", SteamAuthController.localPath("/seasons/a b"));
     }
 }
