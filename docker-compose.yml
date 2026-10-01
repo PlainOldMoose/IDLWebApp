@@ -25,6 +25,8 @@ services:
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       BASE_URL: https://idl-uk.com
+      # Moose, LightofSeven, Lacanos
+      ADMIN_STEAM_IDS: 76561198090941997,76561198004530856,76561198083132868
     depends_on:
       db:
         condition: service_healthy
