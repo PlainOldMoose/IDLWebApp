@@ -111,7 +111,7 @@ export default function Inhouses() {
                                 ))}
                             </datalist>
                             <button className="secondary-button" disabled={!searchMatch}>Add</button>
-                        </form>s
+                        </form>
                         {chosen.length > 0 && (
                             <ul className="mt-4 grid max-w-2xl gap-x-6 sm:grid-cols-2">
                                 {chosen.map(steamId => {
