@@ -103,12 +103,11 @@ cloudflared service install <token>
 mkdir -p /opt/idlwebapp && echo "DB_PASSWORD=$(openssl rand -hex 24)" > /opt/idlwebapp/.env
 ```
 
-- **Tunnel routes:** `idl-uk.com` → `http://127.0.0.1:80`, `ssh.idl-uk.com` → `ssh://localhost:22`. A Cloudflare Access app guards `ssh.idl-uk.com` and only lets the CI service token through.
-- **Firewall:** the droplet's DigitalOcean firewall allows no inbound traffic. The tunnel only connects outward.
-- **Actions secrets:** `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (the service token), `SSH_PRIVATE_KEY` (the deploy key, whose public half is in the server's `/root/.ssh/authorized_keys`), and `SSH_KNOWN_HOSTS`, from this on the server:
-  ```bash
-  for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
-  ```
+The deploy key's public half goes in the server's `/root/.ssh/authorized_keys`, and its private half in the `SSH_PRIVATE_KEY` Actions secret. `SSH_KNOWN_HOSTS` comes from this on the server:
+
+```bash
+for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
+```
 
 ## API Reference
 
