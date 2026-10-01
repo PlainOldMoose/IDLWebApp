@@ -71,44 +71,6 @@ npm install
 npm run dev
 ```
 
-### Seed data
-
-The database is never wiped or seeded on startup. Data persists until you reset it with:
-
-```bash
-backend/scripts/reset-db.sh          # dev DB
-IDL_PROD_SSH=<host> backend/scripts/reset-db.sh prod   # prod DB, asks for confirmation
-```
-
-This empties every table and reloads `backend/src/main/resources/data.sql` in a single transaction. This data is a snapshot of actual IDL Elos with some fake seasons/matches and serves only as a placeholder until I import the real data.
-
-Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won't change a column's type, rename or drop anything. After that kind of entity change, recreate the dev DB with `docker compose down -v && docker compose up -d` in `backend/`, start the backend, then run the reset script.
-
-## Deployment
-
-Prod is https://idl-uk.com, on a DigitalOcean droplet (Ubuntu 24.04). A push to `main` runs the tests, pushes both images to GHCR, then deploys over SSH through a Cloudflare Tunnel. The deploy copies the root `docker-compose.yml` to `/opt/idlwebapp`, so the repo's compose file is the one prod runs. The only other file on the server is the `.env` beside it.
-
-Setting up a new server, as root:
-
-```bash
-# 1 GB of swap, Docker, and log rotation so container logs can't fill the disk
-fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
-echo "/swapfile none swap sw 0 0" >> /etc/fstab
-mkdir -p /etc/docker && echo '{"log-driver": "local"}' > /etc/docker/daemon.json
-apt install docker.io docker-compose-v2
-
-# cloudflared from Cloudflare's apt repo (pkg.cloudflare.com), then connect it with the tunnel's token
-cloudflared service install <token>
-
-mkdir -p /opt/idlwebapp && echo "DB_PASSWORD=$(openssl rand -hex 24)" > /opt/idlwebapp/.env
-```
-
-The deploy key's public half goes in the server's `/root/.ssh/authorized_keys`, and its private half in the `SSH_PRIVATE_KEY` Actions secret. `SSH_KNOWN_HOSTS` comes from this on the server:
-
-```bash
-for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
-```
-
 ## API Reference
 
 ### Players
