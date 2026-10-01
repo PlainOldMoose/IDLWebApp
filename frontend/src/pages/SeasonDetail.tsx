@@ -1,6 +1,5 @@
 import {type FormEvent, useRef, useState} from "react";
-import {Link, useNavigate, useParams} from "react-router-dom";
-import {Trash} from "@phosphor-icons/react";
+import {Link, useNavigate, useParams} from "react-router";
 import {
     useCurrentUser,
     useDeleteSeason,
@@ -15,7 +14,7 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
+import {statusStyles} from "../util/statusStyles.ts";
 import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
 
 export default function SeasonDetail() {
@@ -80,13 +79,16 @@ export default function SeasonDetail() {
             subtitle={
                 <>
                     <span className="figures">{formatDateRange(season.startDate, season.endDate)}</span>
-                    <span className={`ml-4 font-medium ${statusTextStyles[season.status]}`}>{statusLabels[season.status]}</span>
+                    <span className={`ml-4 font-medium ${statusStyles[season.status].text}`}>{statusStyles[season.status].label}</span>
                     {/* Only admins get the button; the API enforces the same rule */}
                     {user?.admin && (
                         <button aria-label="Delete season" onClick={openDeleteDialog} disabled={!deletable}
                                 title={deletable ? "Delete season" : "Seasons with teams or matches can't be deleted"}
                                 className="ml-3 rounded-md p-1 align-middle text-danger transition-colors enabled:cursor-pointer enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:text-ash disabled:opacity-50">
-                            <Trash size={20} aria-hidden="true"/>
+                            {/*Phosphor's Trash*/}
+                            <svg aria-hidden="true" width={20} height={20} viewBox="0 0 256 256" fill="currentColor">
+                                <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/>
+                            </svg>
                         </button>
                     )}
                 </>

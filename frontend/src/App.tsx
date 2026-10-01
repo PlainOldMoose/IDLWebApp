@@ -1,4 +1,4 @@
-import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router-dom";
+import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router";
 import {useCurrentUser, useSignOut} from "./services/Queries.ts";
 import Landing from "./pages/Landing.tsx";
 import Seasons from "./pages/Seasons.tsx";
@@ -8,6 +8,7 @@ import MatchDetail from "./pages/MatchDetail.tsx";
 import SeasonDetail from "./pages/SeasonDetail.tsx";
 import Unregistered from "./pages/Unregistered.tsx";
 import PlayerDetail from "./pages/PlayerDetail.tsx";
+import Inhouses from "./pages/Inhouses.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
                         <NavLink to="/players" className="nav-link">Players</NavLink>
                         <NavLink to="/seasons" className="nav-link">Seasons</NavLink>
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
+                        <NavLink to="/inhouses" className="nav-link">In-houses</NavLink>
                     </div>
                     <div className="ml-auto flex h-12 shrink-0 items-center">
                         {user ? (<>
@@ -54,6 +56,7 @@ function App() {
                     <Route path="/seasons/:seasonId" element={<SeasonDetail/>}/>
                     <Route path="/matches" element={<Matches/>}/>
                     <Route path="/matches/:matchId" element={<MatchDetail/>}/>
+                    <Route path="/inhouses" element={<Inhouses/>}/>
                     <Route path="/unregistered" element={<Unregistered/>}/>
                     <Route path="*" element={<NotFound/>}/>
                 </Routes>
