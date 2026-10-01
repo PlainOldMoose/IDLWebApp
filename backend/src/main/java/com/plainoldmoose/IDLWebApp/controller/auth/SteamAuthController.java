@@ -91,8 +91,14 @@ public class SteamAuthController {
                 .build();
     }
 
-    // Paths on this site only: baseUrl + ".evil.com" or "@evil.com" would send the browser to evil.com
+    // Paths on this site only: baseUrl + ".evil.com" or "@evil.com" would send the browser to evil.com.
+    // A path that isn't a valid URI, e.g. one with a space, would make URI.create throw after a good login
     static String localPath(String path) {
+        try {
+            URI.create(path);
+        } catch (IllegalArgumentException e) {
+            return "/";
+        }
         return path.startsWith("/") ? path : "/";
     }
 
