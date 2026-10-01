@@ -1,5 +1,4 @@
 import {Link, useParams} from "react-router-dom";
-import {Moon, Sun, Trophy, UsersThree} from "@phosphor-icons/react";
 import {usePlayer, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
@@ -59,10 +58,9 @@ export default function PlayerDetail() {
                                     const change = match.eloChange;
                                     const swing = change !== null && maxChange > 0 ? (Math.abs(change) / maxChange) * 50 : 0;
                                     const gained = change === null || change >= 0;
-                                    const radiant = match.side === "RADIANT";
                                     return (
                                         <Link key={match.matchId} to={`/matches/${match.matchId}`}
-                                              className="grid grid-cols-[1.5rem_1rem_3.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-2.5 transition-colors hover:bg-panel-raised focus-visible:-outline-offset-2
+                                              className="grid grid-cols-[1.5rem_3.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-2.5 transition-colors hover:bg-panel-raised focus-visible:-outline-offset-2
                                                       sm:grid-cols-[1.5rem_7rem_3.5rem_6rem_minmax(0,1fr)_7.5rem]">
                                             <span title={match.won ? "Won" : "Lost"}
                                                   className={`inline-flex size-6 items-center justify-center rounded-[3px] text-xs font-bold text-night ${
@@ -71,13 +69,10 @@ export default function PlayerDetail() {
                                                 <span className="sr-only">{match.won ? "Won" : "Lost"}</span>
                                             </span>
 
-                                            {/*Radiant is the side of daylight, Dire the side of night*/}
-                                            <p className="flex items-center gap-2 text-sm text-ash" title={radiant ? "Radiant" : "Dire"}>
-                                                {radiant
-                                                    ? <Sun aria-hidden="true" size={16} className="shrink-0"/>
-                                                    : <Moon aria-hidden="true" size={16} className="shrink-0"/>}
-                                                <span className="sr-only sm:not-sr-only">{radiant ? "Radiant" : "Dire"}</span>
-                                                {match.sub && <span className="hidden rounded-sm bg-panel-raised px-1 text-xs sm:inline">Sub</span>}
+                                            {/*Too narrow for the side on phones; it's one tap away on the match page*/}
+                                            <p className="sr-only flex items-center gap-2 text-sm text-ash sm:not-sr-only">
+                                                {match.side === "RADIANT" ? "Radiant" : "Dire"}
+                                                {match.sub && <span className="rounded-sm bg-panel-raised px-1 text-xs">Sub</span>}
                                             </p>
 
                                             {change === null ? (
@@ -95,11 +90,8 @@ export default function PlayerDetail() {
                                                 <span className="absolute -top-0.5 left-1/2 h-2.5 w-0.5 -translate-x-1/2 bg-bone/70"/>
                                             </span>
 
-                                            <p className="flex min-w-0 items-center gap-2 text-ash sm:border-l sm:border-rule sm:pl-4">
-                                                {match.seasonName
-                                                    ? <Trophy aria-hidden="true" size={16} className="shrink-0"/>
-                                                    : <UsersThree aria-hidden="true" size={16} className="shrink-0"/>}
-                                                <span className="truncate">{match.seasonName ?? "In-house"}</span>
+                                            <p className="truncate text-ash sm:border-l sm:border-rule sm:pl-4">
+                                                {match.seasonName ?? "In-house"}
                                             </p>
 
                                             <p className="text-right sm:border-l sm:border-rule sm:pl-4">
