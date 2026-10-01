@@ -14,6 +14,9 @@
 	<name>IDLWebApp</name>
 	<properties>
 		<java.version>17</java.version>
+		<!-- Patched over Boot 4.1.1's 11.0.24 and 3.1.5 for known CVEs. Drop both once a Boot release ships them -->
+		<tomcat.version>11.0.26</tomcat.version>
+		<jackson-bom.version>3.1.7</jackson-bom.version>
 	</properties>
 	<dependencies>
 		<dependency>

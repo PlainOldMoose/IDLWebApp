@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.dto.request;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -10,7 +11,9 @@ public record CreatePlayerRequest(
         @Size(max = 64, message = "Username must be at most 64 characters")
         String username,
 
+        // The cap also rejects 1e999, which Jackson reads as Infinity
         @PositiveOrZero
+        @Max(10000)
         double elo,
 
         @NotBlank(message = "Steam ID is required")
