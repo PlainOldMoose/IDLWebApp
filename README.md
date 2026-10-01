@@ -2,40 +2,6 @@
 
 A full-stack web application for managing an **in-house Dota 2 league (IDL)**. Built to replace manual spreadsheet tracking with a proper platform for seasons, teams, matches, player ELO ratings, and Steam-authenticated signups.
 
-## To do for `security-followups` (remove this section before merging)
-
-Manual steps the code changes on this branch can't do.
-
-**Before merging**
-
-- [ ] Add the `SSH_KNOWN_HOSTS` Actions secret, or deploys stop at the SSH step (prod stays as it was). On the server:
-  ```bash
-  for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
-  ```
-  Paste the output into GitHub → Settings → Secrets and variables → Actions.
-- [ ] Review the branch, commit, open the PR.
-
-**Right after the merge deploys**
-
-- [ ] Run `backend/scripts/migrate-enum-names.sql` on prod (the command is at the top of the file), then delete the file. Until it runs, the match and player pages fail on the old columns. It runs in one transaction, so if it errors nothing changes (`character varying + integer` means the tables were already recreated and there's nothing to migrate).
-
-**Any time**
-
-- [ ] Cloudflare → SSL/TLS → Edge Certificates → turn on **Always Use HTTPS**. Check: `curl -I http://idl.vandermerwe.uk/` returns 301.
-- [ ] Rotate the prod DB password. Changing the env var alone does nothing to an existing database, so in `/opt/idlwebapp`:
-  1. `openssl rand -hex 24`
-  2. `docker compose exec db psql -U admin -d idlwebapp -c "ALTER USER admin PASSWORD '<new>'"`
-  3. Put the new password in the prod compose for both `POSTGRES_PASSWORD` and `SPRING_DATASOURCE_PASSWORD` (or a `.env` beside it)
-  4. `docker compose up -d`
-- [ ] Prod compose: if cloudflared runs on the same machine, bind the frontend as `127.0.0.1:80:80`. Make sure the router doesn't forward port 80 (`curl -m5 http://<home IP>/` from outside should time out).
-- [ ] Recreate the dev DB, which wipes it. It now runs Postgres 16 like prod (it was on `latest`, 18, whose data 16 can't open) and only listens on localhost: `cd backend && docker compose down -v && docker compose up -d`, start the backend once, then `scripts/reset-db.sh`.
-- [ ] If you use the root `docker-compose.yml`, put `DB_PASSWORD=...` in a `.env` next to it; it no longer has a default.
-
-**Undecided**
-
-- Removing the fallback admin Steam ID from `application.properties`: set `ADMIN_STEAM_IDS` in the prod compose first, or you lose admin on the next deploy.
-- `@EnableWebSecurity` on `SecurityConfig` is redundant (Spring Boot applies it), but Claude's permission check blocked removing it. Delete the annotation and its import yourself if you want it gone.
-
 ## Why This Exists
 
 Running an in-house Dota 2 league means juggling spreadsheets for player stats, match results, ELO calculations, and season standings. IDL WebApp centralises all of that into a single application where players can authenticate with Steam, sign up for seasons, and track their performance over time.
@@ -83,7 +49,7 @@ IDLWebApp/
 │       ├── pages/                    # Route-level page components
 │       ├── services/                 # API query hooks
 │       └── types.ts                  # TypeScript type definitions
-├── docker-compose.yml                # Container orchestration
+├── docker-compose.yml                # Full stack; prod runs this file
 └── .github/workflows/deploy.yml      # CI/CD pipeline
 ```
 
@@ -117,6 +83,32 @@ IDL_PROD_SSH=<host> backend/scripts/reset-db.sh prod   # prod DB, asks for confi
 This empties every table and reloads `backend/src/main/resources/data.sql` in a single transaction. This data is a snapshot of actual IDL Elos with some fake seasons/matches and serves only as a placeholder until I import the real data.
 
 Hibernate (`ddl-auto=update`) adds new tables and columns automatically, but won't change a column's type, rename or drop anything. After that kind of entity change, recreate the dev DB with `docker compose down -v && docker compose up -d` in `backend/`, start the backend, then run the reset script.
+
+## Deployment
+
+Prod is https://idl-uk.com, on a DigitalOcean droplet (Ubuntu 24.04). A push to `main` runs the tests, pushes both images to GHCR, then deploys over SSH through a Cloudflare Tunnel. The deploy copies the root `docker-compose.yml` to `/opt/idlwebapp`, so the repo's compose file is the one prod runs. The only other file on the server is the `.env` beside it.
+
+Setting up a new server, as root:
+
+```bash
+# 1 GB of swap, Docker, and log rotation so container logs can't fill the disk
+fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo "/swapfile none swap sw 0 0" >> /etc/fstab
+mkdir -p /etc/docker && echo '{"log-driver": "local"}' > /etc/docker/daemon.json
+apt install docker.io docker-compose-v2
+
+# cloudflared from Cloudflare's apt repo (pkg.cloudflare.com), then connect it with the tunnel's token
+cloudflared service install <token>
+
+mkdir -p /opt/idlwebapp && echo "DB_PASSWORD=$(openssl rand -hex 24)" > /opt/idlwebapp/.env
+```
+
+- **Tunnel routes:** `idl-uk.com` → `http://127.0.0.1:80`, `ssh.idl-uk.com` → `ssh://localhost:22`. A Cloudflare Access app guards `ssh.idl-uk.com` and only lets the CI service token through.
+- **Firewall:** the droplet's DigitalOcean firewall allows no inbound traffic. The tunnel only connects outward.
+- **Actions secrets:** `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (the service token), `SSH_PRIVATE_KEY` (the deploy key, whose public half is in the server's `/root/.ssh/authorized_keys`), and `SSH_KNOWN_HOSTS`, from this on the server:
+  ```bash
+  for f in /etc/ssh/ssh_host_*_key.pub; do awk '{print "[localhost]:2222", $1, $2}' "$f"; done
+  ```
 
 ## API Reference
 

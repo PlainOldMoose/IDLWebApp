@@ -1,3 +1,5 @@
+# Prod runs this file: the deploy copies it to the server, which pulls the images instead of building them.
+# Locally, `docker compose up --build` builds from source.
 services:
   db:
     image: postgres:16-alpine
@@ -13,25 +15,31 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
+    image: ghcr.io/plainoldmoose/idlwebapp-backend:latest
     build: ./backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/idlwebapp
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
-      BASE_URL: https://idl.vandermerwe.uk
+      BASE_URL: https://idl-uk.com
     depends_on:
       db:
         condition: service_healthy
     # No published port: only nginx (frontend) reaches it, so its rate limits and headers can't be skipped
+    restart: unless-stopped
 
   frontend:
+    image: ghcr.io/plainoldmoose/idlwebapp-frontend:latest
     build: ./frontend
+    # Localhost only: the Cloudflare Tunnel is the way in
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   db_data:
