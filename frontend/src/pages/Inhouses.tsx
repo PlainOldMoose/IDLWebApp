@@ -95,7 +95,7 @@ export default function Inhouses() {
     };
 
     return (
-        <Page title="In-houses" subtitle="Pick 10 players, play one of the 3 most even splits, then record who won.">
+        <Page title="In-houses" subtitle="Pick 10 players, pick the most even teams, then record who won.">
             {user ? (
                 <>
                     <Panel title="Balance teams" meta={`${chosen.length}/10 players`}>
@@ -111,7 +111,7 @@ export default function Inhouses() {
                                 ))}
                             </datalist>
                             <button className="secondary-button" disabled={!searchMatch}>Add</button>
-                        </form>
+                        </form>s
                         {chosen.length > 0 && (
                             <ul className="mt-4 grid max-w-2xl gap-x-6 sm:grid-cols-2">
                                 {chosen.map(steamId => {
