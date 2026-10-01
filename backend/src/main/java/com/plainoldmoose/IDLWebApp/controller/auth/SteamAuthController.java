@@ -98,16 +98,13 @@ public class SteamAuthController {
 
     // authentication is null for anonymous requests
     @GetMapping("/me")
-    public ResponseEntity<SteamUserResponse> me(Authentication authentication) {
+    public ResponseEntity<SteamUserResponse> me(Authentication authentication, HttpServletRequest request) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .build();
         }
 
-        boolean admin = authentication.getAuthorities()
-                .contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-
-        return playerService.findSteamUser(authentication.getName(), admin)
+        return playerService.findSteamUser(authentication.getName(), request.isUserInRole("ADMIN"))
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not signed in"));
     }

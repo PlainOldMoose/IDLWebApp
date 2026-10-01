@@ -1,14 +1,15 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
-// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod. json, if given, is sent as the body
+const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> => {
     // Spring's CSRF check wants the XSRF-TOKEN cookie echoed back as a header on writes
-    const headers = new Headers(init?.headers);
+    const headers = new Headers(init.headers);
     const xsrfToken = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1];
     if (xsrfToken) headers.set("X-XSRF-TOKEN", decodeURIComponent(xsrfToken));
+    if (json !== undefined) headers.set("Content-Type", "application/json");
 
-    const response = await fetch(path, {...init, headers});
+    const response = await fetch(path, {...init, headers, body: JSON.stringify(json)});
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
     return response.status === 204 ? undefined as T : response.json();
 };
@@ -38,11 +39,8 @@ export function useSeasons() {
 export function useCreateSeason() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (season: Pick<Season, "name" | "startDate" | "endDate">) => request<Season>("/api/seasons", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(season),
-        }),
+        mutationFn: (season: Pick<Season, "name" | "startDate" | "endDate">) =>
+            request<Season>("/api/seasons", {method: "POST", json: season}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasons"]});
         }
@@ -114,11 +112,8 @@ export function useSeasonSignups(seasonId: string | undefined, enabled: boolean)
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) => request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(body),
-        }),
+        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) =>
+            request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
         }
@@ -145,11 +140,8 @@ export function useInhouseBalance(steamIds: string[]) {
 export function useCreateInhouse() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (teams: { radiant: string[], dire: string[] }) => request<Inhouse>("/api/inhouses", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(teams),
-        }),
+        mutationFn: (teams: { radiant: string[], dire: string[] }) =>
+            request<Inhouse>("/api/inhouses", {method: "POST", json: teams}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["inhouses"]});
         }

@@ -1,5 +1,5 @@
 import {useId, useRef, useState} from "react";
-import {useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router";
 import type {PlayerSummary} from "../types.ts";
 import {formatElo} from "../util/format.ts";
 

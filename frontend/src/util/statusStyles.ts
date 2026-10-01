@@ -1,23 +1,8 @@
 import type {Season} from "../types.ts";
 
-type SeasonStatus = Season["status"];
-
-export const statusLabels: Record<SeasonStatus, string> = {
-    REGISTRATION: "Sign-ups open",
-    ACTIVE: "In progress",
-    COMPLETED: "Finished",
-};
-
-// Text colour for the status label
-export const statusTextStyles: Record<SeasonStatus, string> = {
-    REGISTRATION: "text-accent",
-    ACTIVE: "text-bone",
-    COMPLETED: "text-ash",
-};
-
-// Node on the seasons timeline: filled while a season still needs players or is being played
-export const statusNodeStyles: Record<SeasonStatus, string> = {
-    REGISTRATION: "bg-accent border-accent",
-    ACTIVE: "bg-bone border-bone",
-    COMPLETED: "bg-night border-ash",
+// The status label, its text colour, and its node on the seasons timeline: filled while a season still needs players or is being played
+export const statusStyles: Record<Season["status"], { label: string, text: string, node: string }> = {
+    REGISTRATION: {label: "Sign-ups open", text: "text-accent", node: "bg-accent border-accent"},
+    ACTIVE: {label: "In progress", text: "text-bone", node: "bg-bone border-bone"},
+    COMPLETED: {label: "Finished", text: "text-ash", node: "bg-night border-ash"},
 };

@@ -1,6 +1,5 @@
 const eloFormat = new Intl.NumberFormat("en-GB", {minimumFractionDigits: 1, maximumFractionDigits: 1});
 const dayFormat = new Intl.DateTimeFormat("en-GB", {day: "numeric", month: "short", year: "numeric"});
-const dayMonthFormat = new Intl.DateTimeFormat("en-GB", {day: "numeric", month: "short"});
 
 export const formatElo = (elo: number): string => eloFormat.format(elo);
 
@@ -10,12 +9,8 @@ export const formatEloChange = (change: number): string =>
 
 export const formatDate = (date: string): string => dayFormat.format(new Date(date));
 
-export const formatDateRange = (start: string, end: string): string => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const sameYear = startDate.getFullYear() === endDate.getFullYear();
-    return `${(sameYear ? dayMonthFormat : dayFormat).format(startDate)} – ${dayFormat.format(endDate)}`;
-};
+// Leaves out what both ends share: "1 – 20 Oct 2026", "1 Dec 2026 – 12 Jan 2027"
+export const formatDateRange = (start: string, end: string): string => dayFormat.formatRange(new Date(start), new Date(end));
 
 const relativeFormat = new Intl.RelativeTimeFormat("en-GB", {numeric: "auto"});
 const relativeSteps: [Intl.RelativeTimeFormatUnit, number][] = [

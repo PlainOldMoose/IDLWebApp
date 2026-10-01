@@ -1,11 +1,11 @@
-import {Link} from "react-router-dom";
+import {Link} from "react-router";
 import EloLadder from "../components/EloLadder.tsx";
 import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import {useCurrentUser, useMatches, usePlayers, useSeasons} from "../services/Queries.ts";
 import {formatDateRange} from "../util/format.ts";
-import {statusLabels, statusTextStyles} from "../util/statusStyles.ts";
+import {statusStyles} from "../util/statusStyles.ts";
 import type {Season} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 5;
@@ -70,8 +70,8 @@ export default function Landing() {
                             <p className="font-display text-3xl font-bold leading-none">{currentSeason.name}</p>
                             <p className="mt-2 text-sm text-ash">
                                 <span className="figures">{formatDateRange(currentSeason.startDate, currentSeason.endDate)}</span>
-                                <span className={`ml-3 font-medium ${statusTextStyles[currentSeason.status]}`}>
-                                    {statusLabels[currentSeason.status]}
+                                <span className={`ml-3 font-medium ${statusStyles[currentSeason.status].text}`}>
+                                    {statusStyles[currentSeason.status].label}
                                 </span>
                             </p>
                             <Link to={`/seasons/${currentSeason.id}`}

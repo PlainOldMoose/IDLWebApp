@@ -7,30 +7,16 @@
 
 # Build output
 target/
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 # Maven wrapper jar (downloaded on build)
 .mvn/wrapper/maven-wrapper.jar
 
-# Spring Tool Suite
+# Eclipse project files, which VS Code's Java extension writes too
 .apt_generated
 .classpath
 .factorypath
 .project
 .settings
-.springBeans
-.sts4-cache
-
-# NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 # ===================
 # Frontend (Node/React/Vite)
@@ -50,10 +36,6 @@ dist-ssr/
 logs/
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
 # Local env files
 *.local
@@ -91,10 +73,6 @@ Desktop.ini
 
 HELP.md
 *.sw?
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 
 CLAUDE.md
 .agents/

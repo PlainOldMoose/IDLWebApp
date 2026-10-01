@@ -4,8 +4,6 @@ on:
     branches: [main]
   # Only the test job runs for PRs, so Dependabot bumps are checked before they're merged
   pull_request:
-env:
-  REGISTRY: ghcr.io
 # Actions are pinned to commit SHAs, so a moved tag can't swap in new code. Dependabot bumps the SHA and the
 # version comment together
 jobs:
@@ -46,7 +44,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push ${{ matrix.service }}
@@ -55,8 +53,8 @@ jobs:
           context: ./${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/plainoldmoose/idlwebapp-${{ matrix.service }}:latest
-            ${{ env.REGISTRY }}/plainoldmoose/idlwebapp-${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/plainoldmoose/idlwebapp-${{ matrix.service }}:latest
+            ghcr.io/plainoldmoose/idlwebapp-${{ matrix.service }}:${{ github.sha }}
   deploy:
     needs: build
     runs-on: ubuntu-latest

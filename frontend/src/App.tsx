@@ -1,4 +1,4 @@
-import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router-dom";
+import {BrowserRouter, Routes, Route, Link, NavLink} from "react-router";
 import {useCurrentUser, useSignOut} from "./services/Queries.ts";
 import Landing from "./pages/Landing.tsx";
 import Seasons from "./pages/Seasons.tsx";
