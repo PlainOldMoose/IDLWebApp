@@ -6,7 +6,8 @@ import {
     useMatches,
     useSeasonDetail,
     useSeasonSignup,
-    useSeasonSignups
+    useSeasonSignups,
+    useWithdrawSignup
 } from "../services/Queries.ts";
 import MatchSummaryCard, {matchColumns} from "../components/MatchSummaryCard.tsx";
 import Page from "../components/Page.tsx";
@@ -26,7 +27,10 @@ export default function SeasonDetail() {
     const {data: user} = useCurrentUser();
     const {data: matches} = useMatches(seasonId, !!seasonId && started);
     const signup = useSeasonSignup(seasonId);
-    const alreadySignedUp = signups?.some(s => s.steamId === user?.steamId);
+    const withdraw = useWithdrawSignup(seasonId);
+    const mySignup = signups?.find(s => s.steamId === user?.steamId);
+    const signupDialogRef = useRef<HTMLDialogElement>(null);
+    const signupFormRef = useRef<HTMLFormElement>(null);
     const deleteSeason = useDeleteSeason(seasonId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
     // The admin has to type "delete" before the button unlocks
@@ -39,7 +43,19 @@ export default function SeasonDetail() {
         signup.mutate({
             rolePreference: String(form.get("rolePreference")),
             willingToCaptain: form.has("willingToCaptain"),
-        });
+        }, {onSuccess: () => signupDialogRef.current?.close()});
+    };
+
+    const handleWithdraw = () => {
+        withdraw.mutate(undefined, {onSuccess: () => signupDialogRef.current?.close()});
+    };
+
+    const openSignupDialog = () => {
+        signup.reset();
+        withdraw.reset();
+        // Back to the saved sign-up, dropping anything typed and then cancelled
+        signupFormRef.current?.reset();
+        signupDialogRef.current?.showModal();
     };
 
     const openDeleteDialog = () => {
@@ -95,41 +111,13 @@ export default function SeasonDetail() {
             }
             aside={
                 season.status === "REGISTRATION" ? (
-                    <div className="sm:text-right">
-                        {user && !alreadySignedUp ? (
-                            <form onSubmit={handleSignup} className="grid gap-2 sm:justify-items-end">
-                                <label htmlFor="role-preference" className="text-sm text-ash">Your roles, most wanted first</label>
-                                {/*Same pattern and length as SeasonSignupRequest on the backend*/}
-                                <input
-                                    id="role-preference"
-                                    name="rolePreference"
-                                    required
-                                    maxLength={32}
-                                    pattern="(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
-                                    title="Roles 1 to 5, each once, joined by > or /, e.g. 1 > 2 > 3/4"
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    placeholder="1 > 2 > 3/4"
-                                    aria-describedby="role-hint"
-                                    className="text-input w-52"
-                                />
-                                <p id="role-hint" className="text-sm text-ash">
-                                    1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
-                                    &gt; prefer, / equal
-                                </p>
-                                <label className="flex items-center gap-2">
-                                    <input type="checkbox" name="willingToCaptain" className="accent-accent"/>
-                                    Willing to captain
-                                </label>
-                                <button className="primary-button" disabled={signup.isPending}>Sign up</button>
-                            </form>
-                        ) : (
-                            <button className="primary-button" onClick={signIn} disabled={alreadySignedUp}>
-                                {user ? "Signed up" : "Sign in with Steam"}
-                            </button>
-                        )}
-                        {signup.isError && <p role="alert" className="mt-2 text-sm text-ash">Sign-up failed. Refresh and try again.</p>}
-                    </div>
+                    user ? (
+                        <button className="primary-button" onClick={openSignupDialog}>
+                            {mySignup ? "Edit sign-up" : "Join now"}
+                        </button>
+                    ) : (
+                        <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
+                    )
                 ) : season.winnerTeamName && (
                     <div className="border-l-3 border-aegis pl-4">
                         <p className="text-sm text-ash">Champions</p>
@@ -145,11 +133,15 @@ export default function SeasonDetail() {
                         {signups?.length ? (
                             <ul className="columns-2 gap-x-4 sm:columns-3">
                                 {signups.map((s) => (
-                                    <li key={s.steamId}>
-                                        <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block truncate px-2 py-1.5">
-                                            {s.username}
-                                            {s.rolePreference && <span className="ml-2 text-sm text-ash">{s.rolePreference}</span>}
-                                            {s.willingToCaptain && <span className="ml-2 text-sm text-ash">captain</span>}
+                                    <li key={s.steamId} className="break-inside-avoid">
+                                        <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block px-2 py-1.5">
+                                            <span className="block truncate">{s.username}</span>
+                                            {/*Own line so long preferences like 1 >>>>> 2 wrap instead of being cut off*/}
+                                            {(s.rolePreference || s.willingToCaptain) && (
+                                                <span className="block text-sm break-words text-ash">
+                                                    {[s.rolePreference, s.willingToCaptain && "captain"].filter(Boolean).join(" · ")}
+                                                </span>
+                                            )}
                                         </Link>
                                     </li>
                                 ))}
@@ -257,6 +249,54 @@ export default function SeasonDetail() {
                         })}
                     </div>
                 </>
+            )}
+
+            {user && (
+                <dialog ref={signupDialogRef} aria-labelledby="signup-title"
+                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                    <h2 id="signup-title" className="font-display text-3xl font-bold">
+                        {mySignup ? "Your sign-up" : `Join ${season.name}`}
+                    </h2>
+                    <form ref={signupFormRef} onSubmit={handleSignup} className="mt-4 space-y-4">
+                        <div>
+                            <label htmlFor="role-preference">Your roles, most wanted first</label>
+                            {/*Same pattern and length as SeasonSignupRequest on the backend*/}
+                            <input
+                                id="role-preference"
+                                name="rolePreference"
+                                required
+                                maxLength={32}
+                                pattern="\s*[Aa][Nn][Yy]\s*|(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
+                                title='Roles 1 to 5, each once, joined by > or /, e.g. 1 >>> 2 > 3/4, or just "any"'
+                                autoComplete="off"
+                                spellCheck={false}
+                                placeholder="1 >>> 2 > 3/4"
+                                defaultValue={mySignup?.rolePreference ?? ""}
+                                aria-describedby="role-hint"
+                                className="text-input mt-1 block w-full"
+                            />
+                            <p id="role-hint" className="mt-1 text-sm text-ash">
+                                1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
+                                &gt; prefer, / equal, or just &quot;any&quot;
+                            </p>
+                        </div>
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" name="willingToCaptain" defaultChecked={mySignup?.willingToCaptain}
+                                   className="accent-accent"/>
+                            Willing to captain
+                        </label>
+                        {(signup.isError || withdraw.isError) &&
+                            <p role="alert" className="text-sm text-ash">Couldn't update your sign-up. Refresh and try again.</p>}
+                        <div className="flex justify-end gap-3">
+                            {mySignup && (
+                                <button type="button" className="secondary-button mr-auto text-danger"
+                                        onClick={handleWithdraw} disabled={withdraw.isPending}>Withdraw</button>
+                            )}
+                            <button type="button" className="secondary-button" onClick={() => signupDialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={signup.isPending}>{mySignup ? "Save" : "Sign up"}</button>
+                        </div>
+                    </form>
+                </dialog>
             )}
 
             {user?.admin && (

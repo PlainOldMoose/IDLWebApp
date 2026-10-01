@@ -24,24 +24,18 @@ public class SeasonSignupService {
     private final SeasonRepository seasonRepository;
     private final PlayerRepository playerRepository;
 
+    // Signing up again updates the existing sign-up, so players can change their preferences
     public SeasonSignupResponse signup(UUID seasonId, String steamId, String rolePreference, boolean willingToCaptain) {
-        Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        Season season = openSeason(seasonId);
 
-        if (season.getStatus() != SeasonStatus.REGISTRATION) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Season signups closed");
-        }
-
-        Player player = playerRepository.findById(steamId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found"));
-
-        if (seasonSignupRepository.existsBySeasonIdAndPlayerSteamId(season.getId(), steamId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Player already signed up for this season");
-        }
-
-        SeasonSignup seasonSignup = new SeasonSignup();
-        seasonSignup.setSeason(season);
-        seasonSignup.setPlayer(player);
+        SeasonSignup seasonSignup = seasonSignupRepository.findBySeasonIdAndPlayerSteamId(seasonId, steamId)
+                .orElseGet(() -> {
+                    SeasonSignup created = new SeasonSignup();
+                    created.setSeason(season);
+                    created.setPlayer(playerRepository.findById(steamId)
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found")));
+                    return created;
+                });
         seasonSignup.setRolePreference(rolePreference);
         seasonSignup.setWillingToCaptain(willingToCaptain);
 
@@ -49,11 +43,29 @@ public class SeasonSignupService {
         return mapToResponse(saved);
     }
 
+    // Does nothing if the player wasn't signed up, so a repeated withdraw still succeeds
+    public void withdraw(UUID seasonId, String steamId) {
+        openSeason(seasonId);
+        seasonSignupRepository.findBySeasonIdAndPlayerSteamId(seasonId, steamId)
+                .ifPresent(seasonSignupRepository::delete);
+    }
+
     public List<SeasonSignupResponse> getSignups(UUID seasonId) {
         return seasonSignupRepository.findBySeasonId(seasonId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    // Sign-ups can only change while the season is taking them
+    private Season openSeason(UUID seasonId) {
+        Season season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+
+        if (season.getStatus() != SeasonStatus.REGISTRATION) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Season signups closed");
+        }
+        return season;
     }
 
     private SeasonSignupResponse mapToResponse(SeasonSignup signup) {

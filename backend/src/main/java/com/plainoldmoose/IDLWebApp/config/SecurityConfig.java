@@ -24,6 +24,8 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/seasons/*/signups").authenticated()
+                        // SeasonSignupController only deletes the caller's own sign-up
+                        .requestMatchers(HttpMethod.DELETE, "/api/seasons/*/signups").authenticated()
                         // InhouseService checks that only an in-house's own players, or an admin, finish or cancel it
                         .requestMatchers("/api/inhouses/**").authenticated()
                         .requestMatchers("/api/**").hasRole("ADMIN")

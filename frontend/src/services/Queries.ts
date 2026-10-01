@@ -120,6 +120,17 @@ export function useSeasonSignup(seasonId: string | undefined) {
     });
 }
 
+// Removes the signed-in player's own sign-up
+export function useWithdrawSignup(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
+        }
+    });
+}
+
 // In-houses whose result isn't in yet, newest first
 export function useInhouses() {
     return useQuery({
