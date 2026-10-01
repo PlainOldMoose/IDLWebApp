@@ -5,6 +5,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSignupResponse;
 import com.plainoldmoose.IDLWebApp.service.SeasonSignupService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -22,6 +23,13 @@ public class SeasonSignupController {
     @PostMapping
     public SeasonSignupResponse signup(@PathVariable UUID seasonId, @Valid @RequestBody SeasonSignupRequest request, Principal principal) {
         return seasonSignupService.signup(seasonId, principal.getName(), request.rolePreference().trim(), request.willingToCaptain());
+    }
+
+    // Only ever the caller's own sign-up
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(@PathVariable UUID seasonId, Principal principal) {
+        seasonSignupService.withdraw(seasonId, principal.getName());
     }
 
     @GetMapping

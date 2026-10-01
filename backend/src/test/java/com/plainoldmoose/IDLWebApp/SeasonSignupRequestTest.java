@@ -17,11 +17,11 @@ class SeasonSignupRequestTest {
 
     @Test
     void rolePreference() {
-        for (String ok : new String[]{"1 > 2 > 3/4", "2/3>1>>>>>5", "5", " 1 > 2 "}) {
+        for (String ok : new String[]{"1 > 2 > 3/4", "2/3>1>>>>>5", "5", " 1 > 2 ", "any", " Any "}) {
             assertEquals(true, valid(ok), ok);
         }
         // The last one matches the pattern but is too long for the column
-        for (String bad : new String[]{"1 > 1", "2/2 > 1", "6", "1 >", ">1", "1,2", "", null, "1 " + ">".repeat(300) + " 2"}) {
+        for (String bad : new String[]{"1 > 1", "2/2 > 1", "6", "1 >", ">1", "1,2", "any > 1", "anyone", "", null, "1 " + ">".repeat(300) + " 2"}) {
             assertEquals(false, valid(bad), bad);
         }
     }
