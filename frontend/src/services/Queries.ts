@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import type {MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+import type {Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
@@ -121,6 +121,59 @@ export function useSeasonSignup(seasonId: string | undefined) {
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
+        }
+    });
+}
+
+// In-houses whose result isn't in yet, newest first
+export function useInhouses() {
+    return useQuery({
+        queryKey: ["inhouses"],
+        queryFn: () => request<Inhouse[]>("/api/inhouses"),
+    });
+}
+
+// The 3 most even ways to split 10 players, most even first
+export function useInhouseBalance(steamIds: string[]) {
+    return useQuery({
+        queryKey: ["inhouseBalance", steamIds],
+        queryFn: () => request<Inhouse[]>(`/api/inhouses/balance?players=${steamIds.join(",")}`),
+        enabled: steamIds.length === 10,
+    });
+}
+
+export function useCreateInhouse() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (teams: { radiant: string[], dire: string[] }) => request<Inhouse>("/api/inhouses", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(teams),
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["inhouses"]});
+        }
+    });
+}
+
+// The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
+export function useInhouseResult() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({id, winner}: { id: number, winner: "RADIANT" | "DIRE" }) =>
+            request<void>(`/api/inhouses/${id}/result?winner=${winner}`, {method: "POST"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries();
+        }
+    });
+}
+
+export function useCancelInhouse() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => request<void>(`/api/inhouses/${id}`, {method: "DELETE"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["inhouses"]});
         }
     });
 }

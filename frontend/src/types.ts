@@ -78,3 +78,10 @@ interface MatchPlayer {
     eloBefore: number | null; // null when the match has no ELO record
     eloChange: number | null;
 }
+
+export interface Inhouse {
+    id: number | null; // null for a balance option nobody has picked yet
+    createdAt: string | null;
+    radiant: PlayerSummary[]; // Highest ELO first
+    dire: PlayerSummary[];
+}
