@@ -1,5 +1,6 @@
+import {type FormEvent, useRef} from "react";
 import {Link, useSearchParams} from "react-router";
-import {useCurrentUser, usePlayers} from "../services/Queries.ts";
+import {useCreatePlayer, useCurrentUser, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
@@ -15,9 +16,69 @@ export default function Players() {
     // The search lives in the URL (?q=) so a filtered list can be shared or bookmarked
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get("q") ?? "";
+    const createPlayer = useCreatePlayer();
+    const dialogRef = useRef<HTMLDialogElement>(null);
 
-    if (isPending) return <Page title="Players"><Loader label="Loading players"/></Page>;
-    if (isError) return <Page title="Players"><QueryError message="Couldn't load players."/></Page>;
+    const openDialog = () => {
+        createPlayer.reset();
+        dialogRef.current?.showModal();
+    };
+
+    const handleCreate = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const data = new FormData(form);
+        createPlayer.mutate({
+            username: String(data.get("username")).trim(),
+            steamId: String(data.get("steamId")),
+            elo: Number(data.get("elo")),
+        }, {
+            onSuccess: () => {
+                form.reset();
+                dialogRef.current?.close();
+            }
+        });
+    };
+
+    const inputClass = "text-input mt-2 block w-full";
+
+    // Only admins get the button; the API enforces the same rule
+    const header = {
+        title: "Players",
+        aside: user?.admin && (
+            <>
+                <button className="primary-button" onClick={openDialog}>Add player</button>
+                <dialog ref={dialogRef} aria-labelledby="add-player-title"
+                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                    <h2 id="add-player-title" className="font-display text-3xl font-bold">Add player</h2>
+                    <form onSubmit={handleCreate} className="mt-4 space-y-4">
+                        <label className="block">
+                            Username
+                            <input name="username" required maxLength={64} autoComplete="off" spellCheck={false} className={inputClass}/>
+                        </label>
+                        <label className="block">
+                            Steam ID
+                            <input name="steamId" required pattern="\d{17}" inputMode="numeric" autoComplete="off"
+                                   placeholder="7656119…" aria-describedby="steam-id-hint" className={`${inputClass} figures`}/>
+                            <span id="steam-id-hint" className="mt-1.5 block text-sm text-ash">The 17-digit SteamID64 from their Steam profile URL</span>
+                        </label>
+                        <label className="block">
+                            ELO
+                            <input name="elo" type="number" required min={0} max={10000} step="any" className={`${inputClass} figures`}/>
+                        </label>
+                        {createPlayer.isError && <p role="alert" className="text-sm text-ash">{createPlayer.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={createPlayer.isPending}>Add</button>
+                        </div>
+                    </form>
+                </dialog>
+            </>
+        ),
+    };
+
+    if (isPending) return <Page {...header}><Loader label="Loading players"/></Page>;
+    if (isError) return <Page {...header}><QueryError message="Couldn't load players."/></Page>;
 
     const query = search.trim().toLowerCase();
     const visible = players
@@ -28,7 +89,7 @@ export default function Players() {
     const median = players.length ? players[Math.floor(players.length / 2)].elo : 0;
 
     return (
-        <Page title="Players" subtitle={`${players.length} players, ranked by ELO`}>
+        <Page {...header} subtitle={`${players.length} players, ranked by ELO`}>
             <Panel title="Ladder" meta="Hover to see who, click to open their page" className="mb-4">
                 <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
             </Panel>

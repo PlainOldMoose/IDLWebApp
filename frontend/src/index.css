@@ -2,7 +2,9 @@
 
 @theme {
     --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Grenze", Georgia, serif;
+    /* Headings: Archivo narrowed to the same width as the figures, like a scoreboard. "wdth" 100 for full width */
+    --font-display: var(--font-sans);
+    --font-display--font-variation-settings: "wdth" 82;
 
     /* Surfaces and ink: warm charcoal, close to black */
     --color-night: #0B0909;
@@ -85,9 +87,10 @@
         hover:text-bone hover:border-ash cursor-pointer transition-colors;
     }
 
-    /* Width and spacing are left to utilities on each input */
+    /* Width and spacing are left to utilities on each input. Focus thickens the border to 2px bone instead of the blue ring */
     .text-input {
-        @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent;
+        @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash
+        focus:border-bone focus:ring-1 focus:ring-bone focus:outline-hidden;
     }
 
     .row-link {
@@ -127,8 +130,68 @@
     animation: tick-rise 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* A card's confirm strip slides in over the footer it replaces, so it reads as the same place asking a question */
+@keyframes strip-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+.confirm-strip {
+    animation: strip-in 160ms ease-out both;
+}
+
+/*
+ * A toast's whole 4s life in one animation, matching the timer in Inhouses.tsx: it slides in from the edge it sits on,
+ * holds, then drops away. Its green edge drains over the same time, so it shows how long the message has left
+ */
+@keyframes toast-life {
+    0% {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    5.5% {
+        opacity: 1;
+        transform: none;
+    }
+    94% {
+        opacity: 1;
+        transform: none;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@keyframes toast-drain {
+    to {
+        transform: scaleY(0);
+    }
+}
+
+.toast {
+    position: relative;
+    animation: toast-life 4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Sits over the faint left border, which stays behind as the track */
+.toast::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: -3px;
+    width: 3px;
+    border-radius: 6px 0 0 6px;
+    background: var(--color-win);
+    transform-origin: bottom;
+    animation: toast-drain 3.76s linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .ladder-tick {
+    .ladder-tick, .confirm-strip, .toast, .toast::before {
         animation: none;
     }
 }

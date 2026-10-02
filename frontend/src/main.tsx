@@ -1,8 +1,7 @@
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
-// Self-hosted fonts: Archivo with its width axis (used for condensed figures), Grenze bold for titles
+// Self-hosted fonts: Archivo with its width axis, for condensed figures and titles
 import '@fontsource-variable/archivo/wdth.css'
-import '@fontsource/grenze/700.css'
 import './index.css'
 import App from './App.tsx'
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";

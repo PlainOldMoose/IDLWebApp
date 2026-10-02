@@ -94,5 +94,8 @@ jobs:
           # Copies the repo's compose file over first, so the server never runs its own copy. Each deploy's images
           # have their own tag, so pruning needs -a to drop the old ones; images of running containers are kept
           ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=known_hosts -p 2222 -i key deploy@localhost \
-            "cat > /opt/idlwebapp/docker-compose.yml && cd /opt/idlwebapp && export TAG=$TAG && docker compose pull && docker compose up -d && docker image prune -af" \
-            < docker-compose.yml
+            "cat > /opt/idlwebapp/docker-compose.yml && cd /opt/idlwebapp && export TAG=$TAG && docker compose pull && docker compose up -d && docker image prune -af && docker compose ps --format '{{.Image}}'" \
+            < docker-compose.yml | tee images
+          # The server must now be running this commit's images. A deploy that silently did something else, like a
+          # forced command on the key that ignores the one above, fails here instead of going green
+          grep -q "backend:$TAG" images && grep -q "frontend:$TAG" images || { echo "::error::Server isn't running $TAG"; exit 1; }

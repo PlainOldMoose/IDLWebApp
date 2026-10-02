@@ -38,7 +38,7 @@ export default function Seasons() {
         });
     };
 
-    const inputClass = "text-input mt-1 block w-full";
+    const inputClass = "text-input mt-2 block w-full";
 
     // Only admins get the button; the API enforces the same rule
     const header = {

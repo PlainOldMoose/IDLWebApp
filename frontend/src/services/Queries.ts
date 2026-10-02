@@ -10,7 +10,11 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
     if (json !== undefined) headers.set("Content-Type", "application/json");
 
     const response = await fetch(path, {...init, headers, body: JSON.stringify(json)});
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
+    // Problem details (RFC 9457) carry the server's reason, e.g. "Username already exists"
+    if (!response.ok) {
+        const problem = await response.json().catch(() => null);
+        throw new Error(problem?.detail ?? `${response.status} ${response.statusText}: ${path}`);
+    }
     return response.status === 204 ? undefined as T : response.json();
 };
 
@@ -27,6 +31,17 @@ export function usePlayer(steamId: string | undefined) {
         queryFn: () => request<PlayerDetail>(`/api/players/${steamId}`),
         enabled: !!steamId
     })
+}
+
+export function useCreatePlayer() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (player: PlayerSummary) =>
+            request<PlayerSummary>("/api/players", {method: "POST", json: player}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["players"]});
+        }
+    });
 }
 
 export function useSeasons() {
@@ -139,6 +154,15 @@ export function useInhouses() {
     });
 }
 
+// Reported results waiting for an admin, oldest first. Admin-only; under ["inhouses"] so the same invalidations refresh it
+export function usePendingInhouses(enabled: boolean) {
+    return useQuery({
+        queryKey: ["inhouses", "pending"],
+        queryFn: () => request<Inhouse[]>("/api/inhouses/pending"),
+        enabled,
+    });
+}
+
 // The 3 most even ways to split 10 players, most even first
 export function useInhouseBalance(steamIds: string[]) {
     return useQuery({
@@ -151,7 +175,7 @@ export function useInhouseBalance(steamIds: string[]) {
 export function useCreateInhouse() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (teams: { radiant: string[], dire: string[] }) =>
+        mutationFn: (teams: { teamA: string[], teamB: string[] }) =>
             request<Inhouse>("/api/inhouses", {method: "POST", json: teams}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["inhouses"]});
@@ -159,12 +183,23 @@ export function useCreateInhouse() {
     });
 }
 
-// The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
+// Sends the winning side and Team A's side to the admin queue; nobody's ELO moves yet
 export function useInhouseResult() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({id, winner}: { id: number, winner: "RADIANT" | "DIRE" }) =>
-            request<void>(`/api/inhouses/${id}/result?winner=${winner}`, {method: "POST"}),
+        mutationFn: ({id, teamASide, winner}: { id: number, teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" }) =>
+            request<void>(`/api/inhouses/${id}/result?teamASide=${teamASide}&winner=${winner}`, {method: "POST"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["inhouses"]});
+        }
+    });
+}
+
+// The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
+export function useApproveInhouse() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => request<void>(`/api/inhouses/${id}/approve`, {method: "POST"}),
         onSuccess: () => {
             queryClient.invalidateQueries();
         }

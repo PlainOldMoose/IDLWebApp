@@ -82,6 +82,9 @@ interface MatchPlayer {
 export interface Inhouse {
     id: number | null; // null for a balance option nobody has picked yet
     createdAt: string | null;
-    radiant: PlayerSummary[]; // Highest ELO first
-    dire: PlayerSummary[];
+    teamA: PlayerSummary[]; // Highest ELO first
+    teamB: PlayerSummary[];
+    reportedWinner: "RADIANT" | "DIRE" | null; // null until someone reports the result; only the admin queue has these
+    teamASide: "RADIANT" | "DIRE" | null; // the side Team A played, reported with the result
+    reportedBy: string | null; // the reporter's username
 }
