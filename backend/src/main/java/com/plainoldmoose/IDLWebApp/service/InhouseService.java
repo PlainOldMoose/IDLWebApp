@@ -40,9 +40,9 @@ public class InhouseService {
     public List<InhouseResponse> balanceOptions(List<String> steamIds) {
         List<Player> players = findTen(steamIds);
         return balance(players).stream()
-                .map(radiant -> toResponse(null, null, radiant, players.stream()
+                .map(radiant -> new InhouseResponse(null, null, summaries(radiant), summaries(players.stream()
                         .filter(player -> !radiant.contains(player))
-                        .toList()))
+                        .toList()), null, null))
                 .toList();
     }
 
@@ -54,22 +54,42 @@ public class InhouseService {
             (request.radiant().contains(player.getSteamId()) ? inhouse.getRadiant() : inhouse.getDire()).add(player);
         }
 
-        Inhouse saved = inhouseRepository.save(inhouse);
-        return toResponse(saved.getId(), saved.getCreatedAt(), saved.getRadiant(), saved.getDire());
+        return toResponse(inhouseRepository.save(inhouse));
     }
 
-    // Newest first
+    // Games with no result reported yet, newest first
     public List<InhouseResponse> getInProgress() {
-        return inhouseRepository.findAllByOrderByCreatedAtDesc()
+        return inhouseRepository.findAllByReportedWinnerIsNullOrderByCreatedAtDesc()
                 .stream()
-                .map(inhouse -> toResponse(inhouse.getId(), inhouse.getCreatedAt(), inhouse.getRadiant(), inhouse.getDire()))
+                .map(InhouseService::toResponse)
                 .toList();
     }
 
-    // Turns the in-house into a match under the same ID and moves everyone's ELO
+    // The admin queue: reported results, oldest first
+    public List<InhouseResponse> getPending() {
+        return inhouseRepository.findAllByReportedWinnerIsNotNullOrderByCreatedAtAsc()
+                .stream()
+                .map(InhouseService::toResponse)
+                .toList();
+    }
+
+    // Records who won for an admin to check. Nobody's ELO moves until it's approved, admins' own reports included
     @Transactional
     public void reportResult(Long id, Side winner, String steamId, boolean admin) {
         Inhouse inhouse = findForPlayer(id, steamId, admin);
+        inhouse.setReportedWinner(winner);
+        inhouse.setReportedBy(playerRepository.getReferenceById(steamId));
+    }
+
+    // Turns the in-house into a match under the same ID and moves everyone's ELO. SecurityConfig keeps this admin-only
+    @Transactional
+    public void approve(Long id) {
+        Inhouse inhouse = inhouseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "In-house not found"));
+        Side winner = inhouse.getReportedWinner();
+        if (winner == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nobody has reported this in-house's result yet");
+        }
         double radiantChange = eloChange(average(inhouse.getRadiant()), average(inhouse.getDire()), winner);
 
         Match match = new Match();
@@ -149,21 +169,27 @@ public class InhouseService {
         return players;
     }
 
-    // Only someone who played in it, or an admin, can finish or cancel an in-house
+    // Only someone who played in it, or an admin, can report or cancel an in-house. Once a result is reported only an
+    // admin can touch it, so the losing side can't cancel it or report it again the other way before it's approved
     private Inhouse findForPlayer(Long id, String steamId, boolean admin) {
         Inhouse inhouse = inhouseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "In-house not found"));
+        if (admin) return inhouse;
 
+        if (inhouse.getReportedWinner() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This in-house's result is waiting for an admin");
+        }
         boolean played = Stream.concat(inhouse.getRadiant().stream(), inhouse.getDire().stream())
                 .anyMatch(player -> player.getSteamId().equals(steamId));
-        if (!played && !admin) {
+        if (!played) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the in-house's players or an admin can do that");
         }
         return inhouse;
     }
 
-    private static InhouseResponse toResponse(Long id, LocalDateTime createdAt, List<Player> radiant, List<Player> dire) {
-        return new InhouseResponse(id, createdAt, summaries(radiant), summaries(dire));
+    private static InhouseResponse toResponse(Inhouse inhouse) {
+        return new InhouseResponse(inhouse.getId(), inhouse.getCreatedAt(), summaries(inhouse.getRadiant()), summaries(inhouse.getDire()),
+                inhouse.getReportedWinner(), inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername());
     }
 
     // Highest ELO first

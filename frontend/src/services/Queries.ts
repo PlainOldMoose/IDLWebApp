@@ -154,6 +154,15 @@ export function useInhouses() {
     });
 }
 
+// Reported results waiting for an admin, oldest first. Admin-only; under ["inhouses"] so the same invalidations refresh it
+export function usePendingInhouses(enabled: boolean) {
+    return useQuery({
+        queryKey: ["inhouses", "pending"],
+        queryFn: () => request<Inhouse[]>("/api/inhouses/pending"),
+        enabled,
+    });
+}
+
 // The 3 most even ways to split 10 players, most even first
 export function useInhouseBalance(steamIds: string[]) {
     return useQuery({
@@ -174,12 +183,23 @@ export function useCreateInhouse() {
     });
 }
 
-// The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
+// Sends the result to the admin queue; nobody's ELO moves yet
 export function useInhouseResult() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: ({id, winner}: { id: number, winner: "RADIANT" | "DIRE" }) =>
             request<void>(`/api/inhouses/${id}/result?winner=${winner}`, {method: "POST"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["inhouses"]});
+        }
+    });
+}
+
+// The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
+export function useApproveInhouse() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => request<void>(`/api/inhouses/${id}/approve`, {method: "POST"}),
         onSuccess: () => {
             queryClient.invalidateQueries();
         }

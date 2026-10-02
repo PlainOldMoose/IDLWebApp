@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.model;
 
+import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * An in-house whose teams are picked but whose result isn't in yet. Deleted once the result turns it into a match.
+ * An in-house whose result isn't approved yet. Deleted once an admin approves the result and it becomes a match.
  */
 @Entity
 @Getter
@@ -34,6 +35,13 @@ public class Inhouse {
     // When the teams were picked, so roughly when the game started
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    // Who someone says won, waiting for an admin to approve. Null while the game is still on
+    @Enumerated(EnumType.STRING)
+    private Side reportedWinner;
+
+    @ManyToOne
+    private Player reportedBy;
 
     // Two results sent at once: the second delete finds a newer version, so it rolls back instead of adding ELO twice
     @Version

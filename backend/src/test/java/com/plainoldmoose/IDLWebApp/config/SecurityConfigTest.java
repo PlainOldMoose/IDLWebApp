@@ -18,6 +18,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // SecurityConfig's rule order is the whole authorisation model, so these pin down who gets through to what
@@ -61,6 +62,19 @@ class SecurityConfigTest {
     @Test
     void adminCanDoAdminWrites() throws Exception {
         mvc.perform(delete(SEASON).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void onlyAdminsSeeOrApproveTheQueue() throws Exception {
+        mvc.perform(get("/api/inhouses/pending")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/inhouses/pending").with(PLAYER)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/inhouses/1/approve").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanSeeAndApproveTheQueue() throws Exception {
+        mvc.perform(get("/api/inhouses/pending").with(ADMIN)).andExpect(status().isOk());
+        mvc.perform(post("/api/inhouses/1/approve").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
     }
 
     @Test
