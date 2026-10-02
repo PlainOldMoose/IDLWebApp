@@ -175,7 +175,7 @@ export function useInhouseBalance(steamIds: string[]) {
 export function useCreateInhouse() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (teams: { radiant: string[], dire: string[] }) =>
+        mutationFn: (teams: { teamA: string[], teamB: string[] }) =>
             request<Inhouse>("/api/inhouses", {method: "POST", json: teams}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["inhouses"]});
@@ -183,12 +183,12 @@ export function useCreateInhouse() {
     });
 }
 
-// Sends the result to the admin queue; nobody's ELO moves yet
+// Sends the winning side and Team A's side to the admin queue; nobody's ELO moves yet
 export function useInhouseResult() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({id, winner}: { id: number, winner: "RADIANT" | "DIRE" }) =>
-            request<void>(`/api/inhouses/${id}/result?winner=${winner}`, {method: "POST"}),
+        mutationFn: ({id, teamASide, winner}: { id: number, teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" }) =>
+            request<void>(`/api/inhouses/${id}/result?teamASide=${teamASide}&winner=${winner}`, {method: "POST"}),
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["inhouses"]});
         }

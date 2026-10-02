@@ -45,8 +45,8 @@ public class InhouseController {
     // getRemoteUser() is never null
     @PostMapping("/{id}/result")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reportResult(@PathVariable Long id, @RequestParam Side winner, HttpServletRequest request) {
-        inhouseService.reportResult(id, winner, request.getRemoteUser(), request.isUserInRole("ADMIN"));
+    public void reportResult(@PathVariable Long id, @RequestParam Side teamASide, @RequestParam Side winner, HttpServletRequest request) {
+        inhouseService.reportResult(id, teamASide, winner, request.getRemoteUser(), request.isUserInRole("ADMIN"));
     }
 
     // The match is recorded under the in-house's ID. SecurityConfig keeps this admin-only

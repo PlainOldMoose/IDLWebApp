@@ -130,8 +130,68 @@
     animation: tick-rise 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* A card's confirm strip slides in over the footer it replaces, so it reads as the same place asking a question */
+@keyframes strip-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+.confirm-strip {
+    animation: strip-in 160ms ease-out both;
+}
+
+/*
+ * A toast's whole 4s life in one animation, matching the timer in Inhouses.tsx: it slides in from the edge it sits on,
+ * holds, then drops away. Its green edge drains over the same time, so it shows how long the message has left
+ */
+@keyframes toast-life {
+    0% {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    5.5% {
+        opacity: 1;
+        transform: none;
+    }
+    94% {
+        opacity: 1;
+        transform: none;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@keyframes toast-drain {
+    to {
+        transform: scaleY(0);
+    }
+}
+
+.toast {
+    position: relative;
+    animation: toast-life 4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Sits over the faint left border, which stays behind as the track */
+.toast::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: -3px;
+    width: 3px;
+    border-radius: 6px 0 0 6px;
+    background: var(--color-win);
+    transform-origin: bottom;
+    animation: toast-drain 3.76s linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .ladder-tick {
+    .ladder-tick, .confirm-strip, .toast, .toast::before {
         animation: none;
     }
 }

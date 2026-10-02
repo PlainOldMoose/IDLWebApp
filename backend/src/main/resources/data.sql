@@ -506,3 +506,22 @@ FROM (SELECT mp.player_id, m.match_id, m.played_time,
       FROM match_participant mp
       JOIN matches m ON m.match_id = mp.match_id) r
 JOIN player p ON p.steam_id = r.player_id;
+
+-- =============================================
+-- IN-HOUSES
+-- One in progress, with Moose on Team A so he can report it, and one waiting in the admin queue.
+-- IDs come from the identity column, as they become match IDs; the CTEs pass each one on to the team tables
+-- =============================================
+WITH ih AS (INSERT INTO inhouse (created_at, version) VALUES (now() - interval '25 minutes', 0) RETURNING id),
+     a AS (INSERT INTO inhouse_radiant (inhouse_id, radiant_steam_id)
+           SELECT id, unnest(ARRAY['76561198090941997','76561190000000001','76561190000000003','76561190000000005','76561190000000007']) FROM ih)
+INSERT INTO inhouse_dire (inhouse_id, dire_steam_id)
+SELECT id, unnest(ARRAY['76561190000000002','76561190000000004','76561190000000008','76561190000000009','76561190000000010']) FROM ih;
+
+-- Reported by Player 12: Team A played Dire and won
+WITH ih AS (INSERT INTO inhouse (created_at, version, reported_winner, team_a_side, reported_by_steam_id)
+            VALUES (now() - interval '2 hours', 0, 'DIRE', 'DIRE', '76561190000000012') RETURNING id),
+     a AS (INSERT INTO inhouse_radiant (inhouse_id, radiant_steam_id)
+           SELECT id, unnest(ARRAY['76561190000000011','76561190000000012','76561190000000013','76561190000000014','76561190000000015']) FROM ih)
+INSERT INTO inhouse_dire (inhouse_id, dire_steam_id)
+SELECT id, unnest(ARRAY['76561190000000016','76561190000000018','76561190000000019','76561190000000020','76561190000000021']) FROM ih;
