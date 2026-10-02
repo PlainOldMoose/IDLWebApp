@@ -24,21 +24,26 @@ public class Inhouse {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // The table and column names are from when the balancer picked sides; nobody knows the sides until the result
     @ManyToMany
-    @JoinTable(name = "inhouse_radiant")
-    private List<Player> radiant = new ArrayList<>();
+    @JoinTable(name = "inhouse_radiant", inverseJoinColumns = @JoinColumn(name = "radiant_steam_id"))
+    private List<Player> teamA = new ArrayList<>();
 
     @ManyToMany
-    @JoinTable(name = "inhouse_dire")
-    private List<Player> dire = new ArrayList<>();
+    @JoinTable(name = "inhouse_dire", inverseJoinColumns = @JoinColumn(name = "dire_steam_id"))
+    private List<Player> teamB = new ArrayList<>();
 
     // When the teams were picked, so roughly when the game started
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // Who someone says won, waiting for an admin to approve. Null while the game is still on
+    // The side that won and the side Team A played, as reported, waiting for an admin to approve. Null while the game is on
     @Enumerated(EnumType.STRING)
     private Side reportedWinner;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "team_a_side")
+    private Side teamASide;
 
     @ManyToOne
     private Player reportedBy;

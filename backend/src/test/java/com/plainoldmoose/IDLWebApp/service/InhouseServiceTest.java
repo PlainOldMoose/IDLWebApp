@@ -67,30 +67,32 @@ class InhouseServiceTest {
         InhouseRepository inhouses = mock(InhouseRepository.class);
         MatchRepository matches = mock(MatchRepository.class);
         InhouseService service = new InhouseService(inhouses, mock(PlayerRepository.class), matches, mock(EloHistoryRepository.class));
-        // Players 0-4 on Radiant, 5-9 on Dire, all on 1500
+        // Players 0-4 on Team A, 5-9 on Team B, all on 1500
         Inhouse inhouse = new Inhouse();
         inhouse.setId(1L);
         IntStream.range(0, 10).forEach(i -> {
             Player player = new Player();
             player.setSteamId(String.valueOf(i));
             player.setElo(1500);
-            (i < 5 ? inhouse.getRadiant() : inhouse.getDire()).add(player);
+            (i < 5 ? inhouse.getTeamA() : inhouse.getTeamB()).add(player);
         });
         when(inhouses.findById(1L)).thenReturn(Optional.of(inhouse));
 
-        service.reportResult(1L, Side.RADIANT, "0", false);
+        // Team A played Dire and Radiant won, so Team B won
+        service.reportResult(1L, Side.DIRE, Side.RADIANT, "0", false);
         assertEquals(Side.RADIANT, inhouse.getReportedWinner());
         verifyNoInteractions(matches);
-        assertEquals(1500.0, inhouse.getRadiant().get(0).getElo());
+        assertEquals(1500.0, inhouse.getTeamA().get(0).getElo());
 
-        // The losing side can't cancel it or flip it before an admin looks
-        assertThrows(ResponseStatusException.class, () -> service.cancel(1L, "5", false));
-        assertThrows(ResponseStatusException.class, () -> service.reportResult(1L, Side.DIRE, "5", false));
+        // The losing team can't cancel it or flip it before an admin looks
+        assertThrows(ResponseStatusException.class, () -> service.cancel(1L, "1", false));
+        assertThrows(ResponseStatusException.class, () -> service.reportResult(1L, Side.RADIANT, Side.DIRE, "1", false));
 
         when(matches.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service.approve(1L);
-        assertEquals(1516.0, inhouse.getRadiant().get(0).getElo());
-        assertEquals(1484.0, inhouse.getDire().get(0).getElo());
+        // Only right if Team B was stored as Radiant
+        assertEquals(1516.0, inhouse.getTeamB().get(0).getElo());
+        assertEquals(1484.0, inhouse.getTeamA().get(0).getElo());
         verify(inhouses).delete(inhouse);
     }
 }

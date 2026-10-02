@@ -40,18 +40,18 @@ public class InhouseService {
     public List<InhouseResponse> balanceOptions(List<String> steamIds) {
         List<Player> players = findTen(steamIds);
         return balance(players).stream()
-                .map(radiant -> new InhouseResponse(null, null, summaries(radiant), summaries(players.stream()
-                        .filter(player -> !radiant.contains(player))
-                        .toList()), null, null))
+                .map(teamA -> new InhouseResponse(null, null, summaries(teamA), summaries(players.stream()
+                        .filter(player -> !teamA.contains(player))
+                        .toList()), null, null, null))
                 .toList();
     }
 
     public InhouseResponse create(CreateInhouseRequest request) {
-        List<Player> players = findTen(Stream.concat(request.radiant().stream(), request.dire().stream()).toList());
+        List<Player> players = findTen(Stream.concat(request.teamA().stream(), request.teamB().stream()).toList());
 
         Inhouse inhouse = new Inhouse();
         for (Player player : players) {
-            (request.radiant().contains(player.getSteamId()) ? inhouse.getRadiant() : inhouse.getDire()).add(player);
+            (request.teamA().contains(player.getSteamId()) ? inhouse.getTeamA() : inhouse.getTeamB()).add(player);
         }
 
         return toResponse(inhouseRepository.save(inhouse));
@@ -73,10 +73,12 @@ public class InhouseService {
                 .toList();
     }
 
-    // Records who won for an admin to check. Nobody's ELO moves until it's approved, admins' own reports included
+    // Records who won and which side Team A played, for an admin to check. Nobody's ELO moves until it's approved,
+    // admins' own reports included
     @Transactional
-    public void reportResult(Long id, Side winner, String steamId, boolean admin) {
+    public void reportResult(Long id, Side teamASide, Side winner, String steamId, boolean admin) {
         Inhouse inhouse = findForPlayer(id, steamId, admin);
+        inhouse.setTeamASide(teamASide);
         inhouse.setReportedWinner(winner);
         inhouse.setReportedBy(playerRepository.getReferenceById(steamId));
     }
@@ -90,16 +92,20 @@ public class InhouseService {
         if (winner == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Nobody has reported this in-house's result yet");
         }
-        double radiantChange = eloChange(average(inhouse.getRadiant()), average(inhouse.getDire()), winner);
+        // Team A's reported side decides who was Radiant. A row reported before sides were asked for has none: Team A was Radiant then
+        boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
+        List<Player> radiant = teamADire ? inhouse.getTeamB() : inhouse.getTeamA();
+        List<Player> dire = teamADire ? inhouse.getTeamA() : inhouse.getTeamB();
+        double radiantChange = eloChange(average(radiant), average(dire), winner);
 
         Match match = new Match();
         match.setMatchId(inhouse.getId());
         match.setPlayedTime(inhouse.getCreatedAt());
         match.setMatchWinner(winner);
-        match.setAvgElo((int) Math.round((average(inhouse.getRadiant()) + average(inhouse.getDire())) / 2));
+        match.setAvgElo((int) Math.round((average(radiant) + average(dire)) / 2));
         match.setParticipants(new ArrayList<>());
         for (Side side : Side.values()) {
-            for (Player player : side == Side.RADIANT ? inhouse.getRadiant() : inhouse.getDire()) {
+            for (Player player : side == Side.RADIANT ? radiant : dire) {
                 MatchParticipant participant = new MatchParticipant();
                 participant.setMatch(match);
                 participant.setPlayer(player);
@@ -134,18 +140,18 @@ public class InhouseService {
         inhouseRepository.delete(findForPlayer(id, steamId, admin));
     }
 
-    // The 3 most even 5v5 splits, each as its Radiant five; Dire is everyone else.
+    // The 3 most even 5v5 splits, each as its Team A five; Team B is everyone else.
     // ponytail: tries all 126 splits, instant for 10 players. Role preferences would add a cost next to the ELO gap
     static List<List<Player>> balance(List<Player> players) {
         double total = players.stream().mapToDouble(Player::getElo).sum();
-        // Bit i set puts player i on Radiant. Player 0 always is, so a split and its mirror image aren't both offered
+        // Bit i set puts player i on Team A. Player 0 always is, so a split and its mirror image aren't both offered
         return IntStream.range(0, 1 << 10)
                 .filter(mask -> Integer.bitCount(mask) == 5 && (mask & 1) == 1)
                 .mapToObj(mask -> IntStream.range(0, 10)
                         .filter(i -> (mask >> i & 1) == 1)
                         .mapToObj(players::get)
                         .toList())
-                .sorted(Comparator.comparingDouble(radiant -> Math.abs(total - 2 * radiant.stream().mapToDouble(Player::getElo).sum())))
+                .sorted(Comparator.comparingDouble(teamA -> Math.abs(total - 2 * teamA.stream().mapToDouble(Player::getElo).sum())))
                 .limit(3)
                 .toList();
     }
@@ -179,7 +185,7 @@ public class InhouseService {
         if (inhouse.getReportedWinner() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This in-house's result is waiting for an admin");
         }
-        boolean played = Stream.concat(inhouse.getRadiant().stream(), inhouse.getDire().stream())
+        boolean played = Stream.concat(inhouse.getTeamA().stream(), inhouse.getTeamB().stream())
                 .anyMatch(player -> player.getSteamId().equals(steamId));
         if (!played) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the in-house's players or an admin can do that");
@@ -188,8 +194,9 @@ public class InhouseService {
     }
 
     private static InhouseResponse toResponse(Inhouse inhouse) {
-        return new InhouseResponse(inhouse.getId(), inhouse.getCreatedAt(), summaries(inhouse.getRadiant()), summaries(inhouse.getDire()),
-                inhouse.getReportedWinner(), inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername());
+        return new InhouseResponse(inhouse.getId(), inhouse.getCreatedAt(), summaries(inhouse.getTeamA()), summaries(inhouse.getTeamB()),
+                inhouse.getReportedWinner(), inhouse.getTeamASide(),
+                inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername());
     }
 
     // Highest ELO first
