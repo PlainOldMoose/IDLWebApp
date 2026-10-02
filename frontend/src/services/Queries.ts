@@ -10,7 +10,11 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
     if (json !== undefined) headers.set("Content-Type", "application/json");
 
     const response = await fetch(path, {...init, headers, body: JSON.stringify(json)});
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${path}`);
+    // Problem details (RFC 9457) carry the server's reason, e.g. "Username already exists"
+    if (!response.ok) {
+        const problem = await response.json().catch(() => null);
+        throw new Error(problem?.detail ?? `${response.status} ${response.statusText}: ${path}`);
+    }
     return response.status === 204 ? undefined as T : response.json();
 };
 
@@ -27,6 +31,17 @@ export function usePlayer(steamId: string | undefined) {
         queryFn: () => request<PlayerDetail>(`/api/players/${steamId}`),
         enabled: !!steamId
     })
+}
+
+export function useCreatePlayer() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (player: PlayerSummary) =>
+            request<PlayerSummary>("/api/players", {method: "POST", json: player}),
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ["players"]});
+        }
+    });
 }
 
 export function useSeasons() {
