@@ -273,9 +273,9 @@ export default function SeasonDetail() {
                                 placeholder="1 >>> 2 > 3/4"
                                 defaultValue={mySignup?.rolePreference ?? ""}
                                 aria-describedby="role-hint"
-                                className="text-input mt-1 block w-full"
+                                className="text-input mt-2 block w-full"
                             />
-                            <p id="role-hint" className="mt-1 text-sm text-ash">
+                            <p id="role-hint" className="mt-1.5 text-sm text-ash">
                                 1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
                                 &gt; prefer, / equal, or just &quot;any&quot;
                             </p>

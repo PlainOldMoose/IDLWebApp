@@ -2,7 +2,9 @@
 
 @theme {
     --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Grenze", Georgia, serif;
+    /* Headings: Archivo narrowed to the same width as the figures, like a scoreboard. "wdth" 100 for full width */
+    --font-display: var(--font-sans);
+    --font-display--font-variation-settings: "wdth" 82;
 
     /* Surfaces and ink: warm charcoal, close to black */
     --color-night: #0B0909;
@@ -85,9 +87,10 @@
         hover:text-bone hover:border-ash cursor-pointer transition-colors;
     }
 
-    /* Width and spacing are left to utilities on each input */
+    /* Width and spacing are left to utilities on each input. Focus thickens the border to 2px bone instead of the blue ring */
     .text-input {
-        @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash focus:border-accent;
+        @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash
+        focus:border-bone focus:ring-1 focus:ring-bone focus:outline-hidden;
     }
 
     .row-link {
