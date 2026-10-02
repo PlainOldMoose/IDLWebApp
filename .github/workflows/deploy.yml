@@ -2,8 +2,10 @@ name: Build and Push Images
 on:
   push:
     branches: [main]
-  # Only the test job runs for PRs, so Dependabot bumps are checked before they're merged
+  # Only the test job runs for PRs, so Dependabot bumps are checked before they're merged. Not for the release PR
+  # into main: everything in pre-release was already tested, and the push to main tests again before deploying
   pull_request:
+    branches: [pre-release]
 # Actions are pinned to commit SHAs, so a moved tag can't swap in new code. Dependabot bumps the SHA and the
 # version comment together
 jobs:
