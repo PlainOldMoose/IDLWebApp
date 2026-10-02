@@ -1,12 +1,14 @@
 import {type FormEvent, useState} from "react";
 import {useNavigate} from "react-router";
 import {
+    useApproveInhouse,
     useCancelInhouse,
     useCreateInhouse,
     useCurrentUser,
     useInhouseBalance,
     useInhouseResult,
     useInhouses,
+    usePendingInhouses,
     usePlayers
 } from "../services/Queries.ts";
 import type {Inhouse, PlayerSummary} from "../types.ts";
@@ -21,6 +23,7 @@ const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + pl
 // Radiant's chance to win, the same Elo expectation InhouseService.eloChange uses. 50% is a perfectly even game
 const radiantWinChance = (inhouse: Inhouse) => 1 / (1 + 10 ** ((average(inhouse.dire) - average(inhouse.radiant)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
+const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
 
 // Radiant and Dire side by side, each with its average ELO. Shared by the balance options and the games in progress
 function Teams({inhouse}: { inhouse: Inhouse }) {
@@ -62,12 +65,16 @@ export default function Inhouses() {
     const createInhouse = useCreateInhouse();
     const reportResult = useInhouseResult();
     const cancelInhouse = useCancelInhouse();
+    // Only admins ask for the queue; the API refuses everyone else
+    const pending = usePendingInhouses(!!user?.admin);
+    const approveInhouse = useApproveInhouse();
     const navigate = useNavigate();
 
     const byId = new Map(players?.map(player => [player.steamId, player] as const));
     const searchMatch = players?.find(player =>
         player.username.toLowerCase() === search.trim().toLowerCase() && !chosen.includes(player.steamId));
-    const busy = reportResult.isPending || cancelInhouse.isPending;
+    const busy = reportResult.isPending || cancelInhouse.isPending || approveInhouse.isPending;
+    const actionError = reportResult.error ?? cancelInhouse.error ?? approveInhouse.error;
 
     const addPlayer = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -83,19 +90,24 @@ export default function Inhouses() {
         }, {onSuccess: () => setChosen([])});
     };
 
-    // The match takes the in-house's ID, so the result page is known up front
+    // Everyone's result waits in the admin queue, admins' own included
     const report = (id: number, winner: "RADIANT" | "DIRE") => {
-        const side = winner === "RADIANT" ? "Radiant" : "Dire";
-        if (!globalThis.confirm(`Record a ${side} win for in-house ${id}? Everyone's ELO changes, and it can't be undone.`)) return;
-        reportResult.mutate({id, winner}, {onSuccess: () => navigate(`/matches/${id}`)});
+        if (!globalThis.confirm(`Report a ${sideName[winner]} win for in-house ${id}? An admin checks it before anyone's ELO changes.`)) return;
+        reportResult.mutate({id, winner});
     };
 
-    const cancel = (id: number) => {
-        if (globalThis.confirm(`Cancel in-house ${id}? Nobody's ELO changes.`)) cancelInhouse.mutate(id);
+    // The match takes the in-house's ID, so the result page is known up front
+    const approve = (id: number, winner: "RADIANT" | "DIRE") => {
+        if (!globalThis.confirm(`Approve a ${sideName[winner]} win for in-house ${id}? Everyone's ELO changes, and it can't be undone.`)) return;
+        approveInhouse.mutate(id, {onSuccess: () => navigate(`/matches/${id}`)});
+    };
+
+    const cancel = (id: number, verb = "Cancel") => {
+        if (globalThis.confirm(`${verb} in-house ${id}? Nobody's ELO changes.`)) cancelInhouse.mutate(id);
     };
 
     return (
-        <Page title="In-houses" subtitle="Pick 10 players, pick the most even teams, then record who won.">
+        <Page title="In-houses" subtitle="Pick 10 players, pick the most even teams, then report who won. An admin approves each result before ELO changes.">
             {user ? (
                 <>
                     <Panel title="Balance teams" meta={`${chosen.length}/10 players`}>
@@ -163,6 +175,38 @@ export default function Inhouses() {
                 <p className="text-ash">Sign in to balance teams and start an in-house.</p>
             )}
 
+            {user?.admin && (
+                <>
+                    <h2 className="mt-10 mb-4 font-display text-3xl font-bold">Waiting for approval</h2>
+                    {pending.isPending ? (
+                        <Loader label="Loading results waiting for approval"/>
+                    ) : pending.isError ? (
+                        <QueryError message="Couldn't load results waiting for approval."/>
+                    ) : pending.data.length ? (
+                        <div className="grid items-start gap-4 lg:grid-cols-2">
+                            {pending.data.map(inhouse => {
+                                const id = inhouse.id!;
+                                const winner = inhouse.reportedWinner!;
+                                return (
+                                    <Panel key={id} title={`In-house ${id}`} level={3} padded={false}
+                                           meta={`${sideName[winner]} win, reported by ${inhouse.reportedBy}`}>
+                                        <Teams inhouse={inhouse}/>
+                                        <div className="mt-1.5 flex flex-wrap justify-end gap-3 border-t border-rule px-1.5 pt-3 pb-1.5">
+                                            <button className="secondary-button" disabled={busy} onClick={() => cancel(id, "Reject")}>Reject</button>
+                                            <button className="primary-button" disabled={busy} onClick={() => approve(id, winner)}>
+                                                Approve {sideName[winner]} win
+                                            </button>
+                                        </div>
+                                    </Panel>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-ash">No results waiting.</p>
+                    )}
+                </>
+            )}
+
             <h2 className="mt-10 mb-4 font-display text-3xl font-bold">In progress</h2>
             {isPending ? (
                 <Loader label="Loading in-houses"/>
@@ -193,9 +237,10 @@ export default function Inhouses() {
             ) : (
                 <p className="text-ash">No in-houses in progress.</p>
             )}
-            {(reportResult.isError || cancelInhouse.isError) && (
-                <p role="alert" className="mt-2 text-sm text-ash">Couldn't update the in-house. Refresh and try again.</p>
+            {reportResult.isSuccess && (
+                <p role="status" className="mt-2 text-sm text-ash">Result sent. An admin will check it before ELO changes.</p>
             )}
+            {actionError && <p role="alert" className="mt-2 text-sm text-ash">{actionError.message}</p>}
         </Page>
     );
 }

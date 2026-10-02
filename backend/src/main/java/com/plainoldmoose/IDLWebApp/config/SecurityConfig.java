@@ -16,12 +16,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain springFilterChain(HttpSecurity http) throws Exception {
-        // First match wins. Reads are public, signing up and in-houses need a signed-in player, and every other
-        // write is admin-only, so a new write endpoint stays locked until a rule here opens it
+        // First match wins. Reads are public except the in-house approval queue, signing up and in-houses need a
+        // signed-in player, and every other write is admin-only, so a new write endpoint stays locked until a rule
+        // here opens it
         return http.authorizeHttpRequests(auth -> auth
                         // Spring forwards a failed request to its error page; without this, anonymous users got a
                         // 403 for that forward instead of the real status, so a 500 looked like "forbidden"
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        // The approval queue: only admins see reported results or approve them into ELO
+                        .requestMatchers(HttpMethod.GET, "/api/inhouses/pending").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/inhouses/*/approve").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/seasons/*/signups").authenticated()
                         // SeasonSignupController only deletes the caller's own sign-up

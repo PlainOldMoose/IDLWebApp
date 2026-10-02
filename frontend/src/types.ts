@@ -84,4 +84,6 @@ export interface Inhouse {
     createdAt: string | null;
     radiant: PlayerSummary[]; // Highest ELO first
     dire: PlayerSummary[];
+    reportedWinner: "RADIANT" | "DIRE" | null; // null until someone reports the result; only the admin queue has these
+    reportedBy: string | null; // the reporter's username
 }
