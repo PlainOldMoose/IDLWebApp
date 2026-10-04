@@ -16,10 +16,11 @@ import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -81,7 +82,7 @@ public class MatchService {
 
     // An admin's record of a season game the league ticket missed. Only in an active season, which keeps the ELO replay
     // to that season's games. SecurityConfig keeps this admin-only
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void create(CreateMatchRequest request) {
         Season season = seasonRepository.findById(request.seasonId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
@@ -135,7 +136,7 @@ public class MatchService {
     }
 
     // For a game that was ticketed but shouldn't count. ELO is replayed from it without it. SecurityConfig keeps this admin-only
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void delete(Long matchId) {
         Match match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found"));
