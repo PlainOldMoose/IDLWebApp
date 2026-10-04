@@ -11,7 +11,7 @@ const PAGE_SIZE = 50;
 
 export default function Matches() {
     // Newest first, as the API returns them.
-    // ponytail: filters and pages the whole list in the browser, move paging to the API if matches reach the tens of thousands
+    // NOTE: filters and pages the whole list in the browser, move paging to the API if matches reach the tens of thousands
     const {data: matches, isPending, isError} = useMatches();
     // Filters and page live in the URL so a filtered view can be shared and the back button pages back
     const [searchParams, setSearchParams] = useSearchParams();

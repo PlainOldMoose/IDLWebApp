@@ -51,7 +51,7 @@ public class EloService {
     }
 
     // Plays every game from `from` on back through the formula, oldest first, moving ELO and writing history as it goes.
-    // ponytail: ~4 queries per player per game for K's inputs, fine for an active season's worth; batch them if it gets slow
+    // NOTE: ~4 queries per player per game for K's inputs, fine for an active season's worth; batch them if it gets slow
     public void replay(LocalDateTime from) {
         for (Match match : matchRepository.findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(from)) {
             match.setAvgElo((int) Math.round(average(match.getParticipants().stream().map(MatchParticipant::getPlayer).toList())));
