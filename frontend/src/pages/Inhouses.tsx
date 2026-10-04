@@ -31,8 +31,7 @@ type Confirming =
     | { id: number, kind: "approve" | "reject" | "cancel" }
     | { id: number, kind: "report", teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" };
 
-// Takes over a card's footer until the action is confirmed or dropped. Escape goes back. The edge is green, red for
-// danger, or the colour passed in
+// Takes over a card's footer until the action is confirmed or dropped. Escape goes back
 function ConfirmStrip({danger, edge, label, busy, onConfirm, onBack, children}: {
     danger?: boolean, edge?: string, label: string, busy: boolean, onConfirm: () => void, onBack: () => void, children: ReactNode
 }) {
@@ -94,11 +93,9 @@ function Teams({inhouse}: { inhouse: Inhouse }) {
 }
 
 export default function Inhouses() {
-    // Newest first, as the API returns them
     const {data: inhouses, isPending, isError} = useInhouses();
     const {data: user} = useCurrentUser();
     const {data: players} = usePlayers();
-    // Steam IDs picked for the balancer, in the order they were added
     const [chosen, setChosen] = useState<string[]>([]);
     const [search, setSearch] = useState("");
     const balance = useInhouseBalance(chosen);

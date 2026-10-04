@@ -55,7 +55,6 @@ public class PlayerService {
         return PlayerSummaryResponse.from(saved);
     }
 
-    // Highest ELO first, so list position is rank
     public List<PlayerSummaryResponse> getAllPlayersSummary() {
         return playerRepository.findAllByOrderByEloDesc()
                 .stream()
@@ -83,7 +82,6 @@ public class PlayerService {
         int losses = matchParticipations.size() - wins;
         double winrate = matchParticipations.isEmpty() ? 0.0 : Math.round((double) wins / matchParticipations.size() * 10000) / 100.0;
 
-        // Build last 20 matches
         List<RecentMatchResponse> recentMatches = matchParticipations
                 .stream()
                 .filter(mp -> mp.getMatch()
@@ -94,7 +92,6 @@ public class PlayerService {
                     Match match = mp.getMatch();
                     boolean won = mp.getSide() == match.getMatchWinner();
 
-                    // Find eloChange for this match from eloHistory; null if the match has no ELO record
                     Double eloChange = player.getEloHistory().stream()
                             .filter(eh -> eh.getMatch() != null && eh.getMatch()
                                     .getMatchId()

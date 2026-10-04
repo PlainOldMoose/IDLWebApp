@@ -8,12 +8,10 @@ import {formatDateRange} from "../util/format.ts";
 import {statusStyles} from "../util/statusStyles.ts";
 
 export default function Seasons() {
-    // Newest first, as the API returns them
     const {data: seasons, isPending, isError} = useSeasons();
     const {data: user} = useCurrentUser();
     const createSeason = useCreateSeason();
     const dialogRef = useRef<HTMLDialogElement>(null);
-    // Tracked so the end date can't be picked before it
     const [startDate, setStartDate] = useState("");
 
     const openDialog = () => {
@@ -40,7 +38,6 @@ export default function Seasons() {
 
     const inputClass = "text-input mt-2 block w-full";
 
-    // Only admins get the button; the API enforces the same rule
     const header = {
         title: "Seasons",
         aside: user?.admin && (

@@ -136,7 +136,7 @@
     radial-gradient(ellipse 45% 120% at 82% 40%, rgb(150 30 30 / 0.3), rgb(150 30 30 / 0.1) 55%, transparent);
 }
 
-/* The one orchestrated moment: the ladder's ticks rise from left to right on first load */
+/* The ladder's ticks rise from left to right on first load */
 @keyframes tick-rise {
     from {
         transform: scaleY(0);

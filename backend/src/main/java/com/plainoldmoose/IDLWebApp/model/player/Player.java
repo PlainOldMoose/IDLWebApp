@@ -28,7 +28,7 @@ public class Player {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // Read on every signed-in request, so granting or revoking (see README) applies straight away
+    // Read on every signed-in request, so granting or revoking applies straight away
     @ColumnDefault("false")
     @Column(nullable = false)
     private boolean admin;

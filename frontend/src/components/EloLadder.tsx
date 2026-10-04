@@ -19,7 +19,6 @@ const KEY_STEPS: Record<string, number> = {
     Home: Infinity, End: -Infinity,
 };
 
-// Places a label over a tick without letting it run off either edge of the ladder
 const labelAlignment = (pct: number): string =>
     pct < 15 ? "translate-x-0" : pct > 85 ? "-translate-x-full" : "-translate-x-1/2";
 
@@ -55,7 +54,6 @@ export default function EloLadder({players, highlightSteamId, highlightLabel}: E
     // Where keyboard selection starts: the highlighted player, or the middle of the league
     const current = active ?? highlighted ?? players[Math.floor(players.length / 2)];
 
-    // The player whose tick is closest to a horizontal screen position
     const playerAt = (clientX: number): PlayerSummary | null => {
         const bounds = ladderRef.current?.getBoundingClientRect();
         if (!bounds) return null;

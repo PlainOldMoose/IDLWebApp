@@ -54,7 +54,6 @@ export default function Matches() {
     const direWins = filtered.length - radiantWins;
     const seasonMatches = filtered.filter(m => m.seasonName).length;
 
-    // The panel is titled after the matches it lists
     const title = inhouses ? "In-houses" : seasons.find(([id]) => id === season)?.[1] ?? "All matches";
     const first = (page - 1) * PAGE_SIZE + 1;
 

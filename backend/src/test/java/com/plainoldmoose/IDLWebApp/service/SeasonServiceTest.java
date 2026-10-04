@@ -29,7 +29,6 @@ class SeasonServiceTest {
         season.setTeams(List.of(champions));
         season.setStatus(SeasonStatus.ACTIVE);
 
-        // The winner has to be one of this season's teams
         assertThrows(ResponseStatusException.class, () -> service.completeSeason(seasonId, UUID.randomUUID()));
         assertEquals(SeasonStatus.ACTIVE, season.getStatus());
 
@@ -37,7 +36,6 @@ class SeasonServiceTest {
         assertSame(champions, season.getWinner());
         assertEquals(SeasonStatus.COMPLETED, season.getStatus());
 
-        // One-way: a completed season's winner can't be changed
         assertThrows(ResponseStatusException.class, () -> service.completeSeason(seasonId, champions.getTeamId()));
     }
 }

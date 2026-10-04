@@ -18,7 +18,6 @@ function App() {
     return (
         <BrowserRouter>
             <a href="#main" className="skip-link">Skip to content</a>
-            {/*Navbar: a thin translucent bar that stays at the top and blurs whatever scrolls underneath it*/}
             <nav className="sticky top-0 z-30 border-b border-white/[0.07] bg-[rgb(40_34_34/0.75)] backdrop-blur-md">
                 <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 px-4">
                     <Link to="/" className="flex h-12 shrink-0 items-center" aria-label="IDL home">
@@ -31,7 +30,7 @@ function App() {
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
                         <NavLink to="/inhouses" className="nav-link">In-houses</NavLink>
                     </div>
-                    {/*Outlined like the sign-in button, so they read as buttons rather than more nav links*/}
+                    {/*Outlined so they read as buttons rather than more nav links*/}
                     <div className="ml-auto flex h-12 shrink-0 items-center gap-2">
                         {user ? (<>
                             <NavLink to={`/players/${user.steamId}`}

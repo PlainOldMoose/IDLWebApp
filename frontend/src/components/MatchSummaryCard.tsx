@@ -5,7 +5,6 @@ import {formatDate} from "../util/format.ts";
 // Desktop columns, shared with the column headings Matches and SeasonDetail draw above the rows
 export const matchColumns = "md:grid-cols-[1fr_auto_1fr_7rem_5rem_7rem]";
 
-// Radiant always sits left of the divider and Dire right; the winner gets a bar in its side's colour on its outer edge
 export default function MatchSummaryCard({match}: { match: MatchSummary }) {
     const radiantWon = match.winner === "RADIANT";
     const direWon = match.winner === "DIRE";

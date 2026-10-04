@@ -38,7 +38,6 @@ public class Match {
 
     private int avgElo;
 
-    // Saved with the match when an in-house result is recorded
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL)
     private List<MatchParticipant> participants;
 }

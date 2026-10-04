@@ -139,7 +139,6 @@ public class EloService {
         return team.stream().mapToDouble(Player::getElo).average().orElse(0);
     }
 
-    // ELO is kept to one decimal place
     private static double round(double elo) {
         return Math.round(elo * 10) / 10.0;
     }

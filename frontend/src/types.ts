@@ -86,7 +86,7 @@ export interface Inhouse {
     teamA: PlayerSummary[]; // Highest ELO first
     teamB: PlayerSummary[];
     reportedWinner: "RADIANT" | "DIRE" | null; // null until someone reports the result; only the admin queue has these
-    teamASide: "RADIANT" | "DIRE" | null; // the side Team A played, reported with the result
+    teamASide: "RADIANT" | "DIRE" | null;
     reportedBy: string | null; // the reporter's username
     eloChanges: Record<string, number> | null; // Steam ID to what approving the result would do to their ELO; only the admin queue has these
 }

@@ -7,7 +7,6 @@ interface PageProps {
     children: ReactNode;
 }
 
-// Full-width banner with the page title, then the page's panels
 export default function Page({title, subtitle, aside, children}: PageProps) {
     return (
         <>
