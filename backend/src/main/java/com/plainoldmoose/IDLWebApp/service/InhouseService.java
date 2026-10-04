@@ -4,34 +4,25 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreateInhouseRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.inhouse.InhouseResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.model.Inhouse;
-import com.plainoldmoose.IDLWebApp.model.Season;
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
-import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
-import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
-import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -39,14 +30,10 @@ import java.util.stream.Stream;
 @AllArgsConstructor
 public class InhouseService {
 
-    // The formula's S: how much a game is worth. A season game is 15
-    private static final double IN_HOUSE_STAKE = 7.5;
-
     private final InhouseRepository inhouseRepository;
     private final PlayerRepository playerRepository;
     private final MatchRepository matchRepository;
-    private final EloHistoryRepository eloHistoryRepository;
-    private final SeasonRepository seasonRepository;
+    private final EloService eloService;
 
     public List<InhouseResponse> balanceOptions(List<String> steamIds) {
         List<Player> players = findTen(steamIds);
@@ -80,7 +67,7 @@ public class InhouseService {
     public List<InhouseResponse> getPending() {
         return inhouseRepository.findAllByReportedWinnerIsNotNullOrderByCreatedAtAsc()
                 .stream()
-                .map(inhouse -> toResponse(inhouse, eloChanges(inhouse)))
+                .map(inhouse -> toResponse(inhouse, eloService.changes(toMatch(inhouse))))
                 .toList();
     }
 
@@ -99,49 +86,14 @@ public class InhouseService {
     public void approve(Long id) {
         Inhouse inhouse = inhouseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "In-house not found"));
-        Side winner = inhouse.getReportedWinner();
-        if (winner == null) {
+        if (inhouse.getReportedWinner() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Nobody has reported this in-house's result yet");
         }
-        // Team A's reported side decides who was Radiant. A row reported before sides were asked for has none: Team A was Radiant then
-        boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
-        List<Player> radiant = teamADire ? inhouse.getTeamB() : inhouse.getTeamA();
-        List<Player> dire = teamADire ? inhouse.getTeamA() : inhouse.getTeamB();
-        // Worked out before the match is saved, so this game isn't in anyone's game count yet
-        Map<String, Double> changes = eloChanges(inhouse);
-
-        Match match = new Match();
-        match.setMatchId(inhouse.getId());
-        match.setPlayedTime(inhouse.getCreatedAt());
-        match.setMatchWinner(winner);
-        match.setAvgElo((int) Math.round((average(radiant) + average(dire)) / 2));
-        match.setParticipants(new ArrayList<>());
-        for (Side side : Side.values()) {
-            for (Player player : side == Side.RADIANT ? radiant : dire) {
-                MatchParticipant participant = new MatchParticipant();
-                participant.setMatch(match);
-                participant.setPlayer(player);
-                participant.setSide(side);
-                match.getParticipants().add(participant);
-            }
-        }
-        Match saved = matchRepository.save(match);
-
-        LocalDateTime now = LocalDateTime.now();
-        for (MatchParticipant participant : saved.getParticipants()) {
-            Player player = participant.getPlayer();
-            double change = changes.get(player.getSteamId());
-            player.setElo(Math.round((player.getElo() + change) * 10) / 10.0);
-
-            EloHistory eloHistory = new EloHistory();
-            eloHistory.setPlayer(player);
-            eloHistory.setMatch(saved);
-            eloHistory.setElo(player.getElo());
-            eloHistory.setEloChange(change);
-            eloHistory.setTimestamp(now);
-            eloHistory.setReason(participant.getSide() == winner ? EloChangeReason.MATCH_WIN : EloChangeReason.MATCH_LOSS);
-            eloHistoryRepository.save(eloHistory);
-        }
+        // Replayed from when it was played, so approving it after later games still moves ELO in the order they happened
+        LocalDateTime played = inhouse.getCreatedAt();
+        eloService.rewind(played);
+        matchRepository.save(toMatch(inhouse));
+        eloService.replay(played);
 
         inhouseRepository.delete(inhouse);
     }
@@ -168,71 +120,6 @@ public class InhouseService {
                 .toList();
     }
 
-    // Each player's ELO change if the reported result stands, by Steam ID. Unlike plain Elo it differs player to
-    // player, through their own K
-    private Map<String, Double> eloChanges(Inhouse inhouse) {
-        LocalDateTime played = inhouse.getCreatedAt();
-        // The season this game falls in, and the one before. Before the first season, every game counts as this season's
-        List<LocalDateTime> starts = seasonRepository.findAllByOrderByStartDateDesc()
-                .stream()
-                .map(Season::getStartDate)
-                .filter(Objects::nonNull)
-                .map(LocalDate::atStartOfDay)
-                .filter(start -> !start.isAfter(played))
-                .toList();
-        LocalDateTime seasonStart = starts.isEmpty() ? null : starts.get(0);
-        LocalDateTime previousStart = starts.size() < 2 ? null : starts.get(1);
-
-        Side teamASide = inhouse.getTeamASide() == null ? Side.RADIANT : inhouse.getTeamASide();
-        boolean teamAWon = inhouse.getReportedWinner() == teamASide;
-        Map<String, Double> changes = new HashMap<>();
-        for (boolean teamA : new boolean[]{true, false}) {
-            List<Player> team = teamA ? inhouse.getTeamA() : inhouse.getTeamB();
-            List<Player> opponents = teamA ? inhouse.getTeamB() : inhouse.getTeamA();
-            for (Player player : team) {
-                changes.put(player.getSteamId(), eloChange(k(player, played, seasonStart, previousStart), IN_HOUSE_STAKE,
-                        average(team), average(opponents), teamA == teamAWon));
-            }
-        }
-        return changes;
-    }
-
-    // Looks up the formula's inputs for a player: P, H, L and N
-    private double k(Player player, LocalDateTime played, LocalDateTime seasonStart, LocalDateTime previousStart) {
-        String steamId = player.getSteamId();
-        int earlierGames = seasonStart == null ? 0 : (int) matchRepository.countGamesBefore(steamId, seasonStart);
-        int seasonGames = (int) matchRepository.countGamesBefore(steamId, played) - earlierGames;
-        LocalDateTime lastPlayed = seasonStart == null ? null : matchRepository.lastPlayedBefore(steamId, seasonStart);
-        int gamesMissed = lastPlayed == null ? 0 : (int) matchRepository.countSeasonGamesBetween(lastPlayed, seasonStart);
-        // Their ELO when the previous season started; their starting ELO if they joined after that
-        double previousSeasonElo = (previousStart == null ? Optional.<EloHistory>empty()
-                : eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampBeforeOrderByTimestampDesc(steamId, previousStart))
-                .or(() -> eloHistoryRepository.findFirstByPlayerSteamIdOrderByTimestampAsc(steamId))
-                .map(EloHistory::getElo)
-                .orElse(player.getElo());
-        return k(player.getElo(), previousSeasonElo, earlierGames, gamesMissed, seasonGames);
-    }
-
-    // The league's K. It's bigger for players far from where they were a season ago, and for players with few games.
-    // The experience term is the sheet's "k modifier": earlier seasons' games, discounted the more season games they've
-    // missed since (down to a third), plus this season's. The written formula has H(1 − L) / (1.5 × (200 + L)), but
-    // that turns negative after 2 missed games and leaves K undefined. This version matches the sheet's K values
-    static double k(double current, double previousSeasonElo, int earlierGames, int gamesMissed, int seasonGames) {
-        double experience = earlierGames * (1 - gamesMissed / (1.5 * (200 + gamesMissed))) + seasonGames;
-        return (Math.pow(Math.abs(current - previousSeasonElo), 0.75) / 90 + 0.92)
-                * (1 + 20 / (20 + Math.pow(experience, 1.19)));
-    }
-
-    // K × S × (W − expected), where the expected result comes from the gap between the team averages
-    static double eloChange(double k, double stake, double teamAvg, double opponentAvg, boolean won) {
-        double expected = 1 / (1 + Math.pow(10, (opponentAvg - teamAvg) / 400));
-        return Math.round(k * stake * ((won ? 1 : 0) - expected) * 10) / 10.0;
-    }
-
-    private static double average(List<Player> team) {
-        return team.stream().mapToDouble(Player::getElo).average().orElse(0);
-    }
-
     private List<Player> findTen(List<String> steamIds) {
         List<Player> players = playerRepository.findAllById(new HashSet<>(steamIds));
         if (steamIds.size() != 10 || players.size() != 10) {
@@ -257,6 +144,27 @@ public class InhouseService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the in-house's players or an admin can do that");
         }
         return inhouse;
+    }
+
+    // The match the in-house becomes, under the same ID. Team A's reported side decides who was Radiant. A row reported
+    // before sides were asked for has none: Team A was Radiant then
+    private static Match toMatch(Inhouse inhouse) {
+        Match match = new Match();
+        match.setMatchId(inhouse.getId());
+        match.setPlayedTime(inhouse.getCreatedAt());
+        match.setMatchWinner(inhouse.getReportedWinner());
+        match.setParticipants(new ArrayList<>());
+        boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
+        for (boolean teamA : new boolean[]{true, false}) {
+            for (Player player : teamA ? inhouse.getTeamA() : inhouse.getTeamB()) {
+                MatchParticipant participant = new MatchParticipant();
+                participant.setMatch(match);
+                participant.setPlayer(player);
+                participant.setSide(teamA != teamADire ? Side.RADIANT : Side.DIRE);
+                match.getParticipants().add(participant);
+            }
+        }
+        return match;
     }
 
     private static InhouseResponse toResponse(Inhouse inhouse, Map<String, Double> eloChanges) {

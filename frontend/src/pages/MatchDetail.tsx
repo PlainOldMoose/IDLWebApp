@@ -1,5 +1,6 @@
-import {Link, useParams} from "react-router";
-import {useMatchDetail} from "../services/Queries.ts";
+import {type FormEvent, useRef, useState} from "react";
+import {Link, useNavigate, useParams} from "react-router";
+import {useCurrentUser, useDeleteMatch, useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
@@ -13,6 +14,23 @@ const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
 export default function MatchDetail() {
     const {matchId} = useParams<{ matchId: string }>();
     const {data, isLoading, isError} = useMatchDetail(matchId);
+    const {data: user} = useCurrentUser();
+    const deleteMatch = useDeleteMatch(matchId);
+    const deleteDialogRef = useRef<HTMLDialogElement>(null);
+    // The admin has to type "delete" before the button unlocks
+    const [confirmText, setConfirmText] = useState("");
+    const navigate = useNavigate();
+
+    const openDeleteDialog = () => {
+        deleteMatch.reset();
+        setConfirmText("");
+        deleteDialogRef.current?.showModal();
+    };
+
+    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        deleteMatch.mutate(undefined, {onSuccess: () => navigate(`/seasons/${data?.match.seasonId}`)});
+    };
 
     if (isLoading) return <Page title="Match"><Loader label="Loading match"/></Page>;
     if (isError || !data) return <Page title="Match not found"><QueryError message="Couldn't find this match."/></Page>;
@@ -39,9 +57,15 @@ export default function MatchDetail() {
                 </span>
             }
             aside={match.seasonName && (
-                <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
-                    Open on Stratz
-                </a>
+                <div className="flex flex-wrap gap-3">
+                    {/* Only admins get the button; the API enforces the same rule, and refuses a finished season's matches */}
+                    {user?.admin && (
+                        <button className="secondary-button text-danger" onClick={openDeleteDialog}>Delete match</button>
+                    )}
+                    <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
+                        Open on Stratz
+                    </a>
+                </div>
             )}
         >
             <div className="grid items-start gap-4 lg:grid-cols-2">
@@ -111,6 +135,29 @@ export default function MatchDetail() {
                     );
                 })}
             </div>
+
+            {user?.admin && (
+                <dialog ref={deleteDialogRef} aria-labelledby="delete-match-title"
+                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                    <h2 id="delete-match-title" className="font-display text-3xl font-bold">Delete match</h2>
+                    <form onSubmit={handleDelete} className="mt-4 space-y-4">
+                        <p>
+                            This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
+                            off the standings. Everyone's ELO is worked out again from this game on.
+                        </p>
+                        <label className="block">
+                            Type <strong>delete</strong> to confirm
+                            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
+                                   className="text-input mt-2 block w-full"/>
+                        </label>
+                        {deleteMatch.isError && <p role="alert" className="text-sm text-ash">{deleteMatch.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
         </Page>
     );
 }
