@@ -126,15 +126,16 @@ export default function Inhouses() {
     }, [toast]);
 
     const byId = new Map(players?.map(player => [player.steamId, player] as const));
-    const searchMatch = players?.find(player =>
-        player.username.toLowerCase() === search.trim().toLowerCase() && !chosen.includes(player.steamId));
+    const query = search.trim().toLowerCase();
+    const matching = query ? (players ?? []).filter(player =>
+        player.username.toLowerCase().includes(query) && !chosen.includes(player.steamId)) : [];
+    // Enter adds the exact name, or else the first suggestion
+    const searchMatch = matching.find(player => player.username.toLowerCase() === query) ?? matching[0];
     const busy = reportResult.isPending || cancelInhouse.isPending || approveInhouse.isPending;
     const actionError = reportResult.error ?? cancelInhouse.error ?? approveInhouse.error;
 
-    const addPlayer = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!searchMatch) return;
-        setChosen([...chosen, searchMatch.steamId]);
+    const add = (player: PlayerSummary) => {
+        setChosen([...chosen, player.steamId]);
         setSearch("");
     };
 
@@ -158,19 +159,33 @@ export default function Inhouses() {
         <Page title="In-houses" subtitle="Pick 10 players and the most even teams. After the game, report who won and which team played Dire; an admin approves it before ELO changes.">
             {user ? (
                 <>
-                    <Panel title="Balance teams" meta={`${chosen.length}/10 players`}>
-                        <form onSubmit={addPlayer} className="flex gap-2">
+                    {/*Not clipped, so the suggestion list can hang below the panel*/}
+                    <Panel title="Balance teams" meta={`${chosen.length}/10 players`} className="overflow-visible!">
+                        <form onSubmit={(e) => { e.preventDefault(); if (searchMatch) add(searchMatch); }} className="flex gap-2">
                             <label htmlFor="inhouse-player" className="sr-only">Player to add</label>
-                            <input id="inhouse-player" list="inhouse-player-names" value={search}
-                                   onChange={(e) => setSearch(e.target.value)} disabled={chosen.length === 10}
-                                   autoComplete="off" spellCheck={false} placeholder="Add a player…"
-                                   className="text-input w-64 min-w-0"/>
-                            <datalist id="inhouse-player-names">
-                                {players?.filter(player => !chosen.includes(player.steamId)).map(player => (
-                                    <option key={player.steamId} value={player.username}/>
-                                ))}
-                            </datalist>
-                            <button className="secondary-button" disabled={!searchMatch}>Add</button>
+                            {/*Our own list rather than a datalist, which iOS only offers in the bar above the keyboard.
+                               Shown while the input has focus; pressing a suggestion keeps that focus, so the keyboard
+                               stays up for the next player*/}
+                            <div className="group relative w-64 min-w-0">
+                                <input id="inhouse-player" value={search}
+                                       onChange={(e) => setSearch(e.target.value)} disabled={chosen.length === 10}
+                                       autoComplete="off" spellCheck={false} placeholder="Add a player…"
+                                       className="text-input w-full"/>
+                                {matching.length > 0 && (
+                                    <ul aria-label="Matching players" onMouseDown={(e) => e.preventDefault()}
+                                        className="absolute inset-x-0 top-full z-10 mt-1 hidden overflow-hidden rounded-md border border-rule bg-panel-raised py-1 shadow-lg group-focus-within:block">
+                                        {matching.slice(0, 8).map(player => (
+                                            <li key={player.steamId}>
+                                                <button type="button" onClick={() => add(player)}
+                                                        className="flex w-full cursor-pointer justify-between gap-2 px-3 py-2 text-left hover:bg-white/5">
+                                                    <span className="truncate">{player.username}</span>
+                                                    <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
                         </form>
                         {chosen.length > 0 && (
                             <ul className="mt-4 grid max-w-2xl gap-x-6 sm:grid-cols-2">
