@@ -3,9 +3,12 @@ package com.plainoldmoose.IDLWebApp.config;
 import com.plainoldmoose.IDLWebApp.controller.InhouseController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
 import com.plainoldmoose.IDLWebApp.controller.MatchController;
+import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
+import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import com.plainoldmoose.IDLWebApp.service.SeasonService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -14,7 +17,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.Optional;
 import java.util.UUID;
+
+import static org.mockito.Mockito.when;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -43,6 +49,18 @@ class SecurityConfigTest {
 
     @MockitoBean
     private MatchService matchService;
+
+    @MockitoBean
+    private PlayerService playerService;
+
+    // Roles come from the player row on every request, so the signed-in users need one
+    @BeforeEach
+    void players() {
+        when(playerService.findSteamUser("76561198000000000"))
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000000", "player", false)));
+        when(playerService.findSteamUser("76561198000000001"))
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000001", "admin", true)));
+    }
 
     @Test
     void anyoneCanRead() throws Exception {
@@ -92,5 +110,18 @@ class SecurityConfigTest {
     @Test
     void writesNeedCsrfToken() throws Exception {
         mvc.perform(delete(SEASON).with(ADMIN)).andExpect(status().isForbidden());
+    }
+
+    // The session still says admin, but the row was flipped to false since sign-in
+    @Test
+    void revokedAdminLosesAdminStraightAway() throws Exception {
+        RequestPostProcessor revoked = user("76561198000000000").roles("USER", "ADMIN");
+        mvc.perform(delete(SEASON).with(revoked).with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deletedPlayerIsSignedOut() throws Exception {
+        RequestPostProcessor deleted = user("76561198000000002").roles("USER");
+        mvc.perform(delete("/api/inhouses/1").with(deleted).with(csrf())).andExpect(status().isForbidden());
     }
 }

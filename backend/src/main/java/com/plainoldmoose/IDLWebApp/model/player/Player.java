@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +27,11 @@ public class Player {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    // Read on every signed-in request, so granting or revoking (see README) applies straight away
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean admin;
 
     @OneToMany(mappedBy = "player")
     private List<EloHistory> eloHistory;

@@ -130,3 +130,9 @@ npm run dev
 | `GET` | `/auth/callback` | Steam login callback |
 | `GET` | `/auth/me` | Get current authenticated user |
 | `POST` | `/auth/logout` | Sign out |
+
+Sessions are kept in Postgres (as JSON, never Java-serialized) and end after 30 days idle or 90 days after sign-in, whichever comes first. Roles are read from the player on every request, so changes apply straight away and a deleted player is signed out. To make someone an admin (`false` to revoke):
+
+```bash
+docker compose exec db psql -U admin -d idlwebapp -c "UPDATE player SET admin = true WHERE steam_id = '<steamid>'"
+```
