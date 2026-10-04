@@ -138,7 +138,7 @@ export default function MatchDetail() {
 
             {user?.admin && (
                 <dialog ref={deleteDialogRef} aria-labelledby="delete-match-title"
-                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                        className="dialog">
                     <h2 id="delete-match-title" className="font-display text-3xl font-bold">Delete match</h2>
                     <form onSubmit={handleDelete} className="mt-4 space-y-4">
                         <p>

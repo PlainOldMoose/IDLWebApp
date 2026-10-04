@@ -1,6 +1,5 @@
 package com.plainoldmoose.IDLWebApp.service;
 
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
@@ -97,7 +96,6 @@ class EloServiceTest {
         assertSame(later, last.getMatch());
         assertEquals(later.getPlayedTime(), last.getTimestamp());
         assertEquals(-7.2, last.getEloChange());
-        assertEquals(EloChangeReason.MATCH_LOSS, last.getReason());
     }
 
     // An in-house: no season, so S = 7.5

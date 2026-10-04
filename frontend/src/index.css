@@ -105,6 +105,11 @@
         background-size: 0.75rem;
     }
 
+    /* A modal's box, 28rem wide unless a max-w-* utility widens it */
+    .dialog {
+        @apply m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60;
+    }
+
     .row-link {
         @apply rounded-md transition-colors hover:bg-panel-raised;
     }

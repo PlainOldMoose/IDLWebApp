@@ -34,13 +34,13 @@ public class Team {
     private Player captain;
 
     @Column(columnDefinition = "integer default 0")
-    private int avgElo = 0;
+    private int avgElo;
 
     @Column(columnDefinition = "integer default 0")
-    private int wins = 0;
+    private int wins;
 
     @Column(columnDefinition = "integer default 0")
-    private int losses = 0;
+    private int losses;
 
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
     private List<TeamMember> members = new ArrayList<>();

@@ -1,6 +1,5 @@
 package com.plainoldmoose.IDLWebApp.model.player;
 
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -33,7 +32,4 @@ public class EloHistory {
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
-
-    @Enumerated(EnumType.STRING)
-    private EloChangeReason reason;
 }
