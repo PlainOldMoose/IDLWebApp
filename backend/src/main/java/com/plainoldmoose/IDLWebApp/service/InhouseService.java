@@ -105,7 +105,7 @@ public class InhouseService {
     }
 
     // The 3 most even 5v5 splits, each as its Team A five; Team B is everyone else.
-    // ponytail: tries all 126 splits, instant for 10 players. Role preferences would add a cost next to the ELO gap
+    // NOTE: tries all 126 splits, instant for 10 players. Role preferences would add a cost next to the ELO gap
     static List<List<Player>> balance(List<Player> players) {
         double total = players.stream().mapToDouble(Player::getElo).sum();
         // Bit i set puts player i on Team A. Player 0 always is, so a split and its mirror image aren't both offered
