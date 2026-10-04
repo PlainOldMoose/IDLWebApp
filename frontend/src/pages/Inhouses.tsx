@@ -24,8 +24,6 @@ const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
 const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
 const sideBorder = {RADIANT: "border-radiant", DIRE: "border-dire"} as const;
-// Until sides are reported, Team A borrows Radiant's colour and Team B Dire's
-const teamStyle = {"Team A": "border-radiant bg-radiant/8 text-radiant", "Team B": "border-dire bg-dire/8 text-dire"} as const;
 const otherSide = (side: "RADIANT" | "DIRE"): "RADIANT" | "DIRE" => side === "RADIANT" ? "DIRE" : "RADIANT";
 
 // The action a card's footer is waiting on, asked in place instead of with the browser's confirm()
