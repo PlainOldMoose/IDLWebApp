@@ -7,6 +7,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+seed=src/main/resources/data.sql
+# Not in git (real league data). Checked up front: a missing file would otherwise commit the TRUNCATE alone
+[[ -f "$seed" ]] || { echo "Missing $seed (it's gitignored; copy it in first)." >&2; exit 1; }
+
 target="${1:-dev}"
 PSQL='psql -U admin -d idlwebapp -v ON_ERROR_STOP=1 --single-transaction -q'
 
@@ -35,7 +39,7 @@ BEGIN
   EXECUTE 'TRUNCATE ' || tables || ' RESTART IDENTITY CASCADE';
 END $$;
 SQL
-  cat src/main/resources/data.sql
+  cat "$seed"
 } | run
 
 echo "$target DB reset to seed snapshot."
