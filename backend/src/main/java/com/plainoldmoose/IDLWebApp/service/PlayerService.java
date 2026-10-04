@@ -69,9 +69,9 @@ public class PlayerService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found with SteamID: " + steamId));
     }
 
-    public Optional<SteamUserResponse> findSteamUser(String steamId, boolean admin) {
+    public Optional<SteamUserResponse> findSteamUser(String steamId) {
         return playerRepository.findById(steamId)
-                .map(player -> new SteamUserResponse(player.getSteamId(), player.getUsername(), admin));
+                .map(player -> new SteamUserResponse(player.getSteamId(), player.getUsername(), player.isAdmin()));
     }
 
     private PlayerDetailResponse mapToDetailResponse(Player player) {

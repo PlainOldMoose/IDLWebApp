@@ -91,6 +91,7 @@ npm run dev
 | `GET` | `/api/seasons` | List all seasons, newest first |
 | `GET` | `/api/seasons/{id}` | Get season details, including teams |
 | `POST` | `/api/seasons` | Create a new season (admin) |
+| `POST` | `/api/seasons/{id}/complete` | End an active season and record its winner (admin) |
 | `DELETE` | `/api/seasons/{id}` | Delete a season with no teams or matches (admin) |
 
 ### Matches
@@ -130,3 +131,9 @@ npm run dev
 | `GET` | `/auth/callback` | Steam login callback |
 | `GET` | `/auth/me` | Get current authenticated user |
 | `POST` | `/auth/logout` | Sign out |
+
+Sessions are kept in Postgres (as JSON, never Java-serialized) and end after 30 days idle or 90 days after sign-in, whichever comes first. Roles are read from the player on every request, so changes apply straight away and a deleted player is signed out. To make someone an admin (`false` to revoke):
+
+```bash
+docker compose exec db psql -U admin -d idlwebapp -c "UPDATE player SET admin = true WHERE steam_id = '<steamid>'"
+```

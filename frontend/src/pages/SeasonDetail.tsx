@@ -1,6 +1,7 @@
 import {type FormEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {
+    useCompleteSeason,
     useCreateMatch,
     useCurrentUser,
     useDeleteSeason,
@@ -49,6 +50,11 @@ export default function SeasonDetail() {
     const [radiantTeamId, setRadiantTeamId] = useState("");
     const [direTeamId, setDireTeamId] = useState("");
     const [unknownNames, setUnknownNames] = useState<string[]>([]);
+    const completeSeason = useCompleteSeason(seasonId);
+    const endDialogRef = useRef<HTMLDialogElement>(null);
+    const [winnerTeamId, setWinnerTeamId] = useState("");
+    // Can't be undone, so the admin types "end" like they type "delete" for a delete
+    const [endConfirmText, setEndConfirmText] = useState("");
 
     const handleSignup = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -118,6 +124,18 @@ export default function SeasonDetail() {
         });
     };
 
+    const openEndDialog = () => {
+        completeSeason.reset();
+        setWinnerTeamId("");
+        setEndConfirmText("");
+        endDialogRef.current?.showModal();
+    };
+
+    const handleEnd = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        completeSeason.mutate(winnerTeamId, {onSuccess: () => endDialogRef.current?.close()});
+    };
+
     const signIn = () => {
         globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
     };
@@ -168,7 +186,10 @@ export default function SeasonDetail() {
                         <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
                     )
                 ) : canAddMatch ? (
-                    <button className="primary-button" onClick={openAddMatchDialog}>Add match</button>
+                    <div className="flex gap-3">
+                        <button className="secondary-button" onClick={openEndDialog}>End season</button>
+                        <button className="primary-button" onClick={openAddMatchDialog}>Add match</button>
+                    </div>
                 ) : season.winnerTeamName && (
                     <div className="border-l-3 border-aegis pl-4">
                         <p className="text-sm text-ash">Champions</p>
@@ -439,6 +460,38 @@ export default function SeasonDetail() {
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
                             <button className="primary-button" disabled={createMatch.isPending}>Add match</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {canAddMatch && (
+                <dialog ref={endDialogRef} aria-labelledby="end-season-title"
+                        className="dialog">
+                    <h2 id="end-season-title" className="font-display text-3xl font-bold">End season</h2>
+                    <form onSubmit={handleEnd} className="mt-4 space-y-4">
+                        <label className="block">
+                            Champions
+                            <select value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)} required
+                                    className="text-input mt-2 block w-full">
+                                <option value="">Pick a team…</option>
+                                {standings.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+                            </select>
+                        </label>
+                        <p>
+                            This marks <strong>{season.name}</strong> as completed
+                            {winnerTeamId && <> with <strong>{season.teams.find(t => t.teamId === winnerTeamId)?.name}</strong> as champions</>}.
+                            No more matches can be added, and the winner can't be changed.
+                        </p>
+                        <label className="block">
+                            Type <strong>end</strong> to confirm
+                            <input value={endConfirmText} onChange={(e) => setEndConfirmText(e.target.value)} autoComplete="off"
+                                   className="text-input mt-2 block w-full"/>
+                        </label>
+                        {completeSeason.isError && <p role="alert" className="text-sm text-ash">{completeSeason.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => endDialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={endConfirmText !== "end" || completeSeason.isPending}>End season</button>
                         </div>
                     </form>
                 </dialog>
