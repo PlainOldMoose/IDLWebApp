@@ -91,6 +91,7 @@ npm run dev
 | `GET` | `/api/seasons` | List all seasons, newest first |
 | `GET` | `/api/seasons/{id}` | Get season details, including teams |
 | `POST` | `/api/seasons` | Create a new season (admin) |
+| `POST` | `/api/seasons/{id}/complete` | End an active season and record its winner (admin) |
 | `DELETE` | `/api/seasons/{id}` | Delete a season with no teams or matches (admin) |
 
 ### Matches

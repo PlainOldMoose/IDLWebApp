@@ -7,6 +7,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import jakarta.transaction.Transactional;
@@ -60,6 +61,24 @@ public class SeasonService {
         }
 
         seasonRepository.delete(season);
+    }
+
+    // The admin picks the winner: there's no bracket to work it out from. One-way, since matches only go into an active
+    // season and the winner is fixed once set. SecurityConfig keeps this admin-only
+    @Transactional
+    public void completeSeason(UUID id, UUID winnerTeamId) {
+        Season season = seasonRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        if (season.getStatus() != SeasonStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an active season can be ended");
+        }
+        Team winner = season.getTeams().stream()
+                .filter(team -> team.getTeamId().equals(winnerTeamId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "The winner has to be a team in this season"));
+
+        season.setWinner(winner);
+        season.setStatus(SeasonStatus.COMPLETED);
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {

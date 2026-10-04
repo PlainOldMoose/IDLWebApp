@@ -69,6 +69,19 @@ export function useDeleteSeason(seasonId: string | undefined) {
     });
 }
 
+// One-way: the season can't take matches or change its winner afterwards
+export function useCompleteSeason(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (winnerTeamId: string) =>
+            request<void>(`/api/seasons/${seasonId}/complete`, {method: "POST", json: {winnerTeamId}}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+        },
+    });
+}
+
 // Every match, or only one season's
 export function useMatches(seasonId?: string, enabled = true) {
     return useQuery({
