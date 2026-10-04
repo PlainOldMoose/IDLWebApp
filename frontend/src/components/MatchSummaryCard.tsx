@@ -15,7 +15,7 @@ export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
     const direWon = match.winner === "DIRE";
     return (
         <Link to={`/matches/${match.matchId}`}
-              className={`row-link grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 px-3 py-3 ${matchColumns}`}>
+              className={`row-link grid border-rule max-md:[a+&]:border-t grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 px-3 py-3 ${matchColumns}`}>
             <p className="truncate text-right">
                 <span className={`border-l-3 pl-2.5 ${radiantWon ? "border-l-radiant font-semibold text-bone" : "border-transparent text-ash"}`}>
                     {match.radiantTeamName ?? "Radiant"}
