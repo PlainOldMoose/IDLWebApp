@@ -31,6 +31,10 @@
 
     /* Season champions only, always next to the word "Champions" */
     --color-aegis: #E6B94F;
+
+    /* Season status, with sign-ups open in the accent: in progress, then finished */
+    --color-live: #B39DFF;
+    --color-rosewood: #BE9A95;
 }
 
 @layer base {
