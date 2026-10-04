@@ -63,11 +63,12 @@ function Teams({inhouse}: { inhouse: Inhouse }) {
         {name: "Team B" as const, team: inhouse.teamB, side: inhouse.teamASide && otherSide(inhouse.teamASide)},
     ];
     return (
-        <div className="grid grid-cols-2 gap-x-3">
+        // The admin queue's extra ELO-change column doesn't fit two teams across a phone, so they stack there
+        <div className={`grid gap-x-3 gap-y-3 ${inhouse.eloChanges ? "sm:grid-cols-2" : "grid-cols-2"}`}>
             {teams.map(({name, team, side}) => (
                 <div key={name} className="min-w-0">
-                    <p className={`flex justify-between gap-2 rounded-r-sm border-l-3 px-2 py-1 text-sm ${side ? sideBorder[side] : teamStyle[name]}`}>
-                        <span className="flex gap-2">
+                    <p className={`flex justify-between gap-2 border-l-3 px-2 py-1 text-sm ${side ? sideBorder[side] : "border-ash"}`}>
+                        <span className="flex gap-2 whitespace-nowrap">
                             <span className="font-semibold">{name}</span>
                             {side && <span className="text-ash">{sideName[side]}</span>}
                         </span>
@@ -226,7 +227,7 @@ export default function Inhouses() {
 
             {user?.admin && (
                 <>
-                    <h2 className="mt-10 mb-4 font-display text-3xl font-bold">Waiting for approval</h2>
+                    <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">Waiting for approval</h2>
                     {pending.isPending ? (
                         <Loader label="Loading results waiting for approval"/>
                     ) : pending.isError ? (
@@ -267,12 +268,12 @@ export default function Inhouses() {
                             })}
                         </div>
                     ) : (
-                        <p className="text-ash">No results waiting.</p>
+                        <p className="px-4 text-ash">No results waiting.</p>
                     )}
                 </>
             )}
 
-            <h2 className="mt-10 mb-4 font-display text-3xl font-bold">In progress</h2>
+            <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">In progress</h2>
             {isPending ? (
                 <Loader label="Loading in-houses"/>
             ) : isError ? (
@@ -336,7 +337,7 @@ export default function Inhouses() {
                     })}
                 </div>
             ) : (
-                <p className="text-ash">No in-houses in progress.</p>
+                <p className="px-4 text-ash">No in-houses in progress.</p>
             )}
             {actionError && <p role="alert" className="mt-2 text-sm text-ash">{actionError.message}</p>}
             {/*Always in the page so screen readers announce each new message; bottom-centred on phones, bottom-right from sm up*/}

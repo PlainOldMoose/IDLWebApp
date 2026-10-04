@@ -20,6 +20,8 @@ import QueryError from "../components/QueryError.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
 import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
 
+const RECENT_MATCH_COUNT = 10;
+
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
@@ -214,8 +216,10 @@ export default function SeasonDetail() {
             {started && (
                 <>
                     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                        <Panel title="Matches" meta={matches?.length ? `${matches.length} played` : undefined}
-                               padded={false} className="min-w-0">
+                        {/*Latest few, with the rest on the season-filtered Matches page; the button is trimmed to keep this header level with Standings*/}
+                        <Panel title="Recent matches" padded={false} className="min-w-0" meta={matches && matches.length > RECENT_MATCH_COUNT
+                            ? <Link to={`/matches?season=${seasonId}`} className="secondary-button px-3 py-0.5 text-sm">See all {matches.length}</Link>
+                            : matches?.length ? `${matches.length} played` : undefined}>
                             {matches?.length ? (
                                 <>
                                     {/*Column headings, hidden on small screens where the rows stack*/}
@@ -227,7 +231,7 @@ export default function SeasonDetail() {
                                         <p className="text-right">Avg ELO</p>
                                         <p className="text-right">Season</p>
                                     </div>
-                                    {matches.map((match) => (
+                                    {matches.slice(0, RECENT_MATCH_COUNT).map((match) => (
                                         <MatchSummaryCard key={match.matchId} match={match}/>
                                     ))}
                                 </>
@@ -259,8 +263,10 @@ export default function SeasonDetail() {
                         </Panel>
                     </div>
 
-                    <h2 className="mt-10 mb-4 font-display text-3xl font-bold">Teams</h2>
-                    <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">Teams</h2>
+                    {/*Each card's header and roster sit on rows shared across the grid row (subgrid), so a long team name that
+                       wraps grows every header in its row and the rosters and averages still line up*/}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {season.teams.map((team) => {
                             const captainFirst = [...team.members].sort((a, b) =>
                                 Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
@@ -271,10 +277,10 @@ export default function SeasonDetail() {
                                        meta={isChampion
                                            ? <span className="font-medium text-aegis">Champions</span>
                                            : <span className="figures">{team.wins}W {team.losses}L</span>}
-                                       className={isChampion ? "ring-1 ring-aegis/70" : ""}
+                                       className={`row-span-2 grid grid-rows-subgrid gap-0 [&>div]:flex [&>div]:flex-col ${isChampion ? "ring-1 ring-aegis/70" : ""}`}
                                        level={3}
                                        padded={false}>
-                                    <ul>
+                                    <ul className="mb-1.5">
                                         {captainFirst.map(member => (
                                             <li key={member.steamId}>
                                                 <Link to={`/players/${member.steamId}`}
@@ -289,7 +295,7 @@ export default function SeasonDetail() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <p className="figures mt-1.5 flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
+                                    <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
                                         <span>Average ELO</span>
                                         <span>{formatElo(team.avgElo)}</span>
                                     </p>
