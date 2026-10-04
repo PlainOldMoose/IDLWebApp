@@ -31,12 +31,18 @@ function App() {
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
                         <NavLink to="/inhouses" className="nav-link">In-houses</NavLink>
                     </div>
-                    <div className="ml-auto flex h-12 shrink-0 items-center">
+                    {/*Outlined like the sign-in button, so they read as buttons rather than more nav links*/}
+                    <div className="ml-auto flex h-12 shrink-0 items-center gap-2">
                         {user ? (<>
-                            <NavLink to={`/players/${user.steamId}`} className="nav-link">
+                            <NavLink to={`/players/${user.steamId}`}
+                                     className={({isActive}) => `secondary-button px-3 py-1 text-sm ${isActive ? "border-ash text-bone" : ""}`}>
+                                {/*Phosphor's User*/}
+                                <svg aria-hidden="true" width={14} height={14} viewBox="0 0 256 256" fill="currentColor">
+                                    <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
+                                </svg>
                                 {user.username}
                             </NavLink>
-                            <button type="button" onClick={() => signOut.mutate()} className="nav-link cursor-pointer">
+                            <button type="button" onClick={() => signOut.mutate()} className="secondary-button px-3 py-1 text-sm">
                                 Sign out
                             </button>
                         </>) : (
