@@ -7,9 +7,11 @@ import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -54,22 +56,37 @@ class InhouseServiceTest {
     }
 
     @Test
+    void k() {
+        // K × S from the sheet's Match Data for two Season 41 games, with S = 15
+        // EdgarAF on 1950, 1888 a season earlier, 166 earlier games, 10 season games missed, none this season
+        assertEquals(18.25, 15 * InhouseService.k(1950, 1888, 166, 10, 0), 0.05);
+        // AndrewC on 2140, 2202 a season earlier, 97 earlier games, 6 missed
+        assertEquals(18.87, 15 * InhouseService.k(2140, 2202, 97, 6, 0), 0.05);
+        // A new player starts on double: 0.92 × 2
+        assertEquals(1.84, InhouseService.k(1500, 1500, 0, 0, 0), 1e-9);
+        // The formula as written is undefined after 2 missed games; this stays finite however long someone's away
+        assertTrue(Double.isFinite(InhouseService.k(1500, 1400, 50, 1000, 0)));
+    }
+
+    @Test
     void eloChange() {
-        assertEquals(16.0, InhouseService.eloChange(1500, 1500, Side.RADIANT));
-        assertEquals(-16.0, InhouseService.eloChange(1500, 1500, Side.DIRE));
+        assertEquals(7.5, InhouseService.eloChange(1, 15, 1500, 1500, true));
+        assertEquals(-7.5, InhouseService.eloChange(1, 15, 1500, 1500, false));
         // A 200 point favourite expects to win 76% of the time, so beating them is worth more than winning as them
-        assertEquals(7.7, InhouseService.eloChange(1700, 1500, Side.RADIANT));
-        assertEquals(24.3, InhouseService.eloChange(1500, 1700, Side.RADIANT));
+        assertEquals(3.6, InhouseService.eloChange(1, 15, 1700, 1500, true));
+        assertEquals(11.4, InhouseService.eloChange(1, 15, 1500, 1700, true));
     }
 
     @Test
     void resultWaitsForAnAdmin() {
         InhouseRepository inhouses = mock(InhouseRepository.class);
         MatchRepository matches = mock(MatchRepository.class);
-        InhouseService service = new InhouseService(inhouses, mock(PlayerRepository.class), matches, mock(EloHistoryRepository.class));
+        InhouseService service = new InhouseService(inhouses, mock(PlayerRepository.class), matches, mock(EloHistoryRepository.class),
+                mock(SeasonRepository.class));
         // Players 0-4 on Team A, 5-9 on Team B, all on 1500
         Inhouse inhouse = new Inhouse();
         inhouse.setId(1L);
+        inhouse.setCreatedAt(LocalDateTime.now());
         IntStream.range(0, 10).forEach(i -> {
             Player player = new Player();
             player.setSteamId(String.valueOf(i));
@@ -90,9 +107,9 @@ class InhouseServiceTest {
 
         when(matches.save(any())).thenAnswer(inv -> inv.getArgument(0));
         service.approve(1L);
-        // Only right if Team B was stored as Radiant
-        assertEquals(1516.0, inhouse.getTeamB().get(0).getElo());
-        assertEquals(1484.0, inhouse.getTeamA().get(0).getElo());
+        // Only right if Team B was stored as Radiant. New players with no games: K = 1.84, so 1.84 × 7.5 × 0.5
+        assertEquals(1506.9, inhouse.getTeamB().get(0).getElo());
+        assertEquals(1493.1, inhouse.getTeamA().get(0).getElo());
         verify(inhouses).delete(inhouse);
     }
 }

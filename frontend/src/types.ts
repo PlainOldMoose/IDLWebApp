@@ -87,4 +87,5 @@ export interface Inhouse {
     reportedWinner: "RADIANT" | "DIRE" | null; // null until someone reports the result; only the admin queue has these
     teamASide: "RADIANT" | "DIRE" | null; // the side Team A played, reported with the result
     reportedBy: string | null; // the reporter's username
+    eloChanges: Record<string, number> | null; // Steam ID to what approving the result would do to their ELO; only the admin queue has these
 }

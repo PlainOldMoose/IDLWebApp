@@ -15,11 +15,11 @@ import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatElo, formatRelative} from "../util/format.ts";
+import {formatElo, formatEloChange, formatRelative} from "../util/format.ts";
 
 const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + player.elo, 0) / team.length;
 
-// A team's chance to win, the same Elo expectation InhouseService.eloChange uses. 50% is a perfectly even game
+// A team's chance to win, the same expectation InhouseService.eloChange uses. 50% is a perfectly even game
 const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 + 10 ** ((average(opponents) - average(team)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
 const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
@@ -53,7 +53,7 @@ function ConfirmStrip({danger, label, busy, onConfirm, onBack, children}: {
 }
 
 // Team A and Team B side by side, each with its average ELO. Sides are only known once someone reports the result,
-// so only the admin queue shows them
+// so only the admin queue shows them, along with each player's ELO change if it's approved
 function Teams({inhouse}: { inhouse: Inhouse }) {
     const teams = [
         {name: "Team A", team: inhouse.teamA, side: inhouse.teamASide},
@@ -74,7 +74,14 @@ function Teams({inhouse}: { inhouse: Inhouse }) {
                         {team.map(player => (
                             <li key={player.steamId} className="flex justify-between gap-2 px-2 py-1">
                                 <span className="truncate">{player.username}</span>
-                                <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                <span className="flex gap-2">
+                                    <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                    {inhouse.eloChanges && (
+                                        <span className={`figures w-12 text-right ${inhouse.eloChanges[player.steamId] > 0 ? "text-win" : "text-loss"}`}>
+                                            {formatEloChange(inhouse.eloChanges[player.steamId])}
+                                        </span>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ul>
@@ -230,8 +237,12 @@ export default function Inhouses() {
                                 const winnerTeam = teamAWon ? "Team A" : "Team B";
                                 const loserTeam = teamAWon ? "Team B" : "Team A";
                                 const [winners, losers] = teamAWon ? [inhouse.teamA, inhouse.teamB] : [inhouse.teamB, inhouse.teamA];
-                                // What each winner gains and each loser drops, with InhouseService.eloChange's K of 32
-                                const gain = Math.round(32 * (1 - winChance(winners, losers)) * 10) / 10;
+                                // Each player's change differs, so each team shows its smallest to largest
+                                const range = (team: PlayerSummary[]) => {
+                                    const changes = team.map(player => inhouse.eloChanges![player.steamId]).sort((a, b) => a - b);
+                                    const [low, high] = [formatEloChange(changes[0]), formatEloChange(changes[changes.length - 1])];
+                                    return low === high ? low : `${low} to ${high}`;
+                                };
                                 return (
                                     <Panel key={id} title={`In-house ${id}`} level={3} padded={false}
                                            meta={`${winnerTeam} won as ${sideName[winner]}, reported by ${inhouse.reportedBy}`}>
@@ -240,13 +251,11 @@ export default function Inhouses() {
                                             <ConfirmStrip label="Approve result" busy={busy}
                                                           onConfirm={() => approveInhouse.mutate(id, done(`In-house ${id} approved. ELO is updated.`))} onBack={() => setConfirming(null)}>
                                                 <p className="flex gap-6">
-                                                    {[{team: winnerTeam, change: gain, colour: "text-win"},
-                                                        {team: loserTeam, change: -gain, colour: "text-loss"}].map(({team, change, colour}) => (
+                                                    {[{team: winnerTeam, change: range(winners), colour: "text-win"},
+                                                        {team: loserTeam, change: range(losers), colour: "text-loss"}].map(({team, change, colour}) => (
                                                         <span key={team} className="flex items-baseline gap-2">
                                                             <span className="text-sm text-ash">{team}</span>
-                                                            <span className={`figures text-2xl font-semibold ${colour}`}>
-                                                                {change > 0 ? "+" : "\u2212"}{formatElo(Math.abs(change))}
-                                                            </span>
+                                                            <span className={`figures text-2xl font-semibold ${colour}`}>{change}</span>
                                                         </span>
                                                     ))}
                                                 </p>

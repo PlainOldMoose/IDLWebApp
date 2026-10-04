@@ -4,6 +4,7 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreateInhouseRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.inhouse.InhouseResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.model.Inhouse;
+import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
@@ -14,17 +15,23 @@ import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -32,17 +39,21 @@ import java.util.stream.Stream;
 @AllArgsConstructor
 public class InhouseService {
 
+    // The formula's S: how much a game is worth. A season game is 15
+    private static final double IN_HOUSE_STAKE = 7.5;
+
     private final InhouseRepository inhouseRepository;
     private final PlayerRepository playerRepository;
     private final MatchRepository matchRepository;
     private final EloHistoryRepository eloHistoryRepository;
+    private final SeasonRepository seasonRepository;
 
     public List<InhouseResponse> balanceOptions(List<String> steamIds) {
         List<Player> players = findTen(steamIds);
         return balance(players).stream()
                 .map(teamA -> new InhouseResponse(null, null, summaries(teamA), summaries(players.stream()
                         .filter(player -> !teamA.contains(player))
-                        .toList()), null, null, null))
+                        .toList()), null, null, null, null))
                 .toList();
     }
 
@@ -54,22 +65,22 @@ public class InhouseService {
             (request.teamA().contains(player.getSteamId()) ? inhouse.getTeamA() : inhouse.getTeamB()).add(player);
         }
 
-        return toResponse(inhouseRepository.save(inhouse));
+        return toResponse(inhouseRepository.save(inhouse), null);
     }
 
     // Games with no result reported yet, newest first
     public List<InhouseResponse> getInProgress() {
         return inhouseRepository.findAllByReportedWinnerIsNullOrderByCreatedAtDesc()
                 .stream()
-                .map(InhouseService::toResponse)
+                .map(inhouse -> toResponse(inhouse, null))
                 .toList();
     }
 
-    // The admin queue: reported results, oldest first
+    // The admin queue: reported results, oldest first, with what approving each would do to everyone's ELO
     public List<InhouseResponse> getPending() {
         return inhouseRepository.findAllByReportedWinnerIsNotNullOrderByCreatedAtAsc()
                 .stream()
-                .map(InhouseService::toResponse)
+                .map(inhouse -> toResponse(inhouse, eloChanges(inhouse)))
                 .toList();
     }
 
@@ -96,7 +107,8 @@ public class InhouseService {
         boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
         List<Player> radiant = teamADire ? inhouse.getTeamB() : inhouse.getTeamA();
         List<Player> dire = teamADire ? inhouse.getTeamA() : inhouse.getTeamB();
-        double radiantChange = eloChange(average(radiant), average(dire), winner);
+        // Worked out before the match is saved, so this game isn't in anyone's game count yet
+        Map<String, Double> changes = eloChanges(inhouse);
 
         Match match = new Match();
         match.setMatchId(inhouse.getId());
@@ -118,7 +130,7 @@ public class InhouseService {
         LocalDateTime now = LocalDateTime.now();
         for (MatchParticipant participant : saved.getParticipants()) {
             Player player = participant.getPlayer();
-            double change = participant.getSide() == Side.RADIANT ? radiantChange : -radiantChange;
+            double change = changes.get(player.getSteamId());
             player.setElo(Math.round((player.getElo() + change) * 10) / 10.0);
 
             EloHistory eloHistory = new EloHistory();
@@ -156,11 +168,65 @@ public class InhouseService {
                 .toList();
     }
 
-    // Radiant's change; Dire's is the opposite. Expected result comes from the gap between the team averages.
-    // ponytail: plain Elo with K = 32, a placeholder until the league's real ELO formula is written
-    static double eloChange(double radiantAvg, double direAvg, Side winner) {
-        double radiantExpected = 1 / (1 + Math.pow(10, (direAvg - radiantAvg) / 400));
-        return Math.round(32 * ((winner == Side.RADIANT ? 1 : 0) - radiantExpected) * 10) / 10.0;
+    // Each player's ELO change if the reported result stands, by Steam ID. Unlike plain Elo it differs player to
+    // player, through their own K
+    private Map<String, Double> eloChanges(Inhouse inhouse) {
+        LocalDateTime played = inhouse.getCreatedAt();
+        // The season this game falls in, and the one before. Before the first season, every game counts as this season's
+        List<LocalDateTime> starts = seasonRepository.findAllByOrderByStartDateDesc()
+                .stream()
+                .map(Season::getStartDate)
+                .filter(Objects::nonNull)
+                .map(LocalDate::atStartOfDay)
+                .filter(start -> !start.isAfter(played))
+                .toList();
+        LocalDateTime seasonStart = starts.isEmpty() ? null : starts.get(0);
+        LocalDateTime previousStart = starts.size() < 2 ? null : starts.get(1);
+
+        Side teamASide = inhouse.getTeamASide() == null ? Side.RADIANT : inhouse.getTeamASide();
+        boolean teamAWon = inhouse.getReportedWinner() == teamASide;
+        Map<String, Double> changes = new HashMap<>();
+        for (boolean teamA : new boolean[]{true, false}) {
+            List<Player> team = teamA ? inhouse.getTeamA() : inhouse.getTeamB();
+            List<Player> opponents = teamA ? inhouse.getTeamB() : inhouse.getTeamA();
+            for (Player player : team) {
+                changes.put(player.getSteamId(), eloChange(k(player, played, seasonStart, previousStart), IN_HOUSE_STAKE,
+                        average(team), average(opponents), teamA == teamAWon));
+            }
+        }
+        return changes;
+    }
+
+    // Looks up the formula's inputs for a player: P, H, L and N
+    private double k(Player player, LocalDateTime played, LocalDateTime seasonStart, LocalDateTime previousStart) {
+        String steamId = player.getSteamId();
+        int earlierGames = seasonStart == null ? 0 : (int) matchRepository.countGamesBefore(steamId, seasonStart);
+        int seasonGames = (int) matchRepository.countGamesBefore(steamId, played) - earlierGames;
+        LocalDateTime lastPlayed = seasonStart == null ? null : matchRepository.lastPlayedBefore(steamId, seasonStart);
+        int gamesMissed = lastPlayed == null ? 0 : (int) matchRepository.countSeasonGamesBetween(lastPlayed, seasonStart);
+        // Their ELO when the previous season started; their starting ELO if they joined after that
+        double previousSeasonElo = (previousStart == null ? Optional.<EloHistory>empty()
+                : eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampBeforeOrderByTimestampDesc(steamId, previousStart))
+                .or(() -> eloHistoryRepository.findFirstByPlayerSteamIdOrderByTimestampAsc(steamId))
+                .map(EloHistory::getElo)
+                .orElse(player.getElo());
+        return k(player.getElo(), previousSeasonElo, earlierGames, gamesMissed, seasonGames);
+    }
+
+    // The league's K. It's bigger for players far from where they were a season ago, and for players with few games.
+    // The experience term is the sheet's "k modifier": earlier seasons' games, discounted the more season games they've
+    // missed since (down to a third), plus this season's. The written formula has H(1 − L) / (1.5 × (200 + L)), but
+    // that turns negative after 2 missed games and leaves K undefined. This version matches the sheet's K values
+    static double k(double current, double previousSeasonElo, int earlierGames, int gamesMissed, int seasonGames) {
+        double experience = earlierGames * (1 - gamesMissed / (1.5 * (200 + gamesMissed))) + seasonGames;
+        return (Math.pow(Math.abs(current - previousSeasonElo), 0.75) / 90 + 0.92)
+                * (1 + 20 / (20 + Math.pow(experience, 1.19)));
+    }
+
+    // K × S × (W − expected), where the expected result comes from the gap between the team averages
+    static double eloChange(double k, double stake, double teamAvg, double opponentAvg, boolean won) {
+        double expected = 1 / (1 + Math.pow(10, (opponentAvg - teamAvg) / 400));
+        return Math.round(k * stake * ((won ? 1 : 0) - expected) * 10) / 10.0;
     }
 
     private static double average(List<Player> team) {
@@ -193,10 +259,10 @@ public class InhouseService {
         return inhouse;
     }
 
-    private static InhouseResponse toResponse(Inhouse inhouse) {
+    private static InhouseResponse toResponse(Inhouse inhouse, Map<String, Double> eloChanges) {
         return new InhouseResponse(inhouse.getId(), inhouse.getCreatedAt(), summaries(inhouse.getTeamA()), summaries(inhouse.getTeamB()),
                 inhouse.getReportedWinner(), inhouse.getTeamASide(),
-                inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername());
+                inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername(), eloChanges);
     }
 
     // Highest ELO first
