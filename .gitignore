@@ -1,6 +1,3 @@
-# Claude Code
-.claude/
-
 # ===================
 # Backend (Java/Maven/Spring Boot)
 # ===================
@@ -74,10 +71,7 @@ Desktop.ini
 HELP.md
 *.sw?
 
-CLAUDE.md
-.agents/
 .playwright/
-skills-lock.json
 
 # Real league data, kept locally only (loaded by backend/scripts/reset-db.sh)
 backend/src/main/resources/data.sql
