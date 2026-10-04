@@ -10,11 +10,13 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 
 - **Seasons** - Admins create seasons; players sign up with their role preferences and whether they'd captain
 - **Teams and standings** - Each season's teams, captains, win/loss records and average ELO
-- **Matches** - Season and in-house results with Radiant/Dire sides and each player's ELO change
+- **Matches** - Season and in-house results with Radiant/Dire sides and each player's ELO change. Admins can add a game the league ticket missed, or delete one, while its season is active
+- **ELO** - Calculated with the league's formula; adding or removing a past game replays everyone's ELO from that game on
+- **In-houses** - Pick 10 players and the balancer offers the 3 most even teams. Players report the result, and an admin approves it before ELO moves
 - **Players** - An ELO ladder, plus each player's record and match history
 - **Steam login** - Players sign in with Steam OpenID; admins are set by Steam ID
 
-Teams, matches and ELO come from the seed data for now. Entering them in the app, and calculating ELO, is still to come.
+Teams and past seasons come from the seed data for now. Creating teams in the app is still to come.
 
 ## Contributing
 
@@ -24,7 +26,7 @@ Contributions are welcome! Please read the [Contributing Guide](.github/CONTRIBU
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Spring Boot 4.0.8, Java 17, Spring Security, Spring Data JPA |
+| **Backend** | Spring Boot 4.1.1, Java 17, Spring Security, Spring Data JPA |
 | **Frontend** | React 19, TypeScript, Tailwind CSS 4, Vite, React Router 7, TanStack Query 5 |
 | **Database** | PostgreSQL 16 |
 | **Auth** | Steam OpenID |
@@ -42,12 +44,13 @@ IDLWebApp/
 │       ├── model/                    # JPA entities and enums
 │       ├── dto/                      # Data transfer objects
 │       └── config/                   # Security and app configuration
-│   └── scripts/reset-db.sh           # Reset a DB to the seed snapshot
+│   └── scripts/reset-db.sh           # Reset a DB to the seed snapshot (data.sql, not in git)
 ├── frontend/                         # React SPA
 │   └── src/
 │       ├── components/               # Reusable UI components
 │       ├── pages/                    # Route-level page components
 │       ├── services/                 # API query hooks
+│       ├── util/                     # Formatting and shared styles
 │       └── types.ts                  # TypeScript type definitions
 ├── docker-compose.yml                # Full stack; prod runs this file
 └── .github/workflows/deploy.yml      # CI/CD pipeline
@@ -96,13 +99,28 @@ npm run dev
 |--------|----------|-------------|
 | `GET` | `/api/matches` | List matches, newest first (optional `seasonId` filter) |
 | `GET` | `/api/matches/{matchId}` | Get match details, including each player's ELO change |
+| `POST` | `/api/matches` | Add a match to an active season, replaying ELO from it (admin) |
+| `DELETE` | `/api/matches/{matchId}` | Delete an active season's match, replaying ELO without it (admin) |
 
 ### Signups
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/seasons/{seasonId}/signups` | Get signups for a season |
-| `POST` | `/api/seasons/{seasonId}/signups` | Sign up for a season (requires auth) |
+| `POST` | `/api/seasons/{seasonId}/signups` | Sign up for a season, or update your sign-up (requires auth) |
+| `DELETE` | `/api/seasons/{seasonId}/signups` | Withdraw your own sign-up (requires auth) |
+
+### In-houses
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/inhouses/balance?players=...` | The 3 most even splits of 10 players (Steam IDs) |
+| `GET` | `/api/inhouses` | In-houses with no result reported yet, newest first |
+| `GET` | `/api/inhouses/pending` | Reported results waiting for approval, with each player's ELO change (admin) |
+| `POST` | `/api/inhouses` | Start an in-house with two teams of 5 (requires auth) |
+| `POST` | `/api/inhouses/{id}/result` | Report the winner and Team A's side (its players or an admin) |
+| `POST` | `/api/inhouses/{id}/approve` | Approve a reported result into a match and move ELO (admin) |
+| `DELETE` | `/api/inhouses/{id}` | Cancel or reject an in-house (its players or an admin) |
 
 ### Authentication
 
