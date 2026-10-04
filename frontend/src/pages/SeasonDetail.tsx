@@ -1,9 +1,11 @@
 import {type FormEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {
+    useCreateMatch,
     useCurrentUser,
     useDeleteSeason,
     useMatches,
+    usePlayers,
     useSeasonDetail,
     useSeasonSignup,
     useSeasonSignups,
@@ -36,6 +38,15 @@ export default function SeasonDetail() {
     // The admin has to type "delete" before the button unlocks
     const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
+    // Admins can add a game the league ticket missed, while the season is active
+    const canAddMatch = !!user?.admin && season?.status === "ACTIVE";
+    const createMatch = useCreateMatch();
+    const {data: players} = usePlayers(canAddMatch);
+    const addMatchDialogRef = useRef<HTMLDialogElement>(null);
+    // Picking a team fills its side with the roster
+    const [radiantTeamId, setRadiantTeamId] = useState("");
+    const [direTeamId, setDireTeamId] = useState("");
+    const [unknownNames, setUnknownNames] = useState<string[]>([]);
 
     const handleSignup = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -67,6 +78,42 @@ export default function SeasonDetail() {
     const handleDelete = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         deleteSeason.mutate(undefined, {onSuccess: () => navigate("/seasons")});
+    };
+
+    const openAddMatchDialog = () => {
+        createMatch.reset();
+        setUnknownNames([]);
+        addMatchDialogRef.current?.showModal();
+    };
+
+    const handleAddMatch = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const data = new FormData(form);
+        const steamIdByName = new Map(players?.map(player => [player.username.toLowerCase(), player.steamId]));
+        const [radiant, dire] = ["radiant", "dire"].map(side => data.getAll(side).map(name => String(name).trim()));
+        const unknown = [...radiant, ...dire].filter(name => !steamIdByName.has(name.toLowerCase()));
+        setUnknownNames(unknown);
+        if (unknown.length) return;
+
+        const steamIds = (names: string[]) => names.map(name => steamIdByName.get(name.toLowerCase())!);
+        createMatch.mutate({
+            matchId: Number(data.get("matchId")),
+            seasonId: season!.id,
+            playedTime: String(data.get("playedTime")),
+            radiantTeamId,
+            direTeamId,
+            winner: data.get("winner") as "RADIANT" | "DIRE",
+            radiant: steamIds(radiant),
+            dire: steamIds(dire),
+        }, {
+            onSuccess: () => {
+                form.reset();
+                setRadiantTeamId("");
+                setDireTeamId("");
+                addMatchDialogRef.current?.close();
+            }
+        });
     };
 
     const signIn = () => {
@@ -118,6 +165,8 @@ export default function SeasonDetail() {
                     ) : (
                         <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
                     )
+                ) : canAddMatch ? (
+                    <button className="primary-button" onClick={openAddMatchDialog}>Add match</button>
                 ) : season.winnerTeamName && (
                     <div className="border-l-3 border-aegis pl-4">
                         <p className="text-sm text-ash">Champions</p>
@@ -314,6 +363,76 @@ export default function SeasonDetail() {
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
                             <button className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {canAddMatch && (
+                <dialog ref={addMatchDialogRef} aria-labelledby="add-match-title"
+                        className="m-auto w-full max-w-2xl rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                    <h2 id="add-match-title" className="font-display text-3xl font-bold">Add match</h2>
+                    <form onSubmit={handleAddMatch} className="mt-4 space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <label className="block">
+                                Dota match ID
+                                <input name="matchId" required inputMode="numeric" pattern="\d+" title="The number in the game's Stratz or Dotabuff link"
+                                       autoComplete="off" className="text-input mt-2 block w-full"/>
+                            </label>
+                            <label className="block">
+                                Played
+                                <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
+                                       className="text-input mt-2 block w-full"/>
+                            </label>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {[
+                                {side: "radiant", label: "Radiant", teamId: radiantTeamId, setTeamId: setRadiantTeamId},
+                                {side: "dire", label: "Dire", teamId: direTeamId, setTeamId: setDireTeamId},
+                            ].map(({side, label, teamId, setTeamId}) => {
+                                const team = season.teams.find(t => t.teamId === teamId);
+                                return (
+                                    <fieldset key={side}>
+                                        <legend>{label}</legend>
+                                        <select value={teamId} onChange={(e) => setTeamId(e.target.value)} required
+                                                aria-label={`${label} team`} className="text-input mt-2 block w-full">
+                                            <option value="">Pick a team…</option>
+                                            {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+                                        </select>
+                                        {/*Keyed by team so picking another refills the roster. Typing over a name puts a sub in*/}
+                                        {team && (
+                                            <div key={team.teamId} className="mt-2 space-y-2">
+                                                {team.members.map((member, i) => (
+                                                    <input key={member.steamId} name={side} list="match-player-names" required
+                                                           defaultValue={member.username} aria-label={`${label} player ${i + 1}`}
+                                                           autoComplete="off" spellCheck={false} className="text-input block w-full"/>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </fieldset>
+                                );
+                            })}
+                            <datalist id="match-player-names">
+                                {players?.map(player => <option key={player.steamId} value={player.username}/>)}
+                            </datalist>
+                        </div>
+                        <fieldset>
+                            <legend>Winner</legend>
+                            <div className="mt-1 flex gap-4">
+                                {(["RADIANT", "DIRE"] as const).map(side => (
+                                    <label key={side} className="flex items-center gap-1.5">
+                                        <input type="radio" name="winner" value={side} required className="accent-accent"/>
+                                        {side === "RADIANT" ? "Radiant" : "Dire"}
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                        <p className="text-sm text-ash">Anyone not on their side's team counts as a sub. Everyone's ELO is worked out again from this game on.</p>
+                        {unknownNames.length > 0 && <p role="alert" className="text-sm text-ash">No player called {unknownNames.join(", ")}.</p>}
+                        {createMatch.isError && <p role="alert" className="text-sm text-ash">{createMatch.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
+                            <button className="primary-button" disabled={createMatch.isPending}>Add match</button>
                         </div>
                     </form>
                 </dialog>

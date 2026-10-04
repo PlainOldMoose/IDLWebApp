@@ -59,6 +59,7 @@ export interface MatchSummary {
     winner: "RADIANT" | "DIRE";
     timePlayed: string;
     avgElo: number;
+    seasonId?: string; // Not set for in-houses
     seasonName?: string;
     radiantTeamName?: string;
     direTeamName?: string;

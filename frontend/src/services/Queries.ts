@@ -18,10 +18,11 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
     return response.status === 204 ? undefined as T : response.json();
 };
 
-export function usePlayers() {
+export function usePlayers(enabled = true) {
     return useQuery({
         queryKey: ["players"],
         queryFn: () => request<PlayerSummary[]>("/api/players"),
+        enabled,
     });
 }
 
@@ -78,6 +79,32 @@ export function useMatches(seasonId?: string, enabled = true) {
         queryKey: ["matches", seasonId],
         queryFn: () => request<MatchSummary[]>(seasonId ? `/api/matches?seasonId=${seasonId}` : "/api/matches"),
         enabled,
+    });
+}
+
+// A season game the league ticket missed. radiant and dire are Steam IDs. Everyone's ELO is replayed from the game on,
+// so everything cached is stale
+export function useCreateMatch() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (match: {
+            matchId: number, seasonId: string, playedTime: string, radiantTeamId: string, direTeamId: string,
+            winner: "RADIANT" | "DIRE", radiant: string[], dire: string[]
+        }) => request<void>("/api/matches", {method: "POST", json: match}),
+        onSuccess: () => {
+            queryClient.invalidateQueries();
+        }
+    });
+}
+
+// ELO is replayed without the game, so everything cached is stale
+export function useDeleteMatch(matchId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/matches/${matchId}`, {method: "DELETE"}),
+        onSuccess: () => {
+            queryClient.invalidateQueries();
+        }
     });
 }
 
