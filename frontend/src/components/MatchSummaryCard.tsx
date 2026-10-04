@@ -16,14 +16,15 @@ export default function MatchSummaryCard({match}: MatchSummaryCardProps) {
     return (
         <Link to={`/matches/${match.matchId}`}
               className={`row-link grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-1 px-3 py-3 ${matchColumns}`}>
-            <p className="truncate text-right">
+            {/*Relative so the clipping also catches the absolutely positioned "(won)", which otherwise widens the page past a long name*/}
+            <p className="relative truncate text-right">
                 <span className={`border-l-3 pl-2.5 ${radiantWon ? "border-l-radiant font-semibold text-bone" : "border-transparent text-ash"}`}>
                     {match.radiantTeamName ?? "Radiant"}
                 </span>
                 {radiantWon && <span className="sr-only"> (won)</span>}
             </p>
             <span aria-hidden="true" className="h-6 w-0.5 skew-x-[-20deg] bg-ash/50"/>
-            <p className="truncate">
+            <p className="relative truncate">
                 <span className={`border-r-3 pr-2.5 ${direWon ? "border-r-dire font-semibold text-bone" : "border-transparent text-ash"}`}>
                     {match.direTeamName ?? "Dire"}
                 </span>
