@@ -2,7 +2,9 @@ package com.plainoldmoose.IDLWebApp.config;
 
 import com.plainoldmoose.IDLWebApp.controller.InhouseController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
+import com.plainoldmoose.IDLWebApp.controller.MatchController;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
+import com.plainoldmoose.IDLWebApp.service.MatchService;
 import com.plainoldmoose.IDLWebApp.service.SeasonService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // SecurityConfig's rule order is the whole authorisation model, so these pin down who gets through to what
-@WebMvcTest({SeasonController.class, InhouseController.class})
+@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class})
 @Import(SecurityConfig.class)
 class SecurityConfigTest {
 
@@ -38,6 +40,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private InhouseService inhouseService;
+
+    @MockitoBean
+    private MatchService matchService;
 
     @Test
     void anyoneCanRead() throws Exception {
@@ -62,6 +67,13 @@ class SecurityConfigTest {
     @Test
     void adminCanDoAdminWrites() throws Exception {
         mvc.perform(delete(SEASON).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void onlyAdminsAddOrDeleteMatches() throws Exception {
+        mvc.perform(post("/api/matches").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/matches/1").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/matches/1").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
     }
 
     @Test

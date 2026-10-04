@@ -2,14 +2,18 @@ package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.model.Inhouse;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -54,22 +58,16 @@ class InhouseServiceTest {
     }
 
     @Test
-    void eloChange() {
-        assertEquals(16.0, InhouseService.eloChange(1500, 1500, Side.RADIANT));
-        assertEquals(-16.0, InhouseService.eloChange(1500, 1500, Side.DIRE));
-        // A 200 point favourite expects to win 76% of the time, so beating them is worth more than winning as them
-        assertEquals(7.7, InhouseService.eloChange(1700, 1500, Side.RADIANT));
-        assertEquals(24.3, InhouseService.eloChange(1500, 1700, Side.RADIANT));
-    }
-
-    @Test
     void resultWaitsForAnAdmin() {
         InhouseRepository inhouses = mock(InhouseRepository.class);
         MatchRepository matches = mock(MatchRepository.class);
-        InhouseService service = new InhouseService(inhouses, mock(PlayerRepository.class), matches, mock(EloHistoryRepository.class));
+        // A real EloService over mocks that know no other games or seasons, so it replays just this one
+        InhouseService service = new InhouseService(inhouses, mock(PlayerRepository.class), matches,
+                new EloService(matches, mock(EloHistoryRepository.class), mock(SeasonRepository.class)));
         // Players 0-4 on Team A, 5-9 on Team B, all on 1500
         Inhouse inhouse = new Inhouse();
         inhouse.setId(1L);
+        inhouse.setCreatedAt(LocalDateTime.now());
         IntStream.range(0, 10).forEach(i -> {
             Player player = new Player();
             player.setSteamId(String.valueOf(i));
@@ -88,11 +86,16 @@ class InhouseServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.cancel(1L, "1", false));
         assertThrows(ResponseStatusException.class, () -> service.reportResult(1L, Side.RADIANT, Side.DIRE, "1", false));
 
-        when(matches.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        List<Match> saved = new ArrayList<>();
+        when(matches.save(any())).thenAnswer(inv -> {
+            saved.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+        when(matches.findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(any())).thenReturn(saved);
         service.approve(1L);
-        // Only right if Team B was stored as Radiant
-        assertEquals(1516.0, inhouse.getTeamB().get(0).getElo());
-        assertEquals(1484.0, inhouse.getTeamA().get(0).getElo());
+        // Only right if Team B was stored as Radiant. New players with no games: K = 1.84, so 1.84 × 7.5 × 0.5
+        assertEquals(1506.9, inhouse.getTeamB().get(0).getElo());
+        assertEquals(1493.1, inhouse.getTeamA().get(0).getElo());
         verify(inhouses).delete(inhouse);
     }
 }

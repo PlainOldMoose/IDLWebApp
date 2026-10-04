@@ -32,7 +32,7 @@ public class SeasonSignup {
     private String rolePreference;
 
     @Column(nullable = false)
-    private boolean willingToCaptain = false;
+    private boolean willingToCaptain;
 
     @Column(nullable = false)
     private LocalDateTime signedUpAt;

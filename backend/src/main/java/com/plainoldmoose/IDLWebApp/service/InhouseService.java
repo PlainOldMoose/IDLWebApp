@@ -4,13 +4,10 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreateInhouseRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.inhouse.InhouseResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.model.Inhouse;
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
-import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
-import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
@@ -25,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -35,14 +33,14 @@ public class InhouseService {
     private final InhouseRepository inhouseRepository;
     private final PlayerRepository playerRepository;
     private final MatchRepository matchRepository;
-    private final EloHistoryRepository eloHistoryRepository;
+    private final EloService eloService;
 
     public List<InhouseResponse> balanceOptions(List<String> steamIds) {
         List<Player> players = findTen(steamIds);
         return balance(players).stream()
                 .map(teamA -> new InhouseResponse(null, null, summaries(teamA), summaries(players.stream()
                         .filter(player -> !teamA.contains(player))
-                        .toList()), null, null, null))
+                        .toList()), null, null, null, null))
                 .toList();
     }
 
@@ -54,22 +52,22 @@ public class InhouseService {
             (request.teamA().contains(player.getSteamId()) ? inhouse.getTeamA() : inhouse.getTeamB()).add(player);
         }
 
-        return toResponse(inhouseRepository.save(inhouse));
+        return toResponse(inhouseRepository.save(inhouse), null);
     }
 
     // Games with no result reported yet, newest first
     public List<InhouseResponse> getInProgress() {
         return inhouseRepository.findAllByReportedWinnerIsNullOrderByCreatedAtDesc()
                 .stream()
-                .map(InhouseService::toResponse)
+                .map(inhouse -> toResponse(inhouse, null))
                 .toList();
     }
 
-    // The admin queue: reported results, oldest first
+    // The admin queue: reported results, oldest first, with what approving each would do to everyone's ELO
     public List<InhouseResponse> getPending() {
         return inhouseRepository.findAllByReportedWinnerIsNotNullOrderByCreatedAtAsc()
                 .stream()
-                .map(InhouseService::toResponse)
+                .map(inhouse -> toResponse(inhouse, eloService.changes(toMatch(inhouse))))
                 .toList();
     }
 
@@ -88,48 +86,14 @@ public class InhouseService {
     public void approve(Long id) {
         Inhouse inhouse = inhouseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "In-house not found"));
-        Side winner = inhouse.getReportedWinner();
-        if (winner == null) {
+        if (inhouse.getReportedWinner() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Nobody has reported this in-house's result yet");
         }
-        // Team A's reported side decides who was Radiant. A row reported before sides were asked for has none: Team A was Radiant then
-        boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
-        List<Player> radiant = teamADire ? inhouse.getTeamB() : inhouse.getTeamA();
-        List<Player> dire = teamADire ? inhouse.getTeamA() : inhouse.getTeamB();
-        double radiantChange = eloChange(average(radiant), average(dire), winner);
-
-        Match match = new Match();
-        match.setMatchId(inhouse.getId());
-        match.setPlayedTime(inhouse.getCreatedAt());
-        match.setMatchWinner(winner);
-        match.setAvgElo((int) Math.round((average(radiant) + average(dire)) / 2));
-        match.setParticipants(new ArrayList<>());
-        for (Side side : Side.values()) {
-            for (Player player : side == Side.RADIANT ? radiant : dire) {
-                MatchParticipant participant = new MatchParticipant();
-                participant.setMatch(match);
-                participant.setPlayer(player);
-                participant.setSide(side);
-                match.getParticipants().add(participant);
-            }
-        }
-        Match saved = matchRepository.save(match);
-
-        LocalDateTime now = LocalDateTime.now();
-        for (MatchParticipant participant : saved.getParticipants()) {
-            Player player = participant.getPlayer();
-            double change = participant.getSide() == Side.RADIANT ? radiantChange : -radiantChange;
-            player.setElo(Math.round((player.getElo() + change) * 10) / 10.0);
-
-            EloHistory eloHistory = new EloHistory();
-            eloHistory.setPlayer(player);
-            eloHistory.setMatch(saved);
-            eloHistory.setElo(player.getElo());
-            eloHistory.setEloChange(change);
-            eloHistory.setTimestamp(now);
-            eloHistory.setReason(participant.getSide() == winner ? EloChangeReason.MATCH_WIN : EloChangeReason.MATCH_LOSS);
-            eloHistoryRepository.save(eloHistory);
-        }
+        // Replayed from when it was played, so approving it after later games still moves ELO in the order they happened
+        LocalDateTime played = inhouse.getCreatedAt();
+        eloService.rewind(played);
+        matchRepository.save(toMatch(inhouse));
+        eloService.replay(played);
 
         inhouseRepository.delete(inhouse);
     }
@@ -154,17 +118,6 @@ public class InhouseService {
                 .sorted(Comparator.comparingDouble(teamA -> Math.abs(total - 2 * teamA.stream().mapToDouble(Player::getElo).sum())))
                 .limit(3)
                 .toList();
-    }
-
-    // Radiant's change; Dire's is the opposite. Expected result comes from the gap between the team averages.
-    // ponytail: plain Elo with K = 32, a placeholder until the league's real ELO formula is written
-    static double eloChange(double radiantAvg, double direAvg, Side winner) {
-        double radiantExpected = 1 / (1 + Math.pow(10, (direAvg - radiantAvg) / 400));
-        return Math.round(32 * ((winner == Side.RADIANT ? 1 : 0) - radiantExpected) * 10) / 10.0;
-    }
-
-    private static double average(List<Player> team) {
-        return team.stream().mapToDouble(Player::getElo).average().orElse(0);
     }
 
     private List<Player> findTen(List<String> steamIds) {
@@ -193,10 +146,31 @@ public class InhouseService {
         return inhouse;
     }
 
-    private static InhouseResponse toResponse(Inhouse inhouse) {
+    // The match the in-house becomes, under the same ID. Team A's reported side decides who was Radiant. A row reported
+    // before sides were asked for has none: Team A was Radiant then
+    private static Match toMatch(Inhouse inhouse) {
+        Match match = new Match();
+        match.setMatchId(inhouse.getId());
+        match.setPlayedTime(inhouse.getCreatedAt());
+        match.setMatchWinner(inhouse.getReportedWinner());
+        match.setParticipants(new ArrayList<>());
+        boolean teamADire = inhouse.getTeamASide() == Side.DIRE;
+        for (boolean teamA : new boolean[]{true, false}) {
+            for (Player player : teamA ? inhouse.getTeamA() : inhouse.getTeamB()) {
+                MatchParticipant participant = new MatchParticipant();
+                participant.setMatch(match);
+                participant.setPlayer(player);
+                participant.setSide(teamA != teamADire ? Side.RADIANT : Side.DIRE);
+                match.getParticipants().add(participant);
+            }
+        }
+        return match;
+    }
+
+    private static InhouseResponse toResponse(Inhouse inhouse, Map<String, Double> eloChanges) {
         return new InhouseResponse(inhouse.getId(), inhouse.getCreatedAt(), summaries(inhouse.getTeamA()), summaries(inhouse.getTeamB()),
                 inhouse.getReportedWinner(), inhouse.getTeamASide(),
-                inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername());
+                inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername(), eloChanges);
     }
 
     // Highest ELO first

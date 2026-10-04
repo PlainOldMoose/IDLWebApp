@@ -6,13 +6,11 @@ interface PanelProps {
     children: ReactNode;
     className?: string;
     padded?: boolean;
-    // No inner padding, for lists whose rows run edge to edge
-    flush?: boolean;
     // Heading level for the title; 3 when the panel sits under another section heading
     level?: 2 | 3;
 }
 
-export default function Panel({title, meta, children, className = "", padded = true, flush = false, level = 2}: PanelProps) {
+export default function Panel({title, meta, children, className = "", padded = true, level = 2}: PanelProps) {
     const Heading = level === 3 ? "h3" : "h2";
     return (
         <section className={`overflow-hidden rounded-lg bg-panel ${className}`}>
@@ -20,7 +18,7 @@ export default function Panel({title, meta, children, className = "", padded = t
                 <Heading className="text-lg font-semibold">{title}</Heading>
                 {meta && <div className="text-sm text-ash">{meta}</div>}
             </header>
-            <div className={flush ? "" : padded ? "p-4" : "p-1.5"}>{children}</div>
+            <div className={padded ? "p-4" : "p-1.5"}>{children}</div>
         </section>
     );
 }

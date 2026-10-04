@@ -1,4 +1,4 @@
-package com.plainoldmoose.IDLWebApp.controller.auth;
+package com.plainoldmoose.IDLWebApp.controller;
 
 import com.plainoldmoose.IDLWebApp.service.SteamAuthService;
 import org.junit.jupiter.api.Test;

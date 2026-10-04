@@ -15,11 +15,11 @@ import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatElo, formatRelative} from "../util/format.ts";
+import {formatElo, formatEloChange, formatRelative} from "../util/format.ts";
 
 const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + player.elo, 0) / team.length;
 
-// A team's chance to win, the same Elo expectation InhouseService.eloChange uses. 50% is a perfectly even game
+// A team's chance to win, the same expectation EloService.eloChange uses. 50% is a perfectly even game
 const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 + 10 ** ((average(opponents) - average(team)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
 const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
@@ -31,14 +31,15 @@ type Confirming =
     | { id: number, kind: "approve" | "reject" | "cancel" }
     | { id: number, kind: "report", teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" };
 
-// Takes over a card's footer until the action is confirmed or dropped. Escape goes back
-function ConfirmStrip({danger, label, busy, onConfirm, onBack, children}: {
-    danger?: boolean, label: string, busy: boolean, onConfirm: () => void, onBack: () => void, children: ReactNode
+// Takes over a card's footer until the action is confirmed or dropped. Escape goes back. The edge is green, red for
+// danger, or the colour passed in
+function ConfirmStrip({danger, edge, label, busy, onConfirm, onBack, children}: {
+    danger?: boolean, edge?: string, label: string, busy: boolean, onConfirm: () => void, onBack: () => void, children: ReactNode
 }) {
     return (
         <div role="group" aria-label={label} onKeyDown={(e) => e.key === "Escape" && onBack()}
              className={`confirm-strip mt-1.5 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-l-3 border-t-rule px-3 pt-3 pb-1.5 ${
-                 danger ? "border-l-danger" : "border-l-win"}`}>
+                 edge ?? (danger ? "border-l-danger" : "border-l-win")}`}>
             <div className="min-w-0">{children}</div>
             <div className="ml-auto flex gap-3">
                 <button type="button" className="secondary-button" onClick={onBack}>Back</button>
@@ -53,18 +54,19 @@ function ConfirmStrip({danger, label, busy, onConfirm, onBack, children}: {
 }
 
 // Team A and Team B side by side, each with its average ELO. Sides are only known once someone reports the result,
-// so only the admin queue shows them
+// so only the admin queue shows them, along with each player's ELO change if it's approved
 function Teams({inhouse}: { inhouse: Inhouse }) {
     const teams = [
-        {name: "Team A", team: inhouse.teamA, side: inhouse.teamASide},
-        {name: "Team B", team: inhouse.teamB, side: inhouse.teamASide && otherSide(inhouse.teamASide)},
+        {name: "Team A" as const, team: inhouse.teamA, side: inhouse.teamASide},
+        {name: "Team B" as const, team: inhouse.teamB, side: inhouse.teamASide && otherSide(inhouse.teamASide)},
     ];
     return (
-        <div className="grid grid-cols-2 gap-x-3">
+        // The admin queue's extra ELO-change column doesn't fit two teams across a phone, so they stack there
+        <div className={`grid gap-x-3 gap-y-3 ${inhouse.eloChanges ? "sm:grid-cols-2" : "grid-cols-2"}`}>
             {teams.map(({name, team, side}) => (
                 <div key={name} className="min-w-0">
                     <p className={`flex justify-between gap-2 border-l-3 px-2 py-1 text-sm ${side ? sideBorder[side] : "border-ash"}`}>
-                        <span className="flex gap-2">
+                        <span className="flex gap-2 whitespace-nowrap">
                             <span className="font-semibold">{name}</span>
                             {side && <span className="text-ash">{sideName[side]}</span>}
                         </span>
@@ -74,7 +76,14 @@ function Teams({inhouse}: { inhouse: Inhouse }) {
                         {team.map(player => (
                             <li key={player.steamId} className="flex justify-between gap-2 px-2 py-1">
                                 <span className="truncate">{player.username}</span>
-                                <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                <span className="flex gap-2">
+                                    <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                    {inhouse.eloChanges && (
+                                        <span className={`figures w-12 text-right ${inhouse.eloChanges[player.steamId] > 0 ? "text-win" : "text-loss"}`}>
+                                            {formatEloChange(inhouse.eloChanges[player.steamId])}
+                                        </span>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ul>
@@ -216,7 +225,7 @@ export default function Inhouses() {
 
             {user?.admin && (
                 <>
-                    <h2 className="mt-10 mb-4 font-display text-3xl font-bold">Waiting for approval</h2>
+                    <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">Waiting for approval</h2>
                     {pending.isPending ? (
                         <Loader label="Loading results waiting for approval"/>
                     ) : pending.isError ? (
@@ -228,29 +237,18 @@ export default function Inhouses() {
                                 const winner = inhouse.reportedWinner!;
                                 const teamAWon = winner === inhouse.teamASide;
                                 const winnerTeam = teamAWon ? "Team A" : "Team B";
-                                const loserTeam = teamAWon ? "Team B" : "Team A";
-                                const [winners, losers] = teamAWon ? [inhouse.teamA, inhouse.teamB] : [inhouse.teamB, inhouse.teamA];
-                                // What each winner gains and each loser drops, with InhouseService.eloChange's K of 32
-                                const gain = Math.round(32 * (1 - winChance(winners, losers)) * 10) / 10;
                                 return (
                                     <Panel key={id} title={`In-house ${id}`} level={3} padded={false}
                                            meta={`${winnerTeam} won as ${sideName[winner]}, reported by ${inhouse.reportedBy}`}>
                                         <Teams inhouse={inhouse}/>
                                         {confirming?.id === id && confirming.kind === "approve" ? (
-                                            <ConfirmStrip label="Approve result" busy={busy}
+                                            <ConfirmStrip label="Approve result" busy={busy} edge={teamAWon ? "border-l-radiant" : "border-l-dire"}
                                                           onConfirm={() => approveInhouse.mutate(id, done(`In-house ${id} approved. ELO is updated.`))} onBack={() => setConfirming(null)}>
-                                                <p className="flex gap-6">
-                                                    {[{team: winnerTeam, change: gain, colour: "text-win"},
-                                                        {team: loserTeam, change: -gain, colour: "text-loss"}].map(({team, change, colour}) => (
-                                                        <span key={team} className="flex items-baseline gap-2">
-                                                            <span className="text-sm text-ash">{team}</span>
-                                                            <span className={`figures text-2xl font-semibold ${colour}`}>
-                                                                {change > 0 ? "+" : "\u2212"}{formatElo(Math.abs(change))}
-                                                            </span>
-                                                        </span>
-                                                    ))}
+                                                <p>
+                                                    <span className={`font-semibold ${teamAWon ? "text-radiant" : "text-dire"}`}>{winnerTeam} won</span>
+                                                    <span className="text-ash"> playing {sideName[winner]}</span>
                                                 </p>
-                                                <p className="mt-0.5 text-sm text-ash">All 10 players' ELO moves. This can't be undone.</p>
+                                                <p className="mt-0.5 text-sm text-ash">Every player's ELO moves by the change next to their name. This can't be undone.</p>
                                             </ConfirmStrip>
                                         ) : confirming?.id === id && confirming.kind === "reject" ? (
                                             <ConfirmStrip danger label="Reject result" busy={busy}
@@ -268,12 +266,12 @@ export default function Inhouses() {
                             })}
                         </div>
                     ) : (
-                        <p className="text-ash">No results waiting.</p>
+                        <p className="px-4 text-ash">No results waiting.</p>
                     )}
                 </>
             )}
 
-            <h2 className="mt-10 mb-4 font-display text-3xl font-bold">In progress</h2>
+            <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">In progress</h2>
             {isPending ? (
                 <Loader label="Loading in-houses"/>
             ) : isError ? (
@@ -291,9 +289,12 @@ export default function Inhouses() {
                                 <Teams inhouse={inhouse}/>
                                 {canFinish && confirming?.id === id && confirming.kind === "report" && (
                                     <ConfirmStrip label="Send result" busy={busy}
+                                                  edge={confirming.winner === confirming.teamASide ? "border-l-radiant" : "border-l-dire"}
                                                   onConfirm={() => reportResult.mutate(confirming, done("Result sent. An admin will check it before ELO changes."))} onBack={() => setConfirming(null)}>
                                         <p>
-                                            <span className="font-semibold">{confirming.winner === confirming.teamASide ? "Team A" : "Team B"} won</span>
+                                            {confirming.winner === confirming.teamASide
+                                                ? <span className="font-semibold text-radiant">Team A won</span>
+                                                : <span className="font-semibold text-dire">Team B won</span>}
                                             <span className="text-ash"> playing {sideName[confirming.winner]}</span>
                                         </p>
                                         <p className="mt-0.5 text-sm text-ash">An admin checks it before anyone's ELO moves.</p>
@@ -334,7 +335,7 @@ export default function Inhouses() {
                     })}
                 </div>
             ) : (
-                <p className="text-ash">No in-houses in progress.</p>
+                <p className="px-4 text-ash">No in-houses in progress.</p>
             )}
             {actionError && <p role="alert" className="mt-2 text-sm text-ash">{actionError.message}</p>}
             {/*Always in the page so screen readers announce each new message; bottom-centred on phones, bottom-right from sm up*/}
