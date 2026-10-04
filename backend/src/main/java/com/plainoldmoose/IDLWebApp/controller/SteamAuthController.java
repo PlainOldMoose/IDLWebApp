@@ -1,4 +1,4 @@
-package com.plainoldmoose.IDLWebApp.controller.auth;
+package com.plainoldmoose.IDLWebApp.controller;
 
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;

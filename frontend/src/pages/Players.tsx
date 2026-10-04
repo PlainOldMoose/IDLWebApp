@@ -49,7 +49,7 @@ export default function Players() {
             <>
                 <button className="primary-button" onClick={openDialog}>Add player</button>
                 <dialog ref={dialogRef} aria-labelledby="add-player-title"
-                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                        className="dialog">
                     <h2 id="add-player-title" className="font-display text-3xl font-bold">Add player</h2>
                     <form onSubmit={handleCreate} className="mt-4 space-y-4">
                         <label className="block">

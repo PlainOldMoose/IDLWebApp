@@ -1,4 +1,4 @@
-package com.plainoldmoose.IDLWebApp.controller.match;
+package com.plainoldmoose.IDLWebApp.controller;
 
 import java.util.List;
 import java.util.UUID;

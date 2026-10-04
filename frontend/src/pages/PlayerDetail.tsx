@@ -50,7 +50,7 @@ export default function PlayerDetail() {
                             <EloLadder players={players} highlightSteamId={player.steamId} highlightLabel={player.username}/>
                         </Panel>
                     )}
-                    <Panel title="Match history" meta={matches.length ? `Last ${matches.length} matches` : undefined} flush>
+                    <Panel title="Match history" meta={matches.length ? `Last ${matches.length} matches` : undefined} padded={false}>
                         {matches.length ? (
                             <div className="divide-y divide-rule/70">
                                 {/*Laid out like a Stratz match row: result, side, ELO swing, match type, then when*/}

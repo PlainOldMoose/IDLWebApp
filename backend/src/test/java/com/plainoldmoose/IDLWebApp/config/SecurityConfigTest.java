@@ -2,7 +2,7 @@ package com.plainoldmoose.IDLWebApp.config;
 
 import com.plainoldmoose.IDLWebApp.controller.InhouseController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
-import com.plainoldmoose.IDLWebApp.controller.match.MatchController;
+import com.plainoldmoose.IDLWebApp.controller.MatchController;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
 import com.plainoldmoose.IDLWebApp.service.SeasonService;

@@ -1,7 +1,6 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.model.Season;
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
@@ -68,7 +67,6 @@ public class EloService {
                 eloHistory.setElo(player.getElo());
                 eloHistory.setEloChange(change);
                 eloHistory.setTimestamp(match.getPlayedTime());
-                eloHistory.setReason(participant.getSide() == match.getMatchWinner() ? EloChangeReason.MATCH_WIN : EloChangeReason.MATCH_LOSS);
                 eloHistoryRepository.save(eloHistory);
             }
         }

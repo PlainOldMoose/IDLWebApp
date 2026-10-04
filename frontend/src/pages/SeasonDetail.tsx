@@ -308,7 +308,7 @@ export default function SeasonDetail() {
 
             {user && (
                 <dialog ref={signupDialogRef} aria-labelledby="signup-title"
-                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                        className="dialog">
                     <h2 id="signup-title" className="font-display text-3xl font-bold">
                         {mySignup ? "Your sign-up" : `Join ${season.name}`}
                     </h2>
@@ -356,7 +356,7 @@ export default function SeasonDetail() {
 
             {user?.admin && (
                 <dialog ref={deleteDialogRef} aria-labelledby="delete-season-title"
-                        className="m-auto w-full max-w-md rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                        className="dialog">
                     <h2 id="delete-season-title" className="font-display text-3xl font-bold">Delete season</h2>
                     <form onSubmit={handleDelete} className="mt-4 space-y-4">
                         <p>This permanently deletes <strong>{season.name}</strong> and its sign-ups.</p>
@@ -376,7 +376,7 @@ export default function SeasonDetail() {
 
             {canAddMatch && (
                 <dialog ref={addMatchDialogRef} aria-labelledby="add-match-title"
-                        className="m-auto w-full max-w-2xl rounded-lg bg-panel p-6 text-bone backdrop:bg-black/60">
+                        className="dialog max-w-2xl">
                     <h2 id="add-match-title" className="font-display text-3xl font-bold">Add match</h2>
                     <form onSubmit={handleAddMatch} className="mt-4 space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">

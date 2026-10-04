@@ -19,7 +19,7 @@ import {formatElo, formatEloChange, formatRelative} from "../util/format.ts";
 
 const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + player.elo, 0) / team.length;
 
-// A team's chance to win, the same expectation InhouseService.eloChange uses. 50% is a perfectly even game
+// A team's chance to win, the same expectation EloService.eloChange uses. 50% is a perfectly even game
 const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 + 10 ** ((average(opponents) - average(team)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
 const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;

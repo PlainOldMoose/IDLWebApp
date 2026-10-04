@@ -34,14 +34,14 @@ export function usePlayer(steamId: string | undefined) {
     })
 }
 
+// Mutations don't return the invalidation, so they settle (and their callers navigate or close dialogs) without
+// waiting for the refetch
 export function useCreatePlayer() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (player: PlayerSummary) =>
             request<PlayerSummary>("/api/players", {method: "POST", json: player}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["players"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["players"]}),
     });
 }
 
@@ -57,9 +57,7 @@ export function useCreateSeason() {
     return useMutation({
         mutationFn: (season: Pick<Season, "name" | "startDate" | "endDate">) =>
             request<Season>("/api/seasons", {method: "POST", json: season}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["seasons"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasons"]}),
     });
 }
 
@@ -67,9 +65,7 @@ export function useDeleteSeason(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: () => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["seasons"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasons"]}),
     });
 }
 
@@ -91,9 +87,7 @@ export function useCreateMatch() {
             matchId: number, seasonId: string, playedTime: string, radiantTeamId: string, direTeamId: string,
             winner: "RADIANT" | "DIRE", radiant: string[], dire: string[]
         }) => request<void>("/api/matches", {method: "POST", json: match}),
-        onSuccess: () => {
-            queryClient.invalidateQueries();
-        }
+        onSuccess: () => void queryClient.invalidateQueries(),
     });
 }
 
@@ -102,9 +96,7 @@ export function useDeleteMatch(matchId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: () => request<void>(`/api/matches/${matchId}`, {method: "DELETE"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries();
-        }
+        onSuccess: () => void queryClient.invalidateQueries(),
     });
 }
 
@@ -156,9 +148,7 @@ export function useSeasonSignup(seasonId: string | undefined) {
     return useMutation({
         mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) =>
             request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
     });
 }
 
@@ -167,9 +157,7 @@ export function useWithdrawSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
     });
 }
 
@@ -204,9 +192,7 @@ export function useCreateInhouse() {
     return useMutation({
         mutationFn: (teams: { teamA: string[], teamB: string[] }) =>
             request<Inhouse>("/api/inhouses", {method: "POST", json: teams}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["inhouses"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
     });
 }
 
@@ -216,9 +202,7 @@ export function useInhouseResult() {
     return useMutation({
         mutationFn: ({id, teamASide, winner}: { id: number, teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" }) =>
             request<void>(`/api/inhouses/${id}/result?teamASide=${teamASide}&winner=${winner}`, {method: "POST"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["inhouses"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
     });
 }
 
@@ -227,9 +211,7 @@ export function useApproveInhouse() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (id: number) => request<void>(`/api/inhouses/${id}/approve`, {method: "POST"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries();
-        }
+        onSuccess: () => void queryClient.invalidateQueries(),
     });
 }
 
@@ -237,8 +219,6 @@ export function useCancelInhouse() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (id: number) => request<void>(`/api/inhouses/${id}`, {method: "DELETE"}),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["inhouses"]});
-        }
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
     });
 }

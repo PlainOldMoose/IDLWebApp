@@ -5,7 +5,6 @@ import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
-import com.plainoldmoose.IDLWebApp.model.enums.EloChangeReason;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
@@ -39,7 +38,6 @@ public class PlayerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
 
-        // Copy request to entity and save to repo
         Player player = new Player();
         player.setUsername(request.username());
         player.setElo(request.elo());
@@ -52,8 +50,6 @@ public class PlayerService {
         eloHistory.setElo(saved.getElo());
         eloHistory.setTimestamp(LocalDateTime.now());
         eloHistory.setEloChange(0);
-        eloHistory.setReason(EloChangeReason.INITIAL);
-        eloHistory.setMatch(null);
         eloHistoryRepository.save(eloHistory);
 
         return PlayerSummaryResponse.from(saved);
