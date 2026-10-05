@@ -1,7 +1,7 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
-// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod. json, if given, is sent as the body
+// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> => {
     // Spring's CSRF check wants the XSRF-TOKEN cookie echoed back as a header on writes
     const headers = new Headers(init.headers);
@@ -69,7 +69,6 @@ export function useDeleteSeason(seasonId: string | undefined) {
     });
 }
 
-// One-way: the season can't take matches or change its winner afterwards
 export function useCompleteSeason(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
@@ -82,7 +81,6 @@ export function useCompleteSeason(seasonId: string | undefined) {
     });
 }
 
-// Every match, or only one season's
 export function useMatches(seasonId?: string, enabled = true) {
     return useQuery({
         queryKey: ["matches", seasonId],
@@ -91,8 +89,7 @@ export function useMatches(seasonId?: string, enabled = true) {
     });
 }
 
-// A season game the league ticket missed. radiant and dire are Steam IDs. Everyone's ELO is replayed from the game on,
-// so everything cached is stale
+// Everyone's ELO is replayed from the game on, so everything cached is stale
 export function useCreateMatch() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -165,7 +162,6 @@ export function useSeasonSignup(seasonId: string | undefined) {
     });
 }
 
-// Removes the signed-in player's own sign-up
 export function useWithdrawSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
@@ -191,7 +187,6 @@ export function usePendingInhouses(enabled: boolean) {
     });
 }
 
-// The 3 most even ways to split 10 players, most even first
 export function useInhouseBalance(steamIds: string[]) {
     return useQuery({
         queryKey: ["inhouseBalance", steamIds],

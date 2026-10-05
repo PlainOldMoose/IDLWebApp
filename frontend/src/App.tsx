@@ -18,7 +18,6 @@ function App() {
     return (
         <BrowserRouter>
             <a href="#main" className="skip-link">Skip to content</a>
-            {/*Navbar: a thin translucent bar that stays at the top and blurs whatever scrolls underneath it*/}
             <nav className="sticky top-0 z-30 border-b border-white/[0.07] bg-[rgb(40_34_34/0.75)] backdrop-blur-md">
                 <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 px-4">
                     <Link to="/" className="flex h-12 shrink-0 items-center" aria-label="IDL home">
@@ -31,12 +30,18 @@ function App() {
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
                         <NavLink to="/inhouses" className="nav-link">In-houses</NavLink>
                     </div>
-                    <div className="ml-auto flex h-12 shrink-0 items-center">
+                    {/*Outlined so they read as buttons rather than more nav links*/}
+                    <div className="ml-auto flex h-12 shrink-0 items-center gap-2">
                         {user ? (<>
-                            <NavLink to={`/players/${user.steamId}`} className="nav-link">
+                            <NavLink to={`/players/${user.steamId}`}
+                                     className={({isActive}) => `secondary-button px-3 py-1 text-sm ${isActive ? "border-ash text-bone" : ""}`}>
+                                {/*Phosphor's User*/}
+                                <svg aria-hidden="true" width={14} height={14} viewBox="0 0 256 256" fill="currentColor">
+                                    <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>
+                                </svg>
                                 {user.username}
                             </NavLink>
-                            <button type="button" onClick={() => signOut.mutate()} className="nav-link cursor-pointer">
+                            <button type="button" onClick={() => signOut.mutate()} className="secondary-button px-3 py-1 text-sm">
                                 Sign out
                             </button>
                         </>) : (

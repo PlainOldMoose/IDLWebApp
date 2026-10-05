@@ -36,7 +36,6 @@ public class SteamAuthController {
     private final SteamAuthService steamAuthService;
     private final PlayerService playerService;
 
-    // Where the frontend is served; /auth is proxied to this app on the same origin
     @Value("${app.base-url}")
     private String baseUrl;
 
@@ -123,7 +122,6 @@ public class SteamAuthController {
         return path.startsWith("/") ? path : "/";
     }
 
-    // authentication is null for anonymous requests
     @GetMapping("/me")
     public ResponseEntity<SteamUserResponse> me(Authentication authentication) {
         if (authentication == null) {

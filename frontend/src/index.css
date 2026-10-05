@@ -91,10 +91,11 @@
         hover:text-bone hover:border-ash cursor-pointer transition-colors disabled:pointer-events-none disabled:opacity-40;
     }
 
-    /* Width and spacing are left to utilities on each input. Focus thickens the border to 2px bone instead of the blue ring */
+    /* Width and spacing are left to utilities on each input. Focus thickens the border to 2px bone instead of the blue ring.
+       At least 16px on touch screens, where iOS zooms into a smaller field on focus (e.g. inside a panel's text-sm meta) */
     .text-input {
         @apply rounded-md border border-ash/65 bg-night px-3 py-1.5 text-bone placeholder:text-ash
-        focus:border-bone focus:ring-1 focus:ring-bone focus:outline-hidden disabled:opacity-40;
+        focus:border-bone focus:ring-1 focus:ring-bone focus:outline-hidden disabled:opacity-40 pointer-coarse:text-base;
     }
 
     /* The browser's own arrow is heavy and sits on the edge; this one is drawn in ash, with room around it */
@@ -135,7 +136,7 @@
     radial-gradient(ellipse 45% 120% at 82% 40%, rgb(150 30 30 / 0.3), rgb(150 30 30 / 0.1) 55%, transparent);
 }
 
-/* The one orchestrated moment: the ladder's ticks rise from left to right on first load */
+/* The ladder's ticks rise from left to right on first load */
 @keyframes tick-rise {
     from {
         transform: scaleY(0);

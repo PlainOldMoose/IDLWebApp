@@ -15,7 +15,6 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
 
     boolean existsBySeasonId(UUID seasonId);
 
-    // Every game from a given time on, in the order they were played, for EloService to replay
     List<Match> findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(LocalDateTime from);
 
     // Season games and in-houses alike
@@ -26,7 +25,6 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     @Query("select max(p.match.playedTime) from MatchParticipant p where p.player.steamId = :steamId and p.match.playedTime < :before")
     LocalDateTime lastPlayedBefore(String steamId, LocalDateTime before);
 
-    // Season games only, not in-houses
     @Query("select count(m) from Match m where m.season is not null and m.playedTime > :after and m.playedTime < :before")
     long countSeasonGamesBetween(LocalDateTime after, LocalDateTime before);
 }

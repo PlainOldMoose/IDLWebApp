@@ -57,7 +57,6 @@ public class SeasonSignupService {
                 .toList();
     }
 
-    // Sign-ups can only change while the season is taking them
     private Season openSeason(UUID seasonId) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));

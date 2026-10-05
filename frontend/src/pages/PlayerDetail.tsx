@@ -53,7 +53,6 @@ export default function PlayerDetail() {
                     <Panel title="Match history" meta={matches.length ? `Last ${matches.length} matches` : undefined} padded={false}>
                         {matches.length ? (
                             <div className="divide-y divide-rule/70">
-                                {/*Laid out like a Stratz match row: result, side, ELO swing, match type, then when*/}
                                 {matches.map((match) => {
                                     const change = match.eloChange;
                                     const swing = change !== null && maxChange > 0 ? (Math.abs(change) / maxChange) * 50 : 0;

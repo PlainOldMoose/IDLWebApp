@@ -17,7 +17,6 @@ export default function MatchDetail() {
     const {data: user} = useCurrentUser();
     const deleteMatch = useDeleteMatch(matchId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    // The admin has to type "delete" before the button unlocks
     const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
 
@@ -58,7 +57,7 @@ export default function MatchDetail() {
             }
             aside={match.seasonName && (
                 <div className="flex flex-wrap gap-3">
-                    {/* Only admins get the button; the API enforces the same rule, and refuses a finished season's matches */}
+                    {/*The API refuses a finished season's matches*/}
                     {user?.admin && (
                         <button className="secondary-button text-danger" onClick={openDeleteDialog}>Delete match</button>
                     )}

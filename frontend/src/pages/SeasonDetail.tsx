@@ -38,22 +38,19 @@ export default function SeasonDetail() {
     const signupFormRef = useRef<HTMLFormElement>(null);
     const deleteSeason = useDeleteSeason(seasonId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    // The admin has to type "delete" before the button unlocks
     const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
-    // Admins can add a game the league ticket missed, while the season is active
     const canAddMatch = !!user?.admin && season?.status === "ACTIVE";
     const createMatch = useCreateMatch();
     const {data: players} = usePlayers(canAddMatch);
     const addMatchDialogRef = useRef<HTMLDialogElement>(null);
-    // Picking a team fills its side with the roster
     const [radiantTeamId, setRadiantTeamId] = useState("");
     const [direTeamId, setDireTeamId] = useState("");
     const [unknownNames, setUnknownNames] = useState<string[]>([]);
     const completeSeason = useCompleteSeason(seasonId);
     const endDialogRef = useRef<HTMLDialogElement>(null);
     const [winnerTeamId, setWinnerTeamId] = useState("");
-    // Can't be undone, so the admin types "end" like they type "delete" for a delete
+    // Can't be undone, so the admin types "end" to confirm
     const [endConfirmText, setEndConfirmText] = useState("");
 
     const handleSignup = (e: FormEvent<HTMLFormElement>) => {
@@ -163,7 +160,6 @@ export default function SeasonDetail() {
                 <>
                     <span className="figures">{formatDateRange(season.startDate, season.endDate)}</span>
                     <span className={`ml-4 font-medium ${statusStyles[season.status].text}`}>{statusStyles[season.status].label}</span>
-                    {/* Only admins get the button; the API enforces the same rule */}
                     {user?.admin && (
                         <button aria-label="Delete season" onClick={openDeleteDialog} disabled={!deletable}
                                 title={deletable ? "Delete season" : "Seasons with teams or matches can't be deleted"}
@@ -198,7 +194,6 @@ export default function SeasonDetail() {
                 )
             }
         >
-            {/*Signups*/}
             {season.status === "REGISTRATION" && (
                 <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     <Panel title="Signed up" meta={`${signups?.length ?? 0} players`}>

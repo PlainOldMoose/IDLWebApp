@@ -80,7 +80,7 @@ public class MatchService {
     }
 
     // An admin's record of a season game the league ticket missed. Only in an active season, which keeps the ELO replay
-    // to that season's games. SecurityConfig keeps this admin-only
+    // to that season's games
     @Transactional
     public void create(CreateMatchRequest request) {
         Season season = seasonRepository.findById(request.seasonId())
@@ -134,7 +134,7 @@ public class MatchService {
         eloService.replay(played);
     }
 
-    // For a game that was ticketed but shouldn't count. ELO is replayed from it without it. SecurityConfig keeps this admin-only
+    // For a game that was ticketed but shouldn't count. ELO is replayed from it without it
     @Transactional
     public void delete(Long matchId) {
         Match match = matchRepository.findById(matchId)
