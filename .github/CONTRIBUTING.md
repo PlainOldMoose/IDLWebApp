@@ -41,7 +41,7 @@ The application should be running at `http://localhost:5173`
 ## Making changes
 
 ### Branch naming
-Always branch off of `main` using this format:
+Always branch off of `pre-release` using this format:
 
 | Type | Format | Example |
 |------|--------|---------|
