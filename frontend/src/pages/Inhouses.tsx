@@ -1,4 +1,4 @@
-import {type FormEvent, type ReactNode, useEffect, useState} from "react";
+import {type ReactNode, type SubmitEvent, useEffect, useState} from "react";
 import {
     useApproveInhouse,
     useCancelInhouse,
@@ -145,7 +145,7 @@ export default function Inhouses() {
 
     // Everyone's result waits in the admin queue, admins' own included. The form says which team won and which played
     // Dire; the API takes both as sides
-    const report = (e: FormEvent<HTMLFormElement>, id: number) => {
+    const report = (e: SubmitEvent<HTMLFormElement>, id: number) => {
         e.preventDefault();
         const data = new FormData(e.currentTarget);
         const teamASide = data.get("dire") === "A" ? "DIRE" : "RADIANT";
@@ -338,7 +338,7 @@ export default function Inhouses() {
                                         </div>
                                         <div className="ml-auto flex gap-3">
                                             <button type="button" className="secondary-button" disabled={busy} onClick={() => setConfirming({id, kind: "cancel"})}>Cancel</button>
-                                            <button className="primary-button" disabled={busy}>Send result</button>
+                                            <button type="submit" className="primary-button" disabled={busy}>Send result</button>
                                         </div>
                                     </form>
                                 )}

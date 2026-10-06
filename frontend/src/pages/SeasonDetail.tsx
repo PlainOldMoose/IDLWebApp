@@ -1,4 +1,4 @@
-import {type FormEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {
     useCompleteSeason,
@@ -53,7 +53,7 @@ export default function SeasonDetail() {
     // Can't be undone, so the admin types "end" to confirm
     const [endConfirmText, setEndConfirmText] = useState("");
 
-    const handleSignup = (e: FormEvent<HTMLFormElement>) => {
+    const handleSignup = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
         signup.mutate({
@@ -80,7 +80,7 @@ export default function SeasonDetail() {
         deleteDialogRef.current?.showModal();
     };
 
-    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
+    const handleDelete = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         deleteSeason.mutate(undefined, {onSuccess: () => navigate("/seasons")});
     };
@@ -91,7 +91,7 @@ export default function SeasonDetail() {
         addMatchDialogRef.current?.showModal();
     };
 
-    const handleAddMatch = (e: FormEvent<HTMLFormElement>) => {
+    const handleAddMatch = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
         const data = new FormData(form);
@@ -128,7 +128,7 @@ export default function SeasonDetail() {
         endDialogRef.current?.showModal();
     };
 
-    const handleEnd = (e: FormEvent<HTMLFormElement>) => {
+    const handleEnd = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         completeSeason.mutate(winnerTeamId, {onSuccess: () => endDialogRef.current?.close()});
     };
@@ -205,7 +205,7 @@ export default function SeasonDetail() {
                                             <span className="block truncate">{s.username}</span>
                                             {/*Own line so long preferences like 1 >>>>> 2 wrap instead of being cut off*/}
                                             {(s.rolePreference || s.willingToCaptain) && (
-                                                <span className="block text-sm break-words text-ash">
+                                                <span className="block text-sm wrap-break-word text-ash">
                                                     {[s.rolePreference, s.willingToCaptain && "captain"].filter(Boolean).join(" · ")}
                                                 </span>
                                             )}
@@ -364,7 +364,7 @@ export default function SeasonDetail() {
                                         onClick={handleWithdraw} disabled={withdraw.isPending}>Withdraw</button>
                             )}
                             <button type="button" className="secondary-button" onClick={() => signupDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={signup.isPending}>{mySignup ? "Save" : "Sign up"}</button>
+                            <button type="submit" className="primary-button" disabled={signup.isPending}>{mySignup ? "Save" : "Sign up"}</button>
                         </div>
                     </form>
                 </dialog>
@@ -384,7 +384,7 @@ export default function SeasonDetail() {
                         {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
+                            <button type="submit" className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
                         </div>
                     </form>
                 </dialog>
@@ -454,7 +454,7 @@ export default function SeasonDetail() {
                         {createMatch.isError && <p role="alert" className="text-sm text-ash">{createMatch.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={createMatch.isPending}>Add match</button>
+                            <button type="submit" className="primary-button" disabled={createMatch.isPending}>Add match</button>
                         </div>
                     </form>
                 </dialog>
@@ -486,7 +486,7 @@ export default function SeasonDetail() {
                         {completeSeason.isError && <p role="alert" className="text-sm text-ash">{completeSeason.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => endDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={endConfirmText !== "end" || completeSeason.isPending}>End season</button>
+                            <button type="submit" className="primary-button" disabled={endConfirmText !== "end" || completeSeason.isPending}>End season</button>
                         </div>
                     </form>
                 </dialog>

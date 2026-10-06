@@ -1,4 +1,4 @@
-import {type FormEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {useCurrentUser, useDeleteMatch, useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -26,7 +26,7 @@ export default function MatchDetail() {
         deleteDialogRef.current?.showModal();
     };
 
-    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
+    const handleDelete = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         deleteMatch.mutate(undefined, {onSuccess: () => navigate(`/seasons/${data?.match.seasonId}`)});
     };
@@ -152,7 +152,7 @@ export default function MatchDetail() {
                         {deleteMatch.isError && <p role="alert" className="text-sm text-ash">{deleteMatch.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
+                            <button type="submit" className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
                         </div>
                     </form>
                 </dialog>

@@ -28,8 +28,10 @@ import java.io.IOException;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String ADMIN = "ADMIN";
+
     @Bean
-    public SecurityFilterChain springFilterChain(HttpSecurity http, PlayerService playerService) throws Exception {
+    public SecurityFilterChain springFilterChain(HttpSecurity http, PlayerService playerService) {
         // First match wins. Reads are public, except the in-house approval queue. Signing up and in-houses need a
         // signed-in player. Every other write is admin-only, so a new write endpoint stays locked until a rule here
         // opens it
@@ -38,15 +40,15 @@ public class SecurityConfig {
                         // 403 for that forward instead of the real status, so a 500 looked like "forbidden"
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // The approval queue: only admins see reported results or approve them into ELO
-                        .requestMatchers(HttpMethod.GET, "/api/inhouses/pending").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/inhouses/*/approve").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/inhouses/pending").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/inhouses/*/approve").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/seasons/*/signups").authenticated()
                         // SeasonSignupController only deletes the caller's own sign-up
                         .requestMatchers(HttpMethod.DELETE, "/api/seasons/*/signups").authenticated()
                         // InhouseService checks that only an in-house's own players, or an admin, report or cancel it
                         .requestMatchers("/api/inhouses/**").authenticated()
-                        .requestMatchers("/api/**").hasRole("ADMIN")
+                        .requestMatchers("/api/**").hasRole(ADMIN)
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated())
                 // Sets a readable XSRF-TOKEN cookie; the frontend echoes it back as an X-XSRF-TOKEN header on writes

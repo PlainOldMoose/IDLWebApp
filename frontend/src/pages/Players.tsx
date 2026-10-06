@@ -1,4 +1,4 @@
-import {type FormEvent, useRef} from "react";
+import {type SubmitEvent, useRef} from "react";
 import {Link, useSearchParams} from "react-router";
 import {useCreatePlayer, useCurrentUser, usePlayers} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -24,7 +24,7 @@ export default function Players() {
         dialogRef.current?.showModal();
     };
 
-    const handleCreate = (e: FormEvent<HTMLFormElement>) => {
+    const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
         const data = new FormData(form);
@@ -68,7 +68,7 @@ export default function Players() {
                         {createPlayer.isError && <p role="alert" className="text-sm text-ash">{createPlayer.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={createPlayer.isPending}>Add</button>
+                            <button type="submit" className="primary-button" disabled={createPlayer.isPending}>Add</button>
                         </div>
                     </form>
                 </dialog>
