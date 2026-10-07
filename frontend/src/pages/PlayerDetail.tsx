@@ -7,6 +7,9 @@ import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {formatDate, formatElo, formatEloChange, formatRelative} from "../util/format.ts";
+import opendotaIcon from "../assets/opendota.png";
+import stratzIcon from "../assets/stratz.png";
+import dotabuffIcon from "../assets/dotabuff.png";
 
 const RECENT_MATCH_COUNT = 10;
 
@@ -31,6 +34,13 @@ export default function PlayerDetail() {
     const matches = player.recentMatches;
     // Largest ELO swing in the list, so the history bars share one scale
     const maxChange = Math.max(0, ...matches.map(m => Math.abs(m.eloChange ?? 0)));
+    // Stats sites use the 32-bit Dota account ID: Steam64 minus Valve's base. BigInt because Steam64 is past Number's safe range
+    const accountId = (BigInt(player.steamId) - 76561197960265728n).toString();
+    const profiles = [
+        {name: "OpenDota", url: `https://www.opendota.com/players/${accountId}`, icon: opendotaIcon},
+        {name: "Stratz", url: `https://stratz.com/players/${accountId}`, icon: stratzIcon},
+        {name: "Dotabuff", url: `https://www.dotabuff.com/players/${accountId}`, icon: dotabuffIcon},
+    ];
 
     return (
         <Page
@@ -120,6 +130,16 @@ export default function PlayerDetail() {
                                 <div className="rounded-r-full bg-loss" style={{flexGrow: player.losses}}/>
                             </div>
                         )}
+                    </Panel>
+                    <Panel title="Profiles">
+                        <div className="grid gap-2">
+                            {profiles.map(({name, url, icon}) => (
+                                <a key={name} href={url} target="_blank" rel="noopener noreferrer" className="secondary-button">
+                                    <img src={icon} alt="" className="size-4 rounded-sm"/>
+                                    {name}
+                                </a>
+                            ))}
+                        </div>
                     </Panel>
                     {matches.length > 0 && (
                         <Panel title={`Last ${Math.min(matches.length, RECENT_MATCH_COUNT)} matches`} meta="Newest first">
