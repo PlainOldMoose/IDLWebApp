@@ -21,7 +21,7 @@ class SeasonSignupRequestTest {
             assertEquals(true, valid(ok), ok);
         }
         // The last one matches the pattern but is too long for the column
-        for (String bad : new String[]{"1 > 1", "2/2 > 1", "6", "1 >", ">1", "1,2", "any > 1", "anyone", "", null, "1 " + ">".repeat(300) + " 2"}) {
+        for (String bad : new String[]{"1 > 1", "2/2 > 1", "1\n> 1", "6", "1 >", ">1", "1,2", "any > 1", "anyone", "", null, "1 " + ">".repeat(300) + " 2"}) {
             assertEquals(false, valid(bad), bad);
         }
     }

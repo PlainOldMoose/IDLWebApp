@@ -4,7 +4,6 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSignupResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.SeasonSignup;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
-import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonSignupRepository;

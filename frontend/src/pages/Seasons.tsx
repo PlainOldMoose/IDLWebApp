@@ -1,4 +1,4 @@
-import {type FormEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef, useState} from "react";
 import {Link} from "react-router";
 import {useCreateSeason, useCurrentUser, useSeasons} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -19,7 +19,7 @@ export default function Seasons() {
         dialogRef.current?.showModal();
     };
 
-    const handleCreate = (e: FormEvent<HTMLFormElement>) => {
+    const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
         const data = new FormData(form);
@@ -65,7 +65,7 @@ export default function Seasons() {
                         {createSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't create the season. Refresh and try again.</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={createSeason.isPending}>Create</button>
+                            <button type="submit" className="primary-button" disabled={createSeason.isPending}>Create</button>
                         </div>
                     </form>
                 </dialog>

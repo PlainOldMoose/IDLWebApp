@@ -23,6 +23,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class SeasonService {
 
+    private static final String SEASON_NOT_FOUND = "Season not found";
+
     private SeasonRepository seasonRepository;
     private MatchRepository matchRepository;
 
@@ -47,14 +49,14 @@ public class SeasonService {
     public SeasonDetailResponse getSeasonById(UUID id) {
         return seasonRepository.findById(id)
                 .map(this::mapToDetailResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
     }
 
     // Only seasons nothing has been played in: matches carry ELO history and teams their standings
     @Transactional
     public void deleteSeason(UUID id) {
         Season season = seasonRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
 
         if (!season.getTeams().isEmpty() || matchRepository.existsBySeasonId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Seasons with teams or matches can't be deleted");
@@ -68,7 +70,7 @@ public class SeasonService {
     @Transactional
     public void completeSeason(UUID id, UUID winnerTeamId) {
         Season season = seasonRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
         if (season.getStatus() != SeasonStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an active season can be ended");
         }
