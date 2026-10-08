@@ -19,7 +19,7 @@ import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
-import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
+import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
 
 const RECENT_MATCH_COUNT = 10;
 
@@ -148,7 +148,6 @@ export default function SeasonDetail() {
     );
     if (isError) return <Page title="Season not found"><QueryError message="Couldn't find this season."/></Page>;
 
-    const standings = [...season.teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
     const captains = signups?.filter(s => s.willingToCaptain).length ?? 0;
     // Same rule as the API, so the button is greyed out instead of failing
     const deletable = !season.teams.length && !matches?.length;
@@ -264,7 +263,7 @@ export default function SeasonDetail() {
                                 <p className="text-right">L</p>
                             </div>
                             <ol>
-                                {standings.map((team, index) => (
+                                {season.teams.map((team, index) => (
                                     <li key={team.teamId}
                                         className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 rounded-md px-3 py-2">
                                         <span className="figures text-right text-ash">{index + 1}</span>
@@ -444,7 +443,7 @@ export default function SeasonDetail() {
                                 {(["RADIANT", "DIRE"] as const).map(side => (
                                     <label key={side} className="flex items-center gap-1.5">
                                         <input type="radio" name="winner" value={side} required className="accent-accent"/>
-                                        {side === "RADIANT" ? "Radiant" : "Dire"}
+                                        {sideName[side]}
                                     </label>
                                 ))}
                             </div>
@@ -470,7 +469,7 @@ export default function SeasonDetail() {
                             <select value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)} required
                                     className="text-input mt-2 block w-full">
                                 <option value="">Pick a team…</option>
-                                {standings.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+                                {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
                             </select>
                         </label>
                         <p>

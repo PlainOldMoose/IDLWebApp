@@ -5,7 +5,7 @@ import Panel from "../components/Panel.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, formatRelative} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange, formatRelative, sideName} from "../util/format.ts";
 import opendotaIcon from "../assets/opendota.png";
 import stratzIcon from "../assets/stratz.png";
 import dotabuffIcon from "../assets/dotabuff.png";
@@ -115,7 +115,7 @@ export default function PlayerDetail() {
 
                                         {/*Too narrow for the side on phones; it's one tap away on the match page*/}
                                         <p className="sr-only flex items-center gap-2 text-sm text-ash sm:not-sr-only">
-                                            {match.side === "RADIANT" ? "Radiant" : "Dire"}
+                                            {sideName[match.side]}
                                             {match.sub && <span className="rounded-sm bg-panel-raised px-1 text-xs">Sub</span>}
                                         </p>
 

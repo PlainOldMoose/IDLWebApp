@@ -34,7 +34,9 @@ public class Season {
     @OneToMany(mappedBy = "season", cascade = CascadeType.REMOVE)
     private List<SeasonSignup> signups;
 
+    // By name, so teams tied in the table always come out in the same order
     @OneToMany(mappedBy = "season")
+    @OrderBy("name")
     private List<Team> teams;
 
     @ManyToOne
