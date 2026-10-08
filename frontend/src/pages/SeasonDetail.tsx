@@ -19,7 +19,7 @@ import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
-import {formatDate, formatDateRange, formatElo} from "../util/format.ts";
+import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
 import type {SeasonSignup} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 10;
@@ -152,7 +152,6 @@ export default function SeasonDetail() {
     );
     if (isError) return <Page title="Season not found"><QueryError message="Couldn't find this season."/></Page>;
 
-    const standings = [...season.teams].sort((a, b) => b.wins - a.wins || a.losses - b.losses);
     const signedUp = signups?.filter(s => !s.sub) ?? [];
     // Includes players past a multiple of 5 once sign-ups close; the API works that out
     const subs = signups?.filter(s => s.sub) ?? [];
