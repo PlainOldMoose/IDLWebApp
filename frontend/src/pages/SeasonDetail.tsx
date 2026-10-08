@@ -359,7 +359,7 @@ export default function SeasonDetail() {
                             </div>
                         </fieldset>
                         {asSub ? (
-                            <p className="text-sm text-ash">Dedicated subs aren&apos;t put on a team. They fill in for any team when a player can&apos;t make it.</p>
+                            <p className="text-sm text-ash">Dedicated subs aren&apos;t put on a team. They fill in for a team when a player can&apos;t make it.</p>
                         ) : (<>
                             <div>
                                 <label htmlFor="role-preference">Your roles, most wanted first</label>

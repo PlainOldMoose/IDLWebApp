@@ -43,7 +43,7 @@ public class SeasonSignupService {
         if (seasonSignup.isSub() && !sub) {
             seasonSignup.setSignedUpAt(LocalDateTime.now());
         }
-        // Dedicated subs fill in for any team, so they have no roles and can't captain
+        // Dedicated subs fill in for a team, so they have no roles and can't captain
         seasonSignup.setSub(sub);
         seasonSignup.setRolePreference(sub ? null : rolePreference.trim());
         seasonSignup.setWillingToCaptain(!sub && willingToCaptain);
