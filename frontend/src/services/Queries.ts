@@ -15,7 +15,9 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
         const problem = await response.json().catch(() => null);
         throw new Error(problem?.detail ?? `${response.status} ${response.statusText}: ${path}`);
     }
-    return response.status === 204 ? undefined as T : response.json();
+    // Writes answer 201/204 with no body
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined as T;
 };
 
 export function usePlayers(enabled = true) {
