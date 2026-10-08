@@ -145,18 +145,18 @@ export function useSeasonDetail(seasonId: string | undefined) {
     });
 }
 
-export function useSeasonSignups(seasonId: string | undefined, enabled: boolean) {
+export function useSeasonSignups(seasonId: string | undefined) {
     return useQuery({
         queryKey: ["seasonSignups", seasonId],
         queryFn: () => request<SeasonSignup[]>(`/api/seasons/${seasonId}/signups`),
-        enabled: enabled && !!seasonId
+        enabled: !!seasonId
     })
 }
 
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) =>
+        mutationFn: (body: { rolePreference: string | null, willingToCaptain: boolean, sub: boolean }) =>
             request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
     });
