@@ -6,7 +6,7 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange, formatOrdinal, sideName} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
@@ -42,8 +42,9 @@ export default function MatchDetail() {
     const teams = sides.map(side => {
         const team = players.filter(p => p.side === side);
         const elos = team.flatMap(p => p.eloBefore ?? []);
-        const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? (side === "RADIANT" ? "Radiant" : "Dire");
-        return {side, team, name, avgElo: elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null};
+        const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? sideName[side];
+        const standing = side === "RADIANT" ? data.radiantStanding : data.direStanding;
+        return {side, team, name, standing, avgElo: elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null};
     });
     const [radiantTeam, direTeam] = teams;
     const eloDiff = radiantTeam.avgElo !== null && direTeam.avgElo !== null ? radiantTeam.avgElo - direTeam.avgElo : null;
@@ -91,15 +92,15 @@ export default function MatchDetail() {
                 </Panel>
             )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
-                {teams.map(({side, team, name, avgElo}) => {
+                {teams.map(({side, team, name, standing, avgElo}) => {
                     const won = match.winner === side;
-                    const sideName = side === "RADIANT" ? "Radiant" : "Dire";
+                    const played = standing ? standing.wins + standing.losses : 0;
                     return (
                         <Panel key={side}
                                title={
                                    <span className="flex items-baseline gap-2">
                                        {name}
-                                       {name !== sideName && <span className="text-sm font-normal text-ash">{sideName}</span>}
+                                       {name !== sideName[side] && <span className="text-sm font-normal text-ash">{sideName[side]}</span>}
                                    </span>
                                }
                                meta={
@@ -113,6 +114,16 @@ export default function MatchDetail() {
                                }
                                className={won ? winnerRing[side] : ""}
                                padded={false}>
+                            {/*Where the team stood in the season just before this game; a first game has no standing or rate yet*/}
+                            {standing && (
+                                <div className="border-b border-rule pt-2 pb-3">
+                                    <StatStrip stats={[
+                                        {label: "Standing", value: played ? `${formatOrdinal(standing.position)} of ${standing.teamCount}` : "–"},
+                                        {label: "Record", value: `${standing.wins}W ${standing.losses}L`},
+                                        {label: "Win rate", value: played ? `${Math.round(100 * standing.wins / played)}%` : "–"},
+                                    ]}/>
+                                </div>
+                            )}
                             {team.length ? (
                                 <>
                                     <div aria-hidden="true" className={`${rowColumns} px-3 pt-1.5 pb-2 text-sm text-ash`}>

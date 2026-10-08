@@ -4,6 +4,7 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchPlayerResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.match.TeamStandingResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
@@ -25,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -76,7 +78,38 @@ public class MatchService {
                 .sorted(Comparator.comparing(MatchPlayerResponse::eloBefore, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
-        return new MatchDetailResponse(mapToSummaryResponse(match), players);
+        Map<UUID, TeamStandingResponse> standings = match.getSeason() != null ? standingsGoingInto(match) : Map.of();
+        return new MatchDetailResponse(mapToSummaryResponse(match), players,
+                match.getRadiantTeam() != null ? standings.get(match.getRadiantTeam().getTeamId()) : null,
+                match.getDireTeam() != null ? standings.get(match.getDireTeam().getTeamId()) : null);
+    }
+
+    // Each team's place in the season table just before this match. The stored W/L are today's, so this match and every
+    // later one (in the ELO replay's order) come off them. Exact as long as the sheet's seeded games came first
+    private Map<UUID, TeamStandingResponse> standingsGoingInto(Match match) {
+        Map<UUID, Integer> wins = new HashMap<>();
+        Map<UUID, Integer> losses = new HashMap<>();
+        List<Team> teams = match.getSeason().getTeams();
+        teams.forEach(team -> {
+            wins.put(team.getTeamId(), team.getWins());
+            losses.put(team.getTeamId(), team.getLosses());
+        });
+
+        Comparator<Match> replayOrder = Comparator.comparing(Match::getPlayedTime).thenComparing(Match::getMatchId);
+        for (Match later : matchRepository.findBySeasonIdOrderByPlayedTimeDesc(match.getSeason().getId())) {
+            if (replayOrder.compare(later, match) < 0) continue;
+            Team winner = winner(later);
+            Team loser = loser(later);
+            if (winner != null) wins.merge(winner.getTeamId(), -1, Integer::sum);
+            if (loser != null) losses.merge(loser.getTeamId(), -1, Integer::sum);
+        }
+
+        List<UUID> table = teams.stream()
+                .map(Team::getTeamId)
+                .sorted(Team.tableOrder(wins::get, losses::get))
+                .toList();
+        return table.stream().collect(Collectors.toMap(Function.identity(),
+                id -> new TeamStandingResponse(table.indexOf(id) + 1, table.size(), wins.get(id), losses.get(id))));
     }
 
     // An admin's record of a season game the league ticket missed. Only in an active season, which keeps the ELO replay
@@ -159,11 +192,19 @@ public class MatchService {
 
     // The standings' W/L are stored (seeded from the sheet), not counted from matches, so they follow a match in and out
     private static void countResult(Match match, int by) {
-        boolean radiantWon = match.getMatchWinner() == Side.RADIANT;
-        Team winner = radiantWon ? match.getRadiantTeam() : match.getDireTeam();
-        Team loser = radiantWon ? match.getDireTeam() : match.getRadiantTeam();
+        Team winner = winner(match);
+        Team loser = loser(match);
         if (winner != null) winner.setWins(winner.getWins() + by);
         if (loser != null) loser.setLosses(loser.getLosses() + by);
+    }
+
+    // null for an in-house, which has no teams
+    private static Team winner(Match match) {
+        return match.getMatchWinner() == Side.RADIANT ? match.getRadiantTeam() : match.getDireTeam();
+    }
+
+    private static Team loser(Match match) {
+        return match.getMatchWinner() == Side.RADIANT ? match.getDireTeam() : match.getRadiantTeam();
     }
 
     private MatchSummaryResponse mapToSummaryResponse(Match match) {

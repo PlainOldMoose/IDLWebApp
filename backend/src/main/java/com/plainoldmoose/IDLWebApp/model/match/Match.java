@@ -31,6 +31,7 @@ public class Match {
     @JoinColumn(name="dire_team_id")
     private Team direTeam;
 
+    @Column(nullable = false)
     private LocalDateTime playedTime;
 
     @Enumerated(EnumType.STRING)

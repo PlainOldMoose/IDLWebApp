@@ -4,6 +4,8 @@ import java.util.List;
 
 public record MatchDetailResponse(
         MatchSummaryResponse match,
-        List<MatchPlayerResponse> players // By ELO going in, highest first
+        List<MatchPlayerResponse> players, // By ELO going in, highest first
+        TeamStandingResponse radiantStanding, // null for an in-house
+        TeamStandingResponse direStanding
 ) {
 }

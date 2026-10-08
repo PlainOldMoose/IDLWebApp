@@ -32,7 +32,7 @@ export interface Season {
 }
 
 export interface SeasonDetail extends Season {
-    teams: TeamSummary[];
+    teams: TeamSummary[]; // In table order: most wins, then fewest losses
     winnerTeamName?: string;
 }
 
@@ -68,6 +68,16 @@ export interface MatchSummary {
 export interface MatchDetail {
     match: MatchSummary;
     players: MatchPlayer[]; // By ELO going in, highest first
+    radiantStanding: TeamStanding | null; // null for an in-house
+    direStanding: TeamStanding | null;
+}
+
+// Where a team stood in its season going into a match
+interface TeamStanding {
+    position: number; // 1 for first
+    teamCount: number;
+    wins: number;
+    losses: number;
 }
 
 interface MatchPlayer {
