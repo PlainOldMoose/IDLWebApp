@@ -10,6 +10,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
+import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
@@ -41,7 +42,8 @@ class MatchServiceTest {
     private final SeasonRepository seasons = mock(SeasonRepository.class);
     private final PlayerRepository players = mock(PlayerRepository.class);
     private final EloService elo = mock(EloService.class);
-    private final MatchService service = new MatchService(matches, mock(EloHistoryRepository.class), seasons, players, elo);
+    private final EloHistoryRepository eloHistory = mock(EloHistoryRepository.class);
+    private final MatchService service = new MatchService(matches, eloHistory, seasons, players, elo);
 
     // Players 0-4 on the first team, 5-9 on the second, and 10 on neither
     private final List<Player> everyone = IntStream.range(0, 11).mapToObj(i -> {
@@ -199,5 +201,48 @@ class MatchServiceTest {
 
         assertNull(detail.radiantStanding());
         assertNull(detail.direStanding());
+    }
+
+    // An in-house where each player's ELO going in is given, or null for a player with no ELO record
+    private Match inhouseWithElo(Double... eloBefore) {
+        Match match = new Match();
+        match.setMatchId(500L);
+        match.setPlayedTime(NOON);
+        match.setMatchWinner(Side.RADIANT);
+        match.setParticipants(new ArrayList<>());
+        List<EloHistory> rows = new ArrayList<>();
+        for (int i = 0; i < eloBefore.length; i++) {
+            MatchParticipant participant = new MatchParticipant();
+            participant.setMatch(match);
+            participant.setPlayer(everyone.get(i));
+            participant.setSide(i < eloBefore.length / 2 ? Side.RADIANT : Side.DIRE);
+            match.getParticipants().add(participant);
+            if (eloBefore[i] == null) continue;
+            EloHistory row = new EloHistory();
+            row.setPlayer(everyone.get(i));
+            row.setMatch(match);
+            // History stores the ELO after the match
+            row.setEloChange(10);
+            row.setElo(eloBefore[i] + 10);
+            rows.add(row);
+        }
+        when(matches.findById(500L)).thenReturn(Optional.of(match));
+        when(eloHistory.findByMatchMatchId(500L)).thenReturn(rows);
+        return match;
+    }
+
+    @Test
+    void winChanceUsesTheEloReplaysFormula() {
+        // Radiant averages 1600 going in, Dire 1500
+        inhouseWithElo(1650.0, 1550.0, 1500.0, 1500.0);
+
+        assertEquals(1 / (1 + Math.pow(10, -100.0 / 400)), service.getMatch(500L).radiantWinChance(), 1e-9);
+    }
+
+    @Test
+    void noWinChanceWhenAPlayerHasNoEloRecord() {
+        inhouseWithElo(1650.0, null, 1500.0, 1500.0);
+
+        assertNull(service.getMatch(500L).radiantWinChance());
     }
 }

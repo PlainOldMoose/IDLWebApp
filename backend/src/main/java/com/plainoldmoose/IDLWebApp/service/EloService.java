@@ -131,8 +131,12 @@ public class EloService {
 
     // K × S × (W − expected), where the expected result comes from the gap between the team averages
     static double eloChange(double k, double stake, double teamAvg, double opponentAvg, boolean won) {
-        double expected = 1 / (1 + Math.pow(10, (opponentAvg - teamAvg) / 400));
-        return round(k * stake * ((won ? 1 : 0) - expected));
+        return round(k * stake * ((won ? 1 : 0) - expectedResult(teamAvg, opponentAvg)));
+    }
+
+    // A team's chance of winning, 0 to 1, from the gap between the team averages
+    static double expectedResult(double teamAvg, double opponentAvg) {
+        return 1 / (1 + Math.pow(10, (opponentAvg - teamAvg) / 400));
     }
 
     private static double average(List<Player> team) {
