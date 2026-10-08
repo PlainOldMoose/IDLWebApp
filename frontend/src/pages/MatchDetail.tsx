@@ -105,9 +105,10 @@ export default function MatchDetail() {
                                }
                                meta={
                                    <span className="flex items-center gap-3">
+                                       {/*tabular-nums rather than figures: figures' narrowed type is too thin to read at this size*/}
                                        {avgElo !== null && <span className="text-bone tabular-nums">{formatElo(avgElo)} avg</span>}
                                        {/*Filled for the winner, hollow for the loser, so the result doesn't rest on the side colour*/}
-                                       <span className={`rounded-md border px-2 py-0.5 font-semibold ${won ? "border-bone bg-bone text-night" : "border-rule text-ash"}`}>
+                                       <span className={`rounded-[3px] border px-2 py-0.5 font-semibold ${won ? "border-bone bg-bone text-night" : "border-rule text-ash"}`}>
                                            {won ? "Won" : "Lost"}
                                        </span>
                                    </span>
@@ -135,10 +136,11 @@ export default function MatchDetail() {
                                         {team.map(player => (
                                             <li key={player.steamId}>
                                                 <Link to={`/players/${player.steamId}`} className={`row-link ${rowColumns} items-center px-3 py-2.5 text-lg`}>
-                                                    <span className="min-w-0">
-                                                        <span className="block truncate">{player.username}</span>
+                                                    {/*On the name's line, so a sub doesn't make their row, and the panel, taller*/}
+                                                    <span className="flex min-w-0 items-baseline gap-2">
+                                                        <span className="truncate">{player.username}</span>
                                                         {player.sub && (
-                                                            <span className="block truncate text-sm text-ash">
+                                                            <span className="truncate text-sm text-ash">
                                                                 {player.subbingFor ? `Sub for ${player.subbingFor}` : "Sub"}
                                                             </span>
                                                         )}
