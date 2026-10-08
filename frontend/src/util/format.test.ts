@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {formatElo, formatEloChange} from "./format";
+import {formatElo, formatEloChange, formatOrdinal} from "./format";
 
 describe("formatEloChange", () => {
     it("signs gains and losses with a true minus sign", () => {
@@ -12,5 +12,12 @@ describe("formatEloChange", () => {
 describe("formatElo", () => {
     it("always shows one decimal place", () => {
         expect(formatElo(1500)).toBe("1,500.0");
+    });
+});
+
+describe("formatOrdinal", () => {
+    it("gives English ordinal suffixes, including the teens", () => {
+        expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(formatOrdinal))
+            .toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);
     });
 });

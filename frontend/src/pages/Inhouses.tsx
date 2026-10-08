@@ -15,14 +15,13 @@ import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatElo, formatEloChange, formatRelative} from "../util/format.ts";
+import {formatElo, formatEloChange, formatRelative, sideName} from "../util/format.ts";
 
 const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + player.elo, 0) / team.length;
 
 // A team's chance to win, the same expectation EloService.eloChange uses. 50% is a perfectly even game
 const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 + 10 ** ((average(opponents) - average(team)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
-const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
 const sideBorder = {RADIANT: "border-radiant", DIRE: "border-dire"} as const;
 const otherSide = (side: "RADIANT" | "DIRE"): "RADIANT" | "DIRE" => side === "RADIANT" ? "DIRE" : "RADIANT";
 

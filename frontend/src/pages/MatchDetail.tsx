@@ -3,12 +3,15 @@ import {Link, useNavigate, useParams} from "react-router";
 import {useCurrentUser, useDeleteMatch, useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
+import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange, formatOrdinal, sideName} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
+const winnerRing = {RADIANT: "ring-1 ring-radiant/70", DIRE: "ring-1 ring-dire/70"};
+const changeColour = (change: number) => change > 0 ? "text-win" : change < 0 ? "text-loss" : "";
 
 // Our own match page, laid out like Stratz's: who played on each side and the ELO they took in. In-houses have no Stratz page
 export default function MatchDetail() {
@@ -36,6 +39,17 @@ export default function MatchDetail() {
 
     const {match, players} = data;
     const radiantWon = match.winner === "RADIANT";
+    const teams = sides.map(side => {
+        const team = players.filter(p => p.side === side);
+        const elos = team.flatMap(p => p.eloBefore ?? []);
+        const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? sideName[side];
+        const standing = side === "RADIANT" ? data.radiantStanding : data.direStanding;
+        return {side, team, name, standing, avgElo: elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null};
+    });
+    const [radiantTeam, direTeam] = teams;
+    const eloDiff = radiantTeam.avgElo !== null && direTeam.avgElo !== null ? radiantTeam.avgElo - direTeam.avgElo : null;
+    // Radiant's expected result, from the same formula EloService uses; Dire's is the rest, so the two always add to 100
+    const radiantChance = eloDiff === null ? null : Math.round(100 / (1 + 10 ** (-eloDiff / 400)));
 
     return (
         <Page
@@ -44,15 +58,15 @@ export default function MatchDetail() {
                     {/*Sits on the baseline and stands one capital tall, so it spans the letters rather than the font's line box*/}
                     <span aria-hidden="true" className={`h-[1cap] w-1 shrink-0 ${radiantWon ? "bg-radiant" : "bg-dire"}`}/>
                     {/*Season games name the winning team; in-houses have no teams, only sides*/}
-                    {(radiantWon ? match.radiantTeamName : match.direTeamName) ?? (radiantWon ? "Radiant" : "Dire")} victory
+                    {(radiantWon ? radiantTeam : direTeam).name} victory
                 </span>
             }
             subtitle={
                 <span className="flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="figures">{formatDate(match.timePlayed)}</span>
+                    <span>{formatDate(match.timePlayed)}</span>
                     <span>{match.seasonName ?? "In-house"}</span>
-                    <span className="figures">{match.avgElo.toLocaleString("en-GB")} avg ELO</span>
-                    <span className="figures">Match {match.matchId}</span>
+                    <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>
+                    <span>Match {match.matchId}</span>
                 </span>
             }
             aside={match.seasonName && (
@@ -67,30 +81,49 @@ export default function MatchDetail() {
                 </div>
             )}
         >
+            {/*Radiant left and Dire right, the same as the team panels below*/}
+            {eloDiff !== null && radiantChance !== null && (
+                <Panel title="Pre-game odds" className="mb-4">
+                    <StatStrip stats={[
+                        {label: radiantTeam.name, value: `${radiantChance}%`},
+                        {label: "Avg ELO gap", value: formatElo(Math.abs(eloDiff))},
+                        {label: direTeam.name, value: `${100 - radiantChance}%`},
+                    ]}/>
+                </Panel>
+            )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
-                {sides.map(side => {
-                    const radiant = side === "RADIANT";
+                {teams.map(({side, team, name, standing, avgElo}) => {
                     const won = match.winner === side;
-                    const team = players.filter(p => p.side === side);
-                    const elos = team.flatMap(p => p.eloBefore ?? []);
-                    const avgElo = elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
-                    const teamName = radiant ? match.radiantTeamName : match.direTeamName;
+                    const played = standing ? standing.wins + standing.losses : 0;
                     return (
                         <Panel key={side}
                                title={
                                    <span className="flex items-baseline gap-2">
-                                       {teamName ?? (radiant ? "Radiant" : "Dire")}
-                                       {teamName && <span className="text-sm font-normal text-ash">{radiant ? "Radiant" : "Dire"}</span>}
+                                       {name}
+                                       {name !== sideName[side] && <span className="text-sm font-normal text-ash">{sideName[side]}</span>}
                                    </span>
                                }
                                meta={
-                                   <span className="flex gap-3">
-                                       {avgElo !== null && <span className="figures">{formatElo(avgElo)} avg</span>}
-                                       <span className={won ? "font-medium text-bone" : ""}>{won ? "Won" : "Lost"}</span>
+                                   <span className="flex items-center gap-3">
+                                       {avgElo !== null && <span className="text-bone tabular-nums">{formatElo(avgElo)} avg</span>}
+                                       {/*Filled for the winner, hollow for the loser, so the result doesn't rest on the side colour*/}
+                                       <span className={`rounded-md border px-2 py-0.5 font-semibold ${won ? "border-bone bg-bone text-night" : "border-rule text-ash"}`}>
+                                           {won ? "Won" : "Lost"}
+                                       </span>
                                    </span>
                                }
-                               className={won ? (radiant ? "ring-1 ring-radiant/70" : "ring-1 ring-dire/70") : ""}
+                               className={won ? winnerRing[side] : ""}
                                padded={false}>
+                            {/*Where the team stood in the season just before this game; a first game has no standing or rate yet*/}
+                            {standing && (
+                                <div className="border-b border-rule pt-2 pb-3">
+                                    <StatStrip stats={[
+                                        {label: "Standing", value: played ? `${formatOrdinal(standing.position)} of ${standing.teamCount}` : "–"},
+                                        {label: "Record", value: `${standing.wins}W ${standing.losses}L`},
+                                        {label: "Win rate", value: played ? `${Math.round(100 * standing.wins / played)}%` : "–"},
+                                    ]}/>
+                                </div>
+                            )}
                             {team.length ? (
                                 <>
                                     <div aria-hidden="true" className={`${rowColumns} px-3 pt-1.5 pb-2 text-sm text-ash`}>
@@ -101,12 +134,12 @@ export default function MatchDetail() {
                                     <ul>
                                         {team.map(player => (
                                             <li key={player.steamId}>
-                                                <Link to={`/players/${player.steamId}`} className={`row-link ${rowColumns} items-center px-3 py-2`}>
-                                                    <span className="flex min-w-0 items-center gap-2">
-                                                        <span className="truncate">{player.username}</span>
+                                                <Link to={`/players/${player.steamId}`} className={`row-link ${rowColumns} items-center px-3 py-2.5 text-lg`}>
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate">{player.username}</span>
                                                         {player.sub && (
-                                                            <span className="shrink-0 rounded-sm bg-panel-raised px-1 text-xs text-ash">
-                                                                Sub{player.subbingFor && <span className="sr-only"> for {player.subbingFor}</span>}
+                                                            <span className="block truncate text-sm text-ash">
+                                                                {player.subbingFor ? `Sub for ${player.subbingFor}` : "Sub"}
                                                             </span>
                                                         )}
                                                     </span>
@@ -117,8 +150,9 @@ export default function MatchDetail() {
                                                     ) : (
                                                         <>
                                                             <span className="figures text-right"><span className="sr-only">ELO </span>{formatElo(player.eloBefore)}</span>
-                                                            <span className={`figures text-right ${player.eloChange < 0 ? "text-ash" : ""}`}>
-                                                                {formatEloChange(player.eloChange)}
+                                                            {/*The sign carries gain or loss; the colour only backs it up*/}
+                                                            <span className={`figures text-right ${changeColour(player.eloChange)}`}>
+                                                                <span className="sr-only">Change </span>{formatEloChange(player.eloChange)}
                                                             </span>
                                                         </>
                                                     )}

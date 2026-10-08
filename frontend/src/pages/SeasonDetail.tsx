@@ -277,7 +277,7 @@ export default function SeasonDetail() {
                                 <p className="text-right">L</p>
                             </div>
                             <ol>
-                                {standings.map((team, index) => (
+                                {season.teams.map((team, index) => (
                                     <li key={team.teamId}
                                         className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 rounded-md px-3 py-2">
                                         <span className="figures text-right text-ash">{index + 1}</span>
@@ -477,7 +477,7 @@ export default function SeasonDetail() {
                                 {(["RADIANT", "DIRE"] as const).map(side => (
                                     <label key={side} className="flex items-center gap-1.5">
                                         <input type="radio" name="winner" value={side} required className="accent-accent"/>
-                                        {side === "RADIANT" ? "Radiant" : "Dire"}
+                                        {sideName[side]}
                                     </label>
                                 ))}
                             </div>
@@ -503,7 +503,7 @@ export default function SeasonDetail() {
                             <select value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)} required
                                     className="text-input mt-2 block w-full">
                                 <option value="">Pick a team…</option>
-                                {standings.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+                                {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
                             </select>
                         </label>
                         <p>
