@@ -20,15 +20,16 @@ import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
 import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
+import type {SeasonSignup} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 10;
 
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
-    // Sign-ups only matter before the season starts, matches only after
+    // Matches only matter once the season starts. Sign-ups are kept for the subs list
     const started = season?.status === "ACTIVE" || season?.status === "COMPLETED";
-    const {data: signups} = useSeasonSignups(seasonId, season?.status === "REGISTRATION");
+    const {data: signups} = useSeasonSignups(seasonId);
     const {data: user} = useCurrentUser();
     const {data: matches} = useMatches(seasonId, !!seasonId && started);
     const signup = useSeasonSignup(seasonId);
@@ -36,6 +37,7 @@ export default function SeasonDetail() {
     const mySignup = signups?.find(s => s.steamId === user?.steamId);
     const signupDialogRef = useRef<HTMLDialogElement>(null);
     const signupFormRef = useRef<HTMLFormElement>(null);
+    const [asSub, setAsSub] = useState(false);
     const deleteSeason = useDeleteSeason(seasonId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
     const [confirmText, setConfirmText] = useState("");
@@ -57,8 +59,9 @@ export default function SeasonDetail() {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
         signup.mutate({
-            rolePreference: String(form.get("rolePreference")),
+            rolePreference: asSub ? null : String(form.get("rolePreference")),
             willingToCaptain: form.has("willingToCaptain"),
+            sub: asSub,
         }, {onSuccess: () => signupDialogRef.current?.close()});
     };
 
@@ -71,6 +74,7 @@ export default function SeasonDetail() {
         withdraw.reset();
         // Back to the saved sign-up, dropping anything typed and then cancelled
         signupFormRef.current?.reset();
+        setAsSub(!!mySignup?.sub);
         signupDialogRef.current?.showModal();
     };
 
@@ -148,9 +152,30 @@ export default function SeasonDetail() {
     );
     if (isError) return <Page title="Season not found"><QueryError message="Couldn't find this season."/></Page>;
 
-    const captains = signups?.filter(s => s.willingToCaptain).length ?? 0;
+    const signedUp = signups?.filter(s => !s.sub) ?? [];
+    // Includes players past a multiple of 5 once sign-ups close; the API works that out
+    const subs = signups?.filter(s => s.sub) ?? [];
+    const captains = signedUp.filter(s => s.willingToCaptain).length;
     // Same rule as the API, so the button is greyed out instead of failing
     const deletable = !season.teams.length && !matches?.length;
+
+    const signupList = (list: SeasonSignup[]) => (
+        <ul className="columns-2 gap-x-4 sm:columns-3">
+            {list.map((s) => (
+                <li key={s.steamId} className="break-inside-avoid">
+                    <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block px-2 py-1.5">
+                        <span className="block truncate">{s.username}</span>
+                        {/*Own line so long preferences like 1 >>>>> 2 wrap instead of being cut off*/}
+                        {(s.rolePreference || s.willingToCaptain) && (
+                            <span className="block text-sm wrap-break-word text-ash">
+                                {[s.rolePreference, s.willingToCaptain && "captain"].filter(Boolean).join(" · ")}
+                            </span>
+                        )}
+                    </Link>
+                </li>
+            ))}
+        </ul>
+    );
 
     return (
         <Page
@@ -195,31 +220,19 @@ export default function SeasonDetail() {
         >
             {season.status === "REGISTRATION" && (
                 <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                    <Panel title="Signed up" meta={`${signups?.length ?? 0} players`}>
-                        {signups?.length ? (
-                            <ul className="columns-2 gap-x-4 sm:columns-3">
-                                {signups.map((s) => (
-                                    <li key={s.steamId} className="break-inside-avoid">
-                                        <Link to={`/players/${s.steamId}`} className="row-link -mx-2 block px-2 py-1.5">
-                                            <span className="block truncate">{s.username}</span>
-                                            {/*Own line so long preferences like 1 >>>>> 2 wrap instead of being cut off*/}
-                                            {(s.rolePreference || s.willingToCaptain) && (
-                                                <span className="block text-sm wrap-break-word text-ash">
-                                                    {[s.rolePreference, s.willingToCaptain && "captain"].filter(Boolean).join(" · ")}
-                                                </span>
-                                            )}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-ash">Nobody has signed up yet.</p>
-                        )}
-                    </Panel>
+                    <div className="space-y-4">
+                        <Panel title="Signed up" meta={`${signedUp.length} players`}>
+                            {signedUp.length ? signupList(signedUp) : <p className="text-ash">Nobody has signed up yet.</p>}
+                        </Panel>
+                        <Panel title="Subs">
+                            {subs.length ? signupList(subs) : <p className="text-ash">Nobody has signed up as a sub yet.</p>}
+                        </Panel>
+                    </div>
                     <Panel title="Sign-ups">
                         <StatStrip stats={[
-                            {label: "Players", value: signups?.length ?? 0},
-                            {label: "Willing to captain", value: captains},
+                            {label: "Players", value: signedUp.length},
+                            {label: "Subs", value: subs.length},
+                            {label: "Captains", value: captains},
                         ]}/>
                         <p className="mt-4 border-t border-rule pt-3 text-sm text-ash">
                             The season starts on {formatDate(season.startDate)}.
@@ -318,6 +331,10 @@ export default function SeasonDetail() {
                             );
                         })}
                     </div>
+
+                    <Panel title="Subs" className="mt-4">
+                        {subs.length ? signupList(subs) : <p className="text-ash">No subs for this season.</p>}
+                    </Panel>
                 </>
             )}
 
@@ -328,33 +345,49 @@ export default function SeasonDetail() {
                         {mySignup ? "Your sign-up" : `Join ${season.name}`}
                     </h2>
                     <form ref={signupFormRef} onSubmit={handleSignup} className="mt-4 space-y-4">
-                        <div>
-                            <label htmlFor="role-preference">Your roles, most wanted first</label>
-                            {/*Same pattern and length as SeasonSignupRequest on the backend*/}
-                            <input
-                                id="role-preference"
-                                name="rolePreference"
-                                required
-                                maxLength={32}
-                                pattern="\s*[Aa][Nn][Yy]\s*|(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
-                                title='Roles 1 to 5, each once, joined by > or /, e.g. 1 >>> 2 > 3/4, or just "any"'
-                                autoComplete="off"
-                                spellCheck={false}
-                                placeholder="1 >>> 2 > 3/4"
-                                defaultValue={mySignup?.rolePreference ?? ""}
-                                aria-describedby="role-hint"
-                                className="text-input mt-2 block w-full"
-                            />
-                            <p id="role-hint" className="mt-1.5 text-sm text-ash">
-                                1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
-                                &gt; prefer, / equal, or just &quot;any&quot;
-                            </p>
-                        </div>
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" name="willingToCaptain" defaultChecked={mySignup?.willingToCaptain}
-                                   className="accent-accent"/>
-                            Willing to captain
-                        </label>
+                        <fieldset>
+                            <legend>Sign up as</legend>
+                            <div className="mt-1 flex gap-4">
+                                {[{value: false, label: "Player"}, {value: true, label: "Dedicated sub"}].map(({value, label}) => (
+                                    <label key={label} className="flex items-center gap-1.5">
+                                        <input type="radio" name="signupType" checked={asSub === value}
+                                               onChange={() => setAsSub(value)} className="accent-accent"/>
+                                        {label}
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                        {asSub ? (
+                            <p className="text-sm text-ash">Dedicated subs aren&apos;t put on a team. They fill in for a team when a player can&apos;t make it.</p>
+                        ) : (<>
+                            <div>
+                                <label htmlFor="role-preference">Your roles, most wanted first</label>
+                                {/*Same pattern and length as SeasonSignupRequest on the backend*/}
+                                <input
+                                    id="role-preference"
+                                    name="rolePreference"
+                                    required
+                                    maxLength={32}
+                                    pattern="\s*[Aa][Nn][Yy]\s*|(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
+                                    title='Roles 1 to 5, each once, joined by > or /, e.g. 1 >>> 2 > 3/4, or just "any"'
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    placeholder="1 >>> 2 > 3/4"
+                                    defaultValue={mySignup?.rolePreference ?? ""}
+                                    aria-describedby="role-hint"
+                                    className="text-input mt-2 block w-full"
+                                />
+                                <p id="role-hint" className="mt-1.5 text-sm text-ash">
+                                    1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
+                                    &gt; prefer, / equal, or just &quot;any&quot;
+                                </p>
+                            </div>
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" name="willingToCaptain" defaultChecked={mySignup?.willingToCaptain}
+                                       className="accent-accent"/>
+                                Willing to captain
+                            </label>
+                        </>)}
                         {(signup.isError || withdraw.isError) &&
                             <p role="alert" className="text-sm text-ash">Couldn't update your sign-up. Refresh and try again.</p>}
                         <div className="flex justify-end gap-3">

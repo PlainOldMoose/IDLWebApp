@@ -37,6 +37,9 @@ public class SeasonSignup {
     @Column(nullable = false)
     private LocalDateTime signedUpAt;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean sub;
+
     @PrePersist
     public void prePersist() {
         signedUpAt = LocalDateTime.now();

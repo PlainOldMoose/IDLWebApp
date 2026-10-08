@@ -52,6 +52,7 @@ export interface SeasonSignup {
     rolePreference: string | null;
     willingToCaptain: boolean;
     signedUpAt: string;
+    sub: boolean;
 }
 
 export interface MatchSummary {

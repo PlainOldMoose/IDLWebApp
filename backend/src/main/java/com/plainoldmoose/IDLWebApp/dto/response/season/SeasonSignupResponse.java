@@ -7,6 +7,7 @@ public record SeasonSignupResponse(
         String username,
         String rolePreference,
         boolean willingToCaptain,
-        LocalDateTime signedUpAt
+        LocalDateTime signedUpAt,
+        boolean sub
 ) {
 }

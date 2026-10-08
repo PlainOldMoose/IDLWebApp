@@ -15,7 +15,9 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
         const problem = await response.json().catch(() => null);
         throw new Error(problem?.detail ?? `${response.status} ${response.statusText}: ${path}`);
     }
-    return response.status === 204 ? undefined as T : response.json();
+    // Writes answer 201/204 with no body
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined as T;
 };
 
 export function usePlayers(enabled = true) {
@@ -145,18 +147,18 @@ export function useSeasonDetail(seasonId: string | undefined) {
     });
 }
 
-export function useSeasonSignups(seasonId: string | undefined, enabled: boolean) {
+export function useSeasonSignups(seasonId: string | undefined) {
     return useQuery({
         queryKey: ["seasonSignups", seasonId],
         queryFn: () => request<SeasonSignup[]>(`/api/seasons/${seasonId}/signups`),
-        enabled: enabled && !!seasonId
+        enabled: !!seasonId
     })
 }
 
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) =>
+        mutationFn: (body: { rolePreference: string | null, willingToCaptain: boolean, sub: boolean }) =>
             request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
     });
