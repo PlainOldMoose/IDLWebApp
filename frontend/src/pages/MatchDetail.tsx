@@ -47,9 +47,10 @@ export default function MatchDetail() {
         return {side, team, name, standing, avgElo: elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null};
     });
     const [radiantTeam, direTeam] = teams;
-    const eloDiff = radiantTeam.avgElo !== null && direTeam.avgElo !== null ? radiantTeam.avgElo - direTeam.avgElo : null;
-    // Radiant's expected result, from the same formula EloService uses; Dire's is the rest, so the two always add to 100
-    const radiantChance = eloDiff === null ? null : Math.round(100 / (1 + 10 ** (-eloDiff / 400)));
+    // Worked out by the API with the ELO replay's own formula; Dire's is the rest, so the two always add to 100
+    const radiantChance = data.radiantWinChance === null ? null : Math.round(100 * data.radiantWinChance);
+    // Every player has an ELO record whenever there's a chance, so both averages are set
+    const eloGap = Math.abs((radiantTeam.avgElo ?? 0) - (direTeam.avgElo ?? 0));
 
     return (
         <Page
@@ -82,11 +83,11 @@ export default function MatchDetail() {
             )}
         >
             {/*Radiant left and Dire right, the same as the team panels below*/}
-            {eloDiff !== null && radiantChance !== null && (
+            {radiantChance !== null && (
                 <Panel title="Pre-game odds" className="mb-4">
                     <StatStrip stats={[
                         {label: radiantTeam.name, value: `${radiantChance}%`},
-                        {label: "Avg ELO gap", value: formatElo(Math.abs(eloDiff))},
+                        {label: "Avg ELO gap", value: formatElo(eloGap)},
                         {label: direTeam.name, value: `${100 - radiantChance}%`},
                     ]}/>
                 </Panel>

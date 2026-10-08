@@ -70,6 +70,7 @@ export interface MatchDetail {
     players: MatchPlayer[]; // By ELO going in, highest first
     radiantStanding: TeamStanding | null; // null for an in-house
     direStanding: TeamStanding | null;
+    radiantWinChance: number | null; // 0 to 1, from the ELO going in; null unless every player has an ELO record
 }
 
 // Where a team stood in its season going into a match

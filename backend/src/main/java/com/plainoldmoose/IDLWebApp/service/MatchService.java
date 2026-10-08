@@ -81,7 +81,18 @@ public class MatchService {
         Map<UUID, TeamStandingResponse> standings = match.getSeason() != null ? standingsGoingInto(match) : Map.of();
         return new MatchDetailResponse(mapToSummaryResponse(match), players,
                 match.getRadiantTeam() != null ? standings.get(match.getRadiantTeam().getTeamId()) : null,
-                match.getDireTeam() != null ? standings.get(match.getDireTeam().getTeamId()) : null);
+                match.getDireTeam() != null ? standings.get(match.getDireTeam().getTeamId()) : null,
+                radiantWinChance(players));
+    }
+
+    // Only when every player has an ELO record: then their ELO going in is what the replay averaged for this game
+    private static Double radiantWinChance(List<MatchPlayerResponse> players) {
+        if (players.isEmpty() || players.stream().anyMatch(p -> p.eloBefore() == null)) return null;
+        return EloService.expectedResult(averageEloBefore(players, Side.RADIANT), averageEloBefore(players, Side.DIRE));
+    }
+
+    private static double averageEloBefore(List<MatchPlayerResponse> players, Side side) {
+        return players.stream().filter(p -> p.side() == side).mapToDouble(MatchPlayerResponse::eloBefore).average().orElse(0);
     }
 
     // Each team's place in the season table just before this match. The stored W/L are today's, so this match and every

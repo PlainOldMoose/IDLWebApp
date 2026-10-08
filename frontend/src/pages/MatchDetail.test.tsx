@@ -17,6 +17,7 @@ const seasonMatch: MatchDetailData = {
     radiantStanding: {position: 2, teamCount: 6, wins: 5, losses: 2},
     // Dire's first game of the season
     direStanding: {position: 6, teamCount: 6, wins: 0, losses: 0},
+    radiantWinChance: 0.544,
 };
 
 const inhouse: MatchDetailData = {
@@ -24,6 +25,7 @@ const inhouse: MatchDetailData = {
     match: {...seasonMatch.match, seasonId: undefined, seasonName: undefined, radiantTeamName: undefined, direTeamName: undefined},
     radiantStanding: null,
     direStanding: null,
+    radiantWinChance: null,
 };
 
 let detail: MatchDetailData;
@@ -79,4 +81,21 @@ it("shows no standings for an in-house", async () => {
     await screen.findByRole("heading", {name: /Radiant victory/});
 
     expect(screen.queryByText("Standing")).toBeNull();
+});
+
+it("shows each team's pre-game win chance from the API, adding up to 100", async () => {
+    detail = seasonMatch;
+    renderMatch();
+    const odds = (await screen.findByRole("heading", {level: 2, name: "Pre-game odds"})).closest("section")!;
+
+    expect(stat(odds, "Sporky Diver")).toBe("Sporky Diver54%");
+    expect(stat(odds, "The Bad Guys")).toBe("The Bad Guys46%");
+});
+
+it("shows no pre-game odds without a win chance", async () => {
+    detail = inhouse;
+    renderMatch();
+    await screen.findByRole("heading", {name: /Radiant victory/});
+
+    expect(screen.queryByRole("heading", {name: "Pre-game odds"})).toBeNull();
 });
