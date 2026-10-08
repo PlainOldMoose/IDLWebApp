@@ -29,7 +29,7 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci && npm run lint && npm run build
+      - run: npm ci && npm run lint && npm test -- run && npm run build
         working-directory: frontend
   build:
     # deploy needs build, so skipping it here skips both on PRs
