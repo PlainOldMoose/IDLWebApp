@@ -28,7 +28,7 @@ export interface Season {
     name: string;
     startDate: string;
     endDate: string;
-    status: "REGISTRATION" | "ACTIVE" | "COMPLETED";
+    status: "REGISTRATION" | "DRAFTING" | "ACTIVE" | "COMPLETED";
 }
 
 export interface SeasonDetail extends Season {
@@ -53,6 +53,30 @@ export interface SeasonSignup {
     willingToCaptain: boolean;
     signedUpAt: string;
     sub: boolean;
+}
+
+export interface DraftPlayer {
+    steamId: string;
+    username: string;
+    elo: number;
+    draftScore: number;
+    rolePreference: string | null;
+    willingToCaptain: boolean;
+}
+
+export interface DraftTeam {
+    teamId: string;
+    name: string;
+    captainSteamId: string;
+    members: DraftPlayer[]; // Captain first, then highest score first
+    draftScore: number; // Sum of the members' scores
+}
+
+export interface Draft {
+    pool: DraftPlayer[]; // Highest score first
+    teams: DraftTeam[];
+    onTheClockTeamId: string | null; // null until every team has a captain
+    teamCount: number;
 }
 
 export interface MatchSummary {

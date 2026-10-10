@@ -59,8 +59,7 @@ public class SeasonSignupService {
                 .ifPresent(seasonSignupRepository::delete);
     }
 
-    // In sign-up order. Once sign-ups close, teams are 5 each, so the latest player sign-ups past a multiple of 5 are
-    // subs too. Under 5 there's no full team, so nobody overflows
+    // In sign-up order. Once sign-ups close, player sign-ups that didn't make a team are subs too
     public List<SeasonSignupResponse> getSignups(UUID seasonId) {
         List<SeasonSignup> signups = seasonSignupRepository.findBySeasonId(seasonId)
                 .stream()
@@ -70,7 +69,7 @@ public class SeasonSignupService {
                 .map(season -> season.getStatus() == SeasonStatus.REGISTRATION)
                 .orElse(true);
         List<SeasonSignup> players = signups.stream().filter(signup -> !signup.isSub()).toList();
-        int teamPlaces = open || players.size() < 5 ? players.size() : players.size() - players.size() % 5;
+        int teamPlaces = open ? players.size() : DraftService.teamPlaces(players.size());
         // SeasonSignup has no equals, so this matches by identity
         Set<SeasonSignup> overflow = new HashSet<>(players.subList(teamPlaces, players.size()));
 

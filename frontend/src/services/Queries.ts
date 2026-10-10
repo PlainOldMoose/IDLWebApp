@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import type {Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+import type {Draft, Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> => {
@@ -169,6 +169,68 @@ export function useWithdrawSignup(seasonId: string | undefined) {
     return useMutation({
         mutationFn: () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
+    });
+}
+
+// Polled, so everyone watching sees each pick without refreshing
+export function useDraft(seasonId: string | undefined, enabled = true) {
+    return useQuery({
+        queryKey: ["draft", seasonId],
+        queryFn: () => request<Draft>(`/api/seasons/${seasonId}/draft`),
+        enabled: !!seasonId && enabled,
+        refetchInterval: 5000,
+    });
+}
+
+// Closes sign-ups, scores everyone and makes the first willing captains captain
+export function useStartDraft(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft`, {method: "POST"}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+            void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
+        },
+    });
+}
+
+export function useDraftPick(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (steamId: string) =>
+            request<void>(`/api/seasons/${seasonId}/draft/picks`, {method: "POST", json: {steamId}}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
+    });
+}
+
+// Locks the team names; matches can be added from here
+export function useStartSeason(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft/start`, {method: "POST"}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+        },
+    });
+}
+
+export function useDraftCaptain(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({steamId, captain}: { steamId: string, captain: boolean }) =>
+            request<void>(`/api/seasons/${seasonId}/draft/captains/${steamId}`, {method: captain ? "PUT" : "DELETE"}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
+    });
+}
+
+export function useRenameTeam(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({teamId, name}: { teamId: string, name: string }) =>
+            request<void>(`/api/seasons/${seasonId}/draft/teams/${teamId}`, {method: "PUT", json: {name}}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
     });
 }
 

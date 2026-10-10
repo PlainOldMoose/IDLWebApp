@@ -11,13 +11,17 @@ const signup = (steamId: string, sub = false): SeasonSignup => ({
 });
 
 let posted: unknown;
+let postedTo: string | undefined;
 
 function renderSeason({status = "REGISTRATION", signups, user = null}: {
     status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null
 }) {
     const season: SeasonDetailData = {id: "s1", name: "Season 5", startDate: "2026-02-01", endDate: "2026-03-01", status, teams: []};
     vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
-        if (init?.method === "POST") posted = JSON.parse(String(init.body));
+        if (init?.method === "POST") {
+            postedTo = path;
+            posted = init.body ? JSON.parse(String(init.body)) : undefined;
+        }
         const body = path === "/auth/me" ? user
             : path === "/api/seasons/s1" ? season
             : path === "/api/seasons/s1/signups" ? signups
@@ -37,6 +41,7 @@ const panel = async (title: string) => (await screen.findByRole("heading", {name
 
 beforeEach(() => {
     posted = undefined;
+    postedTo = undefined;
     // NOTE: jsdom has no modal dialogs
     HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
     HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.open = false; };
@@ -94,4 +99,27 @@ it("says when a started season has no subs", async () => {
 
     const subs = await panel("Subs");
     expect(await within(subs).findByText("No subs for this season.")).toBeTruthy();
+});
+
+it("lets an admin close sign-ups and start the draft", async () => {
+    renderSeason({signups: [signup("alice")], user: {steamId: "admin", username: "admin", admin: true}});
+
+    await userEvent.click(await screen.findByRole("button", {name: "Start draft"}));
+    const dialog = screen.getByRole("dialog", {name: "Start draft"});
+    await userEvent.click(within(dialog).getByRole("button", {name: "Start draft"}));
+
+    await vi.waitFor(() => expect(postedTo).toBe("/api/seasons/s1/draft"));
+});
+
+it("doesn't offer players the draft", async () => {
+    renderSeason({signups: [signup("alice")], user: {steamId: "alice", username: "alice", admin: false}});
+
+    await screen.findByRole("button", {name: "Edit sign-up"});
+    expect(screen.queryByRole("button", {name: "Start draft"})).toBeNull();
+});
+
+it("labels a drafting season", async () => {
+    renderSeason({status: "DRAFTING", signups: []});
+
+    expect(await screen.findByText("Drafting")).toBeTruthy();
 });

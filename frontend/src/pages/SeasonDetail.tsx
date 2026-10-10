@@ -9,7 +9,10 @@ import {
     usePlayers,
     useSeasonDetail,
     useSeasonSignup,
+    useDraft,
     useSeasonSignups,
+    useStartDraft,
+    useStartSeason,
     useWithdrawSignup
 } from "../services/Queries.ts";
 import MatchSummaryCard, {matchColumns} from "../components/MatchSummaryCard.tsx";
@@ -18,6 +21,7 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import SeasonDraft from "./SeasonDraft.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
 import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
 import type {SeasonSignup} from "../types.ts";
@@ -54,6 +58,14 @@ export default function SeasonDetail() {
     const [winnerTeamId, setWinnerTeamId] = useState("");
     // Can't be undone, so the admin types "end" to confirm
     const [endConfirmText, setEndConfirmText] = useState("");
+    const startDraft = useStartDraft(seasonId);
+    const draftDialogRef = useRef<HTMLDialogElement>(null);
+    // Shares the draft section's query, so this adds no requests
+    const {data: draft} = useDraft(seasonId, season?.status === "DRAFTING");
+    // Same rule as the API: the pool only empties once every team has a captain and 5 players
+    const draftComplete = !!draft && !draft.pool.length;
+    const startSeason = useStartSeason(seasonId);
+    const startSeasonDialogRef = useRef<HTMLDialogElement>(null);
 
     const handleSignup = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -137,6 +149,26 @@ export default function SeasonDetail() {
         completeSeason.mutate(winnerTeamId, {onSuccess: () => endDialogRef.current?.close()});
     };
 
+    const openDraftDialog = () => {
+        startDraft.reset();
+        draftDialogRef.current?.showModal();
+    };
+
+    const handleStartDraft = (e: SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        startDraft.mutate(undefined, {onSuccess: () => draftDialogRef.current?.close()});
+    };
+
+    const openStartSeasonDialog = () => {
+        startSeason.reset();
+        startSeasonDialogRef.current?.showModal();
+    };
+
+    const handleStartSeason = (e: SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        startSeason.mutate(undefined, {onSuccess: () => startSeasonDialogRef.current?.close()});
+    };
+
     const signIn = () => {
         globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
     };
@@ -199,12 +231,17 @@ export default function SeasonDetail() {
             aside={
                 season.status === "REGISTRATION" ? (
                     user ? (
-                        <button className="primary-button" onClick={openSignupDialog}>
-                            {mySignup ? "Edit sign-up" : "Join now"}
-                        </button>
+                        <div className="flex gap-3">
+                            {user.admin && <button className="secondary-button" onClick={openDraftDialog}>Start draft</button>}
+                            <button className="primary-button" onClick={openSignupDialog}>
+                                {mySignup ? "Edit sign-up" : "Join now"}
+                            </button>
+                        </div>
                     ) : (
                         <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
                     )
+                ) : season.status === "DRAFTING" ? (
+                    user?.admin && draftComplete && <button className="primary-button" onClick={openStartSeasonDialog}>Start season</button>
                 ) : canAddMatch ? (
                     <div className="flex gap-3">
                         <button className="secondary-button" onClick={openEndDialog}>End season</button>
@@ -241,34 +278,38 @@ export default function SeasonDetail() {
                 </div>
             )}
 
+            {season.status === "DRAFTING" && <SeasonDraft seasonId={season.id} user={user}/>}
+
             {started && (
                 <>
-                    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                        {/*Latest few, with the rest on the season-filtered Matches page; the button is trimmed to keep this header level with Standings*/}
-                        <Panel title="Recent matches" padded={false} className="min-w-0" meta={matches && matches.length > RECENT_MATCH_COUNT
-                            ? <Link to={`/matches?season=${seasonId}`} className="secondary-button px-3 py-0.5 text-sm">See all {matches.length}</Link>
-                            : matches?.length ? `${matches.length} played` : undefined}>
-                            {matches?.length ? (
-                                <>
-                                    {/*Column headings, hidden on small screens where the rows stack*/}
-                                    <div aria-hidden="true" className={`hidden gap-x-3 border-b border-rule px-3 pb-2 text-sm text-ash md:grid ${matchColumns}`}>
-                                        <p className="text-right">Radiant</p>
-                                        <span className="w-0.5"/>
-                                        <p>Dire</p>
-                                        <p className="text-right">Played</p>
-                                        <p className="text-right">Avg ELO</p>
-                                        <p className="text-right">Season</p>
-                                    </div>
-                                    {matches.slice(0, RECENT_MATCH_COUNT).map((match) => (
-                                        <MatchSummaryCard key={match.matchId} match={match}/>
-                                    ))}
-                                </>
-                            ) : (
-                                <p className="p-3 text-ash">No matches played yet.</p>
-                            )}
-                        </Panel>
+                    {/*Latest few, with the rest on the season-filtered Matches page; the button is trimmed to keep the header one line tall*/}
+                    <Panel title="Recent matches" padded={false} className="min-w-0" meta={matches && matches.length > RECENT_MATCH_COUNT
+                        ? <Link to={`/matches?season=${seasonId}`} className="secondary-button px-3 py-0.5 text-sm">See all {matches.length}</Link>
+                        : matches?.length ? `${matches.length} played` : undefined}>
+                        {matches?.length ? (
+                            <>
+                                {/*Column headings, hidden on small screens where the rows stack*/}
+                                <div aria-hidden="true" className={`hidden gap-x-3 border-b border-rule px-3 pb-2 text-sm text-ash md:grid ${matchColumns}`}>
+                                    <p className="text-right">Radiant</p>
+                                    <span className="w-0.5"/>
+                                    <p>Dire</p>
+                                    <p className="text-right">Played</p>
+                                    <p className="text-right">Avg ELO</p>
+                                    <p className="text-right">Season</p>
+                                </div>
+                                {matches.slice(0, RECENT_MATCH_COUNT).map((match) => (
+                                    <MatchSummaryCard key={match.matchId} match={match}/>
+                                ))}
+                            </>
+                        ) : (
+                            <p className="p-3 text-ash">No matches played yet.</p>
+                        )}
+                    </Panel>
 
-                        <Panel title="Standings" padded={false}>
+                    {/*Standings first on phones; beside the teams from lg, level with the first row of cards and kept in view
+                       while scrolling them*/}
+                    <div className="mt-10 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                        <Panel title="Standings" padded={false} className="lg:sticky lg:top-16 lg:col-start-2 lg:row-start-1 lg:mt-13">
                             <div aria-hidden="true" className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 px-3 pt-1.5 pb-2 text-sm text-ash">
                                 <p/>
                                 <p>Team</p>
@@ -289,53 +330,56 @@ export default function SeasonDetail() {
                                 ))}
                             </ol>
                         </Panel>
+                        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+                            <h2 className="mb-4 px-4 font-display text-3xl font-bold">Teams</h2>
+                            {/*Each card's header and roster sit on rows shared across the grid row (subgrid), so a long team name that
+                               wraps grows every header in its row and the rosters and averages still line up*/}
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {season.teams.map((team) => {
+                                    const captainFirst = [...team.members].sort((a, b) =>
+                                        Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
+                                    const isChampion = team.name === season.winnerTeamName;
+                                    return (
+                                        <Panel key={team.teamId}
+                                               title={<span className="font-display text-2xl font-bold">{team.name}</span>}
+                                               meta={isChampion
+                                                   ? <span className="font-medium text-aegis">Champions</span>
+                                                   : <span className="figures">{team.wins}W {team.losses}L</span>}
+                                               className={`row-span-2 grid grid-rows-subgrid gap-0 [&>div]:flex [&>div]:flex-col ${isChampion ? "ring-1 ring-aegis/70" : ""}`}
+                                               level={3}
+                                               padded={false}>
+                                            <ul className="mb-1.5">
+                                                {captainFirst.map(member => (
+                                                    <li key={member.steamId}>
+                                                        <Link to={`/players/${member.steamId}`}
+                                                              className="row-link flex justify-between gap-3 px-3 py-1.5">
+                                                            <span className="truncate">
+                                                                {member.username}
+                                                                {member.username === team.captainUsername &&
+                                                                    <span className="ml-2 text-sm text-ash">captain</span>}
+                                                            </span>
+                                                            <span className="figures text-ash">{formatElo(member.elo)}</span>
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
+                                                <span>Average ELO</span>
+                                                <span>{formatElo(team.avgElo)}</span>
+                                            </p>
+                                        </Panel>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
-
-                    <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">Teams</h2>
-                    {/*Each card's header and roster sit on rows shared across the grid row (subgrid), so a long team name that
-                       wraps grows every header in its row and the rosters and averages still line up*/}
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {season.teams.map((team) => {
-                            const captainFirst = [...team.members].sort((a, b) =>
-                                Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
-                            const isChampion = team.name === season.winnerTeamName;
-                            return (
-                                <Panel key={team.teamId}
-                                       title={<span className="font-display text-2xl font-bold">{team.name}</span>}
-                                       meta={isChampion
-                                           ? <span className="font-medium text-aegis">Champions</span>
-                                           : <span className="figures">{team.wins}W {team.losses}L</span>}
-                                       className={`row-span-2 grid grid-rows-subgrid gap-0 [&>div]:flex [&>div]:flex-col ${isChampion ? "ring-1 ring-aegis/70" : ""}`}
-                                       level={3}
-                                       padded={false}>
-                                    <ul className="mb-1.5">
-                                        {captainFirst.map(member => (
-                                            <li key={member.steamId}>
-                                                <Link to={`/players/${member.steamId}`}
-                                                      className="row-link flex justify-between gap-3 px-3 py-1.5">
-                                                    <span className="truncate">
-                                                        {member.username}
-                                                        {member.username === team.captainUsername &&
-                                                            <span className="ml-2 text-sm text-ash">captain</span>}
-                                                    </span>
-                                                    <span className="figures text-ash">{formatElo(member.elo)}</span>
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
-                                        <span>Average ELO</span>
-                                        <span>{formatElo(team.avgElo)}</span>
-                                    </p>
-                                </Panel>
-                            );
-                        })}
-                    </div>
-
-                    <Panel title="Subs" className="mt-4">
-                        {subs.length ? signupList(subs) : <p className="text-ash">No subs for this season.</p>}
-                    </Panel>
                 </>
+            )}
+
+            {season.status !== "REGISTRATION" && (
+                <Panel title="Subs" className="mt-4">
+                    {subs.length ? signupList(subs) : <p className="text-ash">No subs for this season.</p>}
+                </Panel>
             )}
 
             {user && (
@@ -487,6 +531,40 @@ export default function SeasonDetail() {
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
                             <button type="submit" className="primary-button" disabled={createMatch.isPending}>Add match</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {user?.admin && season.status === "REGISTRATION" && (
+                <dialog ref={draftDialogRef} aria-labelledby="start-draft-title" className="dialog">
+                    <h2 id="start-draft-title" className="font-display text-3xl font-bold">Start draft</h2>
+                    <form onSubmit={handleStartDraft} className="mt-4 space-y-4">
+                        <p>
+                            This closes sign-ups for <strong>{season.name}</strong> and can&apos;t be undone. Players past a multiple
+                            of 5 become subs, everyone else gets a draft score, and the first players willing to captain become captains.
+                        </p>
+                        {startDraft.isError && <p role="alert" className="text-sm text-ash">{startDraft.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => draftDialogRef.current?.close()}>Cancel</button>
+                            <button type="submit" className="primary-button" disabled={startDraft.isPending}>Start draft</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {user?.admin && draftComplete && (
+                <dialog ref={startSeasonDialogRef} aria-labelledby="start-season-title" className="dialog">
+                    <h2 id="start-season-title" className="font-display text-3xl font-bold">Start season</h2>
+                    <form onSubmit={handleStartSeason} className="mt-4 space-y-4">
+                        <p>
+                            This starts <strong>{season.name}</strong> with the teams as drafted. Captains can&apos;t rename their teams
+                            after this, and matches can be added.
+                        </p>
+                        {startSeason.isError && <p role="alert" className="text-sm text-ash">{startSeason.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => startSeasonDialogRef.current?.close()}>Cancel</button>
+                            <button type="submit" className="primary-button" disabled={startSeason.isPending}>Start season</button>
                         </div>
                     </form>
                 </dialog>

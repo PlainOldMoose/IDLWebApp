@@ -1,9 +1,11 @@
 package com.plainoldmoose.IDLWebApp.config;
 
+import com.plainoldmoose.IDLWebApp.controller.DraftController;
 import com.plainoldmoose.IDLWebApp.controller.InhouseController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
 import com.plainoldmoose.IDLWebApp.controller.MatchController;
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
+import com.plainoldmoose.IDLWebApp.service.DraftService;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
@@ -27,10 +29,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // SecurityConfig's rule order is the whole authorisation model, so these pin down who gets through to what
-@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class})
+@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class, DraftController.class})
 @Import(SecurityConfig.class)
 class SecurityConfigTest {
 
@@ -52,6 +55,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private PlayerService playerService;
+
+    @MockitoBean
+    private DraftService draftService;
 
     // Roles come from the player row on every request, so the signed-in users need one
     @BeforeEach
@@ -105,6 +111,29 @@ class SecurityConfigTest {
     void adminCanSeeAndApproveTheQueue() throws Exception {
         mvc.perform(get("/api/inhouses/pending").with(ADMIN)).andExpect(status().isOk());
         mvc.perform(post("/api/inhouses/1/approve").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void onlyAdminsStartTheDraftChangeCaptainsOrStartTheSeason() throws Exception {
+        mvc.perform(post(SEASON + "/draft").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(put(SEASON + "/draft/captains/1").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(delete(SEASON + "/draft/captains/1").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(post(SEASON + "/draft/start").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(post(SEASON + "/draft/start").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(post(SEASON + "/draft").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(put(SEASON + "/draft/captains/1").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    // DraftService checks it's the right captain
+    @Test
+    void playersReachPicksAndRenames() throws Exception {
+        mvc.perform(get(SEASON + "/draft")).andExpect(status().isOk());
+        mvc.perform(post(SEASON + "/draft/picks").with(csrf())
+                .contentType("application/json").content("{\"steamId\":\"1\"}")).andExpect(status().isForbidden());
+        mvc.perform(post(SEASON + "/draft/picks").with(PLAYER).with(csrf())
+                .contentType("application/json").content("{\"steamId\":\"1\"}")).andExpect(status().isNoContent());
+        mvc.perform(put(SEASON + "/draft/teams/" + UUID.randomUUID()).with(PLAYER).with(csrf())
+                .contentType("application/json").content("{\"name\":\"Team\"}")).andExpect(status().isNoContent());
     }
 
     @Test
