@@ -2,6 +2,29 @@
 
 Thanks for your interest in contributing! Please read this before opening a PR.
 
+## Suggestions
+
+You don't need to code to help out. If you have an idea or something you'd like changed:
+
+1. Sign in to GitHub (a free account is all you need)
+2. Open the [suggestion form](https://github.com/PlainOldMoose/IDLWebApp/issues/new?template=suggestion.yml)
+3. Describe your idea in your own words and press **Create**
+
+That's it - I'll reply on your suggestion.
+
+### Prefer Discord?
+
+Raising it on GitHub yourself greatly helps me keep track of everything, so please treat Discord as a last resort. If GitHub really isn't for you, copy this template, fill it in and DM me instead:
+
+```
+Suggestion:
+What's your idea?
+Why would it help?
+Anything else? (screenshots, links, examples)
+```
+
+If you're a developer with a detailed proposal, you may wish to use the [Feature Request](https://github.com/PlainOldMoose/IDLWebApp/issues/new?template=feature_request.md) template instead.
+
 ## Tech Stack
 
 - **Backend:** Java 17, Springboot, PostgreSQL
@@ -41,7 +64,7 @@ The application should be running at `http://localhost:5173`
 ## Making changes
 
 ### Branch naming
-Always branch off of `main` using this format:
+Always branch off of `pre-release` using this format:
 
 | Type | Format | Example |
 |------|--------|---------|

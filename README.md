@@ -18,6 +18,10 @@ Running an in-house Dota 2 league means juggling spreadsheets for player stats, 
 
 Teams and past seasons come from the seed data for now. Creating teams in the app is still to come.
 
+## Suggestions
+
+Got an idea or something you'd like changed? Use the [suggestion form](https://github.com/PlainOldMoose/IDLWebApp/issues/new?template=suggestion.yml) - no technical knowledge needed, just a free GitHub account. Raising it on GitHub greatly helps me track suggestions, but as a last resort you can copy the template in the [Contributing Guide](.github/CONTRIBUTING.md#prefer-discord) and DM me on Discord.
+
 ## Contributing
 
 Contributions are welcome! Please read the [Contributing Guide](.github/CONTRIBUTING.md) before opening a PR.
@@ -44,7 +48,7 @@ IDLWebApp/
 │       ├── model/                    # JPA entities and enums
 │       ├── dto/                      # Data transfer objects
 │       └── config/                   # Security and app configuration
-│   └── scripts/reset-db.sh           # Reset a DB to the seed snapshot (data.sql, not in git)
+│   └── scripts/reset-db.sh           # Reset the dev DB to the seed snapshot (data.sql, not in git)
 ├── frontend/                         # React SPA
 │   └── src/
 │       ├── components/               # Reusable UI components
@@ -91,6 +95,7 @@ npm run dev
 | `GET` | `/api/seasons` | List all seasons, newest first |
 | `GET` | `/api/seasons/{id}` | Get season details, including teams |
 | `POST` | `/api/seasons` | Create a new season (admin) |
+| `POST` | `/api/seasons/{id}/complete` | End an active season and record its winner (admin) |
 | `DELETE` | `/api/seasons/{id}` | Delete a season with no teams or matches (admin) |
 
 ### Matches

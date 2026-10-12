@@ -9,7 +9,7 @@ public record MatchSummaryResponse(
         Long matchId,
         Side winner,
         LocalDateTime timePlayed,
-        int avgElo,
+        Integer avgElo, // null unless all 10 players have an ELO record for the match
         UUID seasonId, // null for an in-house
         String seasonName,
         String radiantTeamName,

@@ -9,9 +9,6 @@ import lombok.Setter;
 import java.util.UUID;
 
 
-/**
- * Represents a player on a team in a given season.
- */
 @Entity
 @Getter
 @Setter

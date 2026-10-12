@@ -27,7 +27,6 @@ public class MatchParticipant {
 
     private boolean isSub;
 
-    // Null unless they stood in for someone
     @ManyToOne
     @JoinColumn(name = "subbing_for_id")
     private Player subbingFor;

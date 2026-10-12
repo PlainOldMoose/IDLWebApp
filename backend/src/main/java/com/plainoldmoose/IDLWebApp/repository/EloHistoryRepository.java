@@ -10,7 +10,6 @@ import java.util.Optional;
 public interface EloHistoryRepository extends JpaRepository<EloHistory, Long> {
     List<EloHistory> findByMatchMatchId(Long matchId);
 
-    // What every game from a given time on did to ELO, for EloService to undo
     List<EloHistory> findByMatchPlayedTimeGreaterThanEqual(LocalDateTime from);
 
     // The player's ELO as it stood at a given time

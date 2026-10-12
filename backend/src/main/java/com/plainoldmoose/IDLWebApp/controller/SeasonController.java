@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.controller;
 
+import com.plainoldmoose.IDLWebApp.dto.request.CompleteSeasonRequest;
 import com.plainoldmoose.IDLWebApp.dto.request.CreateSeasonRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
@@ -31,6 +32,12 @@ public class SeasonController {
     @GetMapping("/{id}")
     public SeasonDetailResponse getSeasonById(@PathVariable UUID id) {
         return seasonService.getSeasonById(id);
+    }
+
+    @PostMapping("/{id}/complete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void completeSeason(@PathVariable UUID id, @Valid @RequestBody CompleteSeasonRequest request) {
+        seasonService.completeSeason(id, request.winnerTeamId());
     }
 
     @DeleteMapping("/{id}")

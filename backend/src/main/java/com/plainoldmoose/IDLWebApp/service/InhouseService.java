@@ -56,7 +56,6 @@ public class InhouseService {
         return toResponse(inhouseRepository.save(inhouse), null);
     }
 
-    // Games with no result reported yet, newest first
     public List<InhouseResponse> getInProgress() {
         return inhouseRepository.findAllByReportedWinnerIsNullOrderByCreatedAtDesc()
                 .stream()
@@ -82,7 +81,7 @@ public class InhouseService {
         inhouse.setReportedBy(playerRepository.getReferenceById(steamId));
     }
 
-    // Turns the in-house into a match under the same ID and moves everyone's ELO. SecurityConfig keeps this admin-only
+    // Turns the in-house into a match under the same ID and moves everyone's ELO
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void approve(Long id) {
         Inhouse inhouse = inhouseRepository.findById(id)
@@ -174,7 +173,6 @@ public class InhouseService {
                 inhouse.getReportedBy() == null ? null : inhouse.getReportedBy().getUsername(), eloChanges);
     }
 
-    // Highest ELO first
     private static List<PlayerSummaryResponse> summaries(List<Player> team) {
         return team.stream()
                 .sorted(Comparator.comparingDouble(Player::getElo).reversed())

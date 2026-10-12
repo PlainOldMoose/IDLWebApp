@@ -1,8 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react(),
   tailwindcss()],
@@ -12,5 +11,10 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
       '/auth': 'http://localhost:8080',
     },
+  },
+  // globals lets Testing Library clean up the DOM after each test
+  test: {
+    environment: 'jsdom',
+    globals: true,
   },
 })

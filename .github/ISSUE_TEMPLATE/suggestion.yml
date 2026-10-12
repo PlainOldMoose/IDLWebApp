@@ -1,0 +1,27 @@
+name: Suggestion
+description: Got an idea or something you'd like changed? Tell us here - no technical knowledge needed.
+title: "Suggestion: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to share an idea! Just write it the way you'd explain it to a friend.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: What would you like added, changed or improved?
+      placeholder: e.g. It would be nice to see each player's most played hero on their profile.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: Optional - what's annoying or missing right now?
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Optional - screenshots, links or examples. You can drag and drop images here.

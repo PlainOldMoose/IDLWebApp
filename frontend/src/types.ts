@@ -28,11 +28,11 @@ export interface Season {
     name: string;
     startDate: string;
     endDate: string;
-    status: "REGISTRATION" | "ACTIVE" | "COMPLETED";
+    status: "REGISTRATION" | "DRAFTING" | "ACTIVE" | "COMPLETED";
 }
 
 export interface SeasonDetail extends Season {
-    teams: TeamSummary[];
+    teams: TeamSummary[]; // In table order: most wins, then fewest losses
     winnerTeamName?: string;
 }
 
@@ -52,13 +52,38 @@ export interface SeasonSignup {
     rolePreference: string | null;
     willingToCaptain: boolean;
     signedUpAt: string;
+    sub: boolean;
+}
+
+export interface DraftPlayer {
+    steamId: string;
+    username: string;
+    elo: number;
+    draftScore: number;
+    rolePreference: string | null;
+    willingToCaptain: boolean;
+}
+
+export interface DraftTeam {
+    teamId: string;
+    name: string;
+    captainSteamId: string;
+    members: DraftPlayer[]; // Captain first, then highest score first
+    draftScore: number; // Sum of the members' scores
+}
+
+export interface Draft {
+    pool: DraftPlayer[]; // Highest score first
+    teams: DraftTeam[];
+    onTheClockTeamId: string | null; // null until every team has a captain
+    teamCount: number;
 }
 
 export interface MatchSummary {
     matchId: number;
     winner: "RADIANT" | "DIRE";
     timePlayed: string;
-    avgElo: number;
+    avgElo: number | null; // null unless all 10 players have a recorded ELO for the match
     seasonId?: string; // Not set for in-houses
     seasonName?: string;
     radiantTeamName?: string;
@@ -68,6 +93,17 @@ export interface MatchSummary {
 export interface MatchDetail {
     match: MatchSummary;
     players: MatchPlayer[]; // By ELO going in, highest first
+    radiantStanding: TeamStanding | null; // null for an in-house
+    direStanding: TeamStanding | null;
+    radiantWinChance: number | null; // 0 to 1, from the ELO going in; null unless every player has an ELO record
+}
+
+// Where a team stood in its season going into a match
+interface TeamStanding {
+    position: number; // 1 for first
+    teamCount: number;
+    wins: number;
+    losses: number;
 }
 
 interface MatchPlayer {
@@ -86,7 +122,7 @@ export interface Inhouse {
     teamA: PlayerSummary[]; // Highest ELO first
     teamB: PlayerSummary[];
     reportedWinner: "RADIANT" | "DIRE" | null; // null until someone reports the result; only the admin queue has these
-    teamASide: "RADIANT" | "DIRE" | null; // the side Team A played, reported with the result
+    teamASide: "RADIANT" | "DIRE" | null;
     reportedBy: string | null; // the reporter's username
     eloChanges: Record<string, number> | null; // Steam ID to what approving the result would do to their ELO; only the admin queue has these
 }

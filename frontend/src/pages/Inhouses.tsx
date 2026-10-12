@@ -1,4 +1,4 @@
-import {type FormEvent, type ReactNode, useEffect, useState} from "react";
+import {type ReactNode, type SubmitEvent, useEffect, useState} from "react";
 import {
     useApproveInhouse,
     useCancelInhouse,
@@ -15,14 +15,13 @@ import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatElo, formatEloChange, formatRelative} from "../util/format.ts";
+import {formatElo, formatEloChange, formatRelative, sideName} from "../util/format.ts";
 
 const average = (team: PlayerSummary[]) => team.reduce((sum, player) => sum + player.elo, 0) / team.length;
 
 // A team's chance to win, the same expectation EloService.eloChange uses. 50% is a perfectly even game
 const winChance = (team: PlayerSummary[], opponents: PlayerSummary[]) => 1 / (1 + 10 ** ((average(opponents) - average(team)) / 400));
 const percentFormat = new Intl.NumberFormat("en-GB", {style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1});
-const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
 const sideBorder = {RADIANT: "border-radiant", DIRE: "border-dire"} as const;
 const otherSide = (side: "RADIANT" | "DIRE"): "RADIANT" | "DIRE" => side === "RADIANT" ? "DIRE" : "RADIANT";
 
@@ -31,8 +30,7 @@ type Confirming =
     | { id: number, kind: "approve" | "reject" | "cancel" }
     | { id: number, kind: "report", teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" };
 
-// Takes over a card's footer until the action is confirmed or dropped. Escape goes back. The edge is green, red for
-// danger, or the colour passed in
+// Takes over a card's footer until the action is confirmed or dropped. Escape goes back
 function ConfirmStrip({danger, edge, label, busy, onConfirm, onBack, children}: {
     danger?: boolean, edge?: string, label: string, busy: boolean, onConfirm: () => void, onBack: () => void, children: ReactNode
 }) {
@@ -94,11 +92,9 @@ function Teams({inhouse}: { inhouse: Inhouse }) {
 }
 
 export default function Inhouses() {
-    // Newest first, as the API returns them
     const {data: inhouses, isPending, isError} = useInhouses();
     const {data: user} = useCurrentUser();
     const {data: players} = usePlayers();
-    // Steam IDs picked for the balancer, in the order they were added
     const [chosen, setChosen] = useState<string[]>([]);
     const [search, setSearch] = useState("");
     const balance = useInhouseBalance(chosen);
@@ -126,15 +122,16 @@ export default function Inhouses() {
     }, [toast]);
 
     const byId = new Map(players?.map(player => [player.steamId, player] as const));
-    const searchMatch = players?.find(player =>
-        player.username.toLowerCase() === search.trim().toLowerCase() && !chosen.includes(player.steamId));
+    const query = search.trim().toLowerCase();
+    const matching = query ? (players ?? []).filter(player =>
+        player.username.toLowerCase().includes(query) && !chosen.includes(player.steamId)) : [];
+    // Enter adds the exact name, or else the first suggestion
+    const searchMatch = matching.find(player => player.username.toLowerCase() === query) ?? matching[0];
     const busy = reportResult.isPending || cancelInhouse.isPending || approveInhouse.isPending;
     const actionError = reportResult.error ?? cancelInhouse.error ?? approveInhouse.error;
 
-    const addPlayer = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!searchMatch) return;
-        setChosen([...chosen, searchMatch.steamId]);
+    const add = (player: PlayerSummary) => {
+        setChosen([...chosen, player.steamId]);
         setSearch("");
     };
 
@@ -147,7 +144,7 @@ export default function Inhouses() {
 
     // Everyone's result waits in the admin queue, admins' own included. The form says which team won and which played
     // Dire; the API takes both as sides
-    const report = (e: FormEvent<HTMLFormElement>, id: number) => {
+    const report = (e: SubmitEvent<HTMLFormElement>, id: number) => {
         e.preventDefault();
         const data = new FormData(e.currentTarget);
         const teamASide = data.get("dire") === "A" ? "DIRE" : "RADIANT";
@@ -158,19 +155,33 @@ export default function Inhouses() {
         <Page title="In-houses" subtitle="Pick 10 players and the most even teams. After the game, report who won and which team played Dire; an admin approves it before ELO changes.">
             {user ? (
                 <>
-                    <Panel title="Balance teams" meta={`${chosen.length}/10 players`}>
-                        <form onSubmit={addPlayer} className="flex gap-2">
+                    {/*Not clipped, so the suggestion list can hang below the panel*/}
+                    <Panel title="Balance teams" meta={`${chosen.length}/10 players`} className="overflow-visible!">
+                        <form onSubmit={(e) => { e.preventDefault(); if (searchMatch) add(searchMatch); }} className="flex gap-2">
                             <label htmlFor="inhouse-player" className="sr-only">Player to add</label>
-                            <input id="inhouse-player" list="inhouse-player-names" value={search}
-                                   onChange={(e) => setSearch(e.target.value)} disabled={chosen.length === 10}
-                                   autoComplete="off" spellCheck={false} placeholder="Add a player…"
-                                   className="text-input w-64 min-w-0"/>
-                            <datalist id="inhouse-player-names">
-                                {players?.filter(player => !chosen.includes(player.steamId)).map(player => (
-                                    <option key={player.steamId} value={player.username}/>
-                                ))}
-                            </datalist>
-                            <button className="secondary-button" disabled={!searchMatch}>Add</button>
+                            {/*Our own list rather than a datalist, which iOS only offers in the bar above the keyboard.
+                               Shown while the input has focus; pressing a suggestion keeps that focus, so the keyboard
+                               stays up for the next player*/}
+                            <div className="group relative w-64 min-w-0">
+                                <input id="inhouse-player" value={search}
+                                       onChange={(e) => setSearch(e.target.value)} disabled={chosen.length === 10}
+                                       autoComplete="off" spellCheck={false} placeholder="Add a player…"
+                                       className="text-input w-full"/>
+                                {matching.length > 0 && (
+                                    <ul aria-label="Matching players" onMouseDown={(e) => e.preventDefault()}
+                                        className="absolute inset-x-0 top-full z-10 mt-1 hidden overflow-hidden rounded-md border border-rule bg-panel-raised py-1 shadow-lg group-focus-within:block">
+                                        {matching.slice(0, 8).map(player => (
+                                            <li key={player.steamId}>
+                                                <button type="button" onClick={() => add(player)}
+                                                        className="flex w-full cursor-pointer justify-between gap-2 px-3 py-2 text-left hover:bg-white/5">
+                                                    <span className="truncate">{player.username}</span>
+                                                    <span className="figures text-ash">{formatElo(player.elo)}</span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
                         </form>
                         {chosen.length > 0 && (
                             <ul className="mt-4 grid max-w-2xl gap-x-6 sm:grid-cols-2">
@@ -326,7 +337,7 @@ export default function Inhouses() {
                                         </div>
                                         <div className="ml-auto flex gap-3">
                                             <button type="button" className="secondary-button" disabled={busy} onClick={() => setConfirming({id, kind: "cancel"})}>Cancel</button>
-                                            <button className="primary-button" disabled={busy}>Send result</button>
+                                            <button type="submit" className="primary-button" disabled={busy}>Send result</button>
                                         </div>
                                     </form>
                                 )}

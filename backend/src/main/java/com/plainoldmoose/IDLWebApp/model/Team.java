@@ -7,12 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.ToIntFunction;
 
-/**
- * Represents a team in a given season.
- */
 @Entity
 @Getter
 @Setter
@@ -44,4 +43,9 @@ public class Team {
 
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
     private List<TeamMember> members = new ArrayList<>();
+
+    // The season table's order: most wins, then fewest losses. Sorts are stable, so ties keep the season's own team order
+    public static <T> Comparator<T> tableOrder(ToIntFunction<T> wins, ToIntFunction<T> losses) {
+        return Comparator.comparingInt(wins).reversed().thenComparingInt(losses);
+    }
 }

@@ -9,6 +9,10 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    # typescript-eslint only supports the TypeScript versions it lists, so a new TypeScript major waits until it does
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

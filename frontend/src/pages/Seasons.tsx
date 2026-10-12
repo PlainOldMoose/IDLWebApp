@@ -1,19 +1,17 @@
-import {type FormEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef, useState} from "react";
 import {Link} from "react-router";
 import {useCreateSeason, useCurrentUser, useSeasons} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDateRange} from "../util/format.ts";
+import {formatDateRange, isLegacySeason} from "../util/format.ts";
 import {statusStyles} from "../util/statusStyles.ts";
 
 export default function Seasons() {
-    // Newest first, as the API returns them
     const {data: seasons, isPending, isError} = useSeasons();
     const {data: user} = useCurrentUser();
     const createSeason = useCreateSeason();
     const dialogRef = useRef<HTMLDialogElement>(null);
-    // Tracked so the end date can't be picked before it
     const [startDate, setStartDate] = useState("");
 
     const openDialog = () => {
@@ -21,7 +19,7 @@ export default function Seasons() {
         dialogRef.current?.showModal();
     };
 
-    const handleCreate = (e: FormEvent<HTMLFormElement>) => {
+    const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
         const data = new FormData(form);
@@ -40,7 +38,6 @@ export default function Seasons() {
 
     const inputClass = "text-input mt-2 block w-full";
 
-    // Only admins get the button; the API enforces the same rule
     const header = {
         title: "Seasons",
         aside: user?.admin && (
@@ -68,7 +65,7 @@ export default function Seasons() {
                         {createSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't create the season. Refresh and try again.</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={createSeason.isPending}>Create</button>
+                            <button type="submit" className="primary-button" disabled={createSeason.isPending}>Create</button>
                         </div>
                     </form>
                 </dialog>
@@ -87,10 +84,22 @@ export default function Seasons() {
                         <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
                                   className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
-                                <p className={`flex items-center gap-2 text-sm font-medium ${statusStyles[season.status].text}`}>
-                                    <span aria-hidden="true" className={`size-2.5 rounded-full border-2 ${statusStyles[season.status].node}`}/>
-                                    {statusStyles[season.status].label}
-                                </p>
+                                <div className="flex items-center justify-between gap-3 text-sm font-medium">
+                                    <p className={`flex items-center gap-2 ${statusStyles[season.status].text}`}>
+                                        <span aria-hidden="true" className={`size-2.5 rounded-full border-2 ${statusStyles[season.status].node}`}/>
+                                        {statusStyles[season.status].label}
+                                    </p>
+                                    {/*Same warning as on the season's own page, so the card says what you're opening*/}
+                                    {isLegacySeason(season.name) && (
+                                        <p className="flex items-center gap-1.5 text-warning" title="Imported from the old league records; some players are no longer tracked">
+                                            {/*Phosphor's Warning*/}
+                                            <svg aria-hidden="true" width={16} height={16} viewBox="0 0 256 256" fill="currentColor" className="shrink-0">
+                                                <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
+                                            </svg>
+                                            Legacy
+                                        </p>
+                                    )}
+                                </div>
                                 <h2 className="mt-3 font-display text-4xl font-bold leading-none">{season.name}</h2>
                                 <p className="figures mt-2 text-ash">{formatDateRange(season.startDate, season.endDate)}</p>
                             </Link>

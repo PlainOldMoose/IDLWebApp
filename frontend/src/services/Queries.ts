@@ -1,7 +1,7 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import type {Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+import type {Draft, Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
-// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod. json, if given, is sent as the body
+// /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> => {
     // Spring's CSRF check wants the XSRF-TOKEN cookie echoed back as a header on writes
     const headers = new Headers(init.headers);
@@ -15,7 +15,9 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
         const problem = await response.json().catch(() => null);
         throw new Error(problem?.detail ?? `${response.status} ${response.statusText}: ${path}`);
     }
-    return response.status === 204 ? undefined as T : response.json();
+    // Writes answer 201/204 with no body
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined as T;
 };
 
 export function usePlayers(enabled = true) {
@@ -69,7 +71,18 @@ export function useDeleteSeason(seasonId: string | undefined) {
     });
 }
 
-// Every match, or only one season's
+export function useCompleteSeason(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (winnerTeamId: string) =>
+            request<void>(`/api/seasons/${seasonId}/complete`, {method: "POST", json: {winnerTeamId}}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+        },
+    });
+}
+
 export function useMatches(seasonId?: string, enabled = true) {
     return useQuery({
         queryKey: ["matches", seasonId],
@@ -78,8 +91,7 @@ export function useMatches(seasonId?: string, enabled = true) {
     });
 }
 
-// A season game the league ticket missed. radiant and dire are Steam IDs. Everyone's ELO is replayed from the game on,
-// so everything cached is stale
+// Everyone's ELO is replayed from the game on, so everything cached is stale
 export function useCreateMatch() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -135,29 +147,90 @@ export function useSeasonDetail(seasonId: string | undefined) {
     });
 }
 
-export function useSeasonSignups(seasonId: string | undefined, enabled: boolean) {
+export function useSeasonSignups(seasonId: string | undefined) {
     return useQuery({
         queryKey: ["seasonSignups", seasonId],
         queryFn: () => request<SeasonSignup[]>(`/api/seasons/${seasonId}/signups`),
-        enabled: enabled && !!seasonId
+        enabled: !!seasonId
     })
 }
 
 export function useSeasonSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (body: { rolePreference: string, willingToCaptain: boolean }) =>
+        mutationFn: (body: { rolePreference: string | null, willingToCaptain: boolean, sub: boolean }) =>
             request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
     });
 }
 
-// Removes the signed-in player's own sign-up
 export function useWithdrawSignup(seasonId: string | undefined) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
+    });
+}
+
+// Polled, so everyone watching sees each pick without refreshing
+export function useDraft(seasonId: string | undefined, enabled = true) {
+    return useQuery({
+        queryKey: ["draft", seasonId],
+        queryFn: () => request<Draft>(`/api/seasons/${seasonId}/draft`),
+        enabled: !!seasonId && enabled,
+        refetchInterval: 5000,
+    });
+}
+
+// Closes sign-ups, scores everyone and makes the first willing captains captain
+export function useStartDraft(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft`, {method: "POST"}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+            void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
+        },
+    });
+}
+
+export function useDraftPick(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (steamId: string) =>
+            request<void>(`/api/seasons/${seasonId}/draft/picks`, {method: "POST", json: {steamId}}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
+    });
+}
+
+// Locks the team names; matches can be added from here
+export function useStartSeason(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft/start`, {method: "POST"}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
+            void queryClient.invalidateQueries({queryKey: ["seasons"]});
+        },
+    });
+}
+
+export function useDraftCaptain(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({steamId, captain}: { steamId: string, captain: boolean }) =>
+            request<void>(`/api/seasons/${seasonId}/draft/captains/${steamId}`, {method: captain ? "PUT" : "DELETE"}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
+    });
+}
+
+export function useRenameTeam(seasonId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({teamId, name}: { teamId: string, name: string }) =>
+            request<void>(`/api/seasons/${seasonId}/draft/teams/${teamId}`, {method: "PUT", json: {name}}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
     });
 }
 
@@ -178,7 +251,6 @@ export function usePendingInhouses(enabled: boolean) {
     });
 }
 
-// The 3 most even ways to split 10 players, most even first
 export function useInhouseBalance(steamIds: string[]) {
     return useQuery({
         queryKey: ["inhouseBalance", steamIds],

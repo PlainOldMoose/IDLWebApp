@@ -4,7 +4,6 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSignupResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.SeasonSignup;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
-import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonSignupRepository;
@@ -13,7 +12,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -25,7 +28,7 @@ public class SeasonSignupService {
     private final PlayerRepository playerRepository;
 
     // Signing up again updates the existing sign-up, so players can change their preferences
-    public SeasonSignupResponse signup(UUID seasonId, String steamId, String rolePreference, boolean willingToCaptain) {
+    public SeasonSignupResponse signup(UUID seasonId, String steamId, String rolePreference, boolean willingToCaptain, boolean sub) {
         Season season = openSeason(seasonId);
 
         SeasonSignup seasonSignup = seasonSignupRepository.findBySeasonIdAndPlayerSteamId(seasonId, steamId)
@@ -36,11 +39,17 @@ public class SeasonSignupService {
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found")));
                     return created;
                 });
-        seasonSignup.setRolePreference(rolePreference);
-        seasonSignup.setWillingToCaptain(willingToCaptain);
+        // Switching from sub to player joins the player queue now, so overflow stays first come, first served
+        if (seasonSignup.isSub() && !sub) {
+            seasonSignup.setSignedUpAt(LocalDateTime.now());
+        }
+        // Dedicated subs fill in for a team, so they have no roles and can't captain
+        seasonSignup.setSub(sub);
+        seasonSignup.setRolePreference(sub ? null : rolePreference.trim());
+        seasonSignup.setWillingToCaptain(!sub && willingToCaptain);
 
         SeasonSignup saved = seasonSignupRepository.save(seasonSignup);
-        return mapToResponse(saved);
+        return mapToResponse(saved, saved.isSub());
     }
 
     // Does nothing if the player wasn't signed up, so a repeated withdraw still succeeds
@@ -50,14 +59,25 @@ public class SeasonSignupService {
                 .ifPresent(seasonSignupRepository::delete);
     }
 
+    // In sign-up order. Once sign-ups close, player sign-ups that didn't make a team are subs too
     public List<SeasonSignupResponse> getSignups(UUID seasonId) {
-        return seasonSignupRepository.findBySeasonId(seasonId)
+        List<SeasonSignup> signups = seasonSignupRepository.findBySeasonId(seasonId)
                 .stream()
-                .map(this::mapToResponse)
+                .sorted(Comparator.comparing(SeasonSignup::getSignedUpAt))
+                .toList();
+        boolean open = seasonRepository.findById(seasonId)
+                .map(season -> season.getStatus() == SeasonStatus.REGISTRATION)
+                .orElse(true);
+        List<SeasonSignup> players = signups.stream().filter(signup -> !signup.isSub()).toList();
+        int teamPlaces = open ? players.size() : DraftService.teamPlaces(players.size());
+        // SeasonSignup has no equals, so this matches by identity
+        Set<SeasonSignup> overflow = new HashSet<>(players.subList(teamPlaces, players.size()));
+
+        return signups.stream()
+                .map(signup -> mapToResponse(signup, signup.isSub() || overflow.contains(signup)))
                 .toList();
     }
 
-    // Sign-ups can only change while the season is taking them
     private Season openSeason(UUID seasonId) {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
@@ -68,7 +88,7 @@ public class SeasonSignupService {
         return season;
     }
 
-    private SeasonSignupResponse mapToResponse(SeasonSignup signup) {
+    private SeasonSignupResponse mapToResponse(SeasonSignup signup, boolean sub) {
         return new SeasonSignupResponse(
                 signup.getPlayer()
                         .getSteamId(),
@@ -76,7 +96,8 @@ public class SeasonSignupService {
                         .getUsername(),
                 signup.getRolePreference(),
                 signup.isWillingToCaptain(),
-                signup.getSignedUpAt()
+                signup.getSignedUpAt(),
+                sub
         );
     }
 }

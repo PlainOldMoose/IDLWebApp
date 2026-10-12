@@ -10,9 +10,10 @@ import type {Season} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 5;
 
-// The season people most likely want: one taking sign-ups, else one in progress, else the latest (API sends newest first)
+// The season people most likely want: one taking sign-ups or drafting, else one in progress, else the latest (API sends
+// newest first)
 const pickCurrentSeason = (seasons: Season[]): Season | undefined =>
-    seasons.find(s => s.status === "REGISTRATION")
+    seasons.find(s => s.status === "REGISTRATION" || s.status === "DRAFTING")
     ?? seasons.find(s => s.status === "ACTIVE")
     ?? seasons[0];
 

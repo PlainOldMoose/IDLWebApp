@@ -39,7 +39,7 @@ npm-debug.log*
 .env*
 
 # ===================
-# IDEs & Editors
+# IDE & Editors
 # ===================
 
 # IntelliJ IDEA
@@ -73,5 +73,5 @@ HELP.md
 
 .playwright/
 
-# Real league data, kept locally only (loaded by backend/scripts/reset-db.sh)
+# Real league data, kept locally only
 backend/src/main/resources/data.sql

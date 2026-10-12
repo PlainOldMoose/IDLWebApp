@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea or improvement
+about: For developers - a detailed proposal covering the problem, solution and alternatives. Not technical? Use Suggestion instead.
 labels: enhancement
 ---
 

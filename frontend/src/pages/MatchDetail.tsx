@@ -1,14 +1,19 @@
-import {type FormEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {useCurrentUser, useDeleteMatch, useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
+import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange} from "../util/format.ts";
+import NoValue from "../components/NoValue.tsx";
+import {formatDate, formatElo, formatEloChange, formatOrdinal, isLegacySeason, sideName} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
+const TEAM_SIZE = 5;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
+const winnerRing = {RADIANT: "ring-1 ring-radiant/70", DIRE: "ring-1 ring-dire/70"};
+const changeColour = (change: number) => change > 0 ? "text-win" : change < 0 ? "text-loss" : "";
 
 // Our own match page, laid out like Stratz's: who played on each side and the ELO they took in. In-houses have no Stratz page
 export default function MatchDetail() {
@@ -17,7 +22,6 @@ export default function MatchDetail() {
     const {data: user} = useCurrentUser();
     const deleteMatch = useDeleteMatch(matchId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    // The admin has to type "delete" before the button unlocks
     const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
 
@@ -27,7 +31,7 @@ export default function MatchDetail() {
         deleteDialogRef.current?.showModal();
     };
 
-    const handleDelete = (e: FormEvent<HTMLFormElement>) => {
+    const handleDelete = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         deleteMatch.mutate(undefined, {onSuccess: () => navigate(`/seasons/${data?.match.seasonId}`)});
     };
@@ -37,6 +41,23 @@ export default function MatchDetail() {
 
     const {match, players} = data;
     const radiantWon = match.winner === "RADIANT";
+    const teams = sides.map(side => {
+        const team = players.filter(p => p.side === side);
+        const elos = team.flatMap(p => p.eloBefore ?? []);
+        const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? sideName[side];
+        const standing = side === "RADIANT" ? data.radiantStanding : data.direStanding;
+        // Players no longer tracked leave a side short; their slots are shown as unknown
+        const missing = Math.max(0, TEAM_SIZE - team.length);
+        // Only with all five ELOs known, as an average of fewer would mislead
+        const avgElo = elos.length === TEAM_SIZE ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
+        return {side, team, name, standing, missing, avgElo};
+    });
+    const [radiantTeam, direTeam] = teams;
+    // Worked out by the API with the ELO replay's own formula, only when all 10 have an ELO record; Dire's is the rest,
+    // so the two always add to 100
+    const radiantChance = data.radiantWinChance === null ? null : Math.round(100 * data.radiantWinChance);
+    // Every player has an ELO record whenever there's a chance, so both averages are set
+    const eloGap = Math.abs((radiantTeam.avgElo ?? 0) - (direTeam.avgElo ?? 0));
 
     return (
         <Page
@@ -45,20 +66,20 @@ export default function MatchDetail() {
                     {/*Sits on the baseline and stands one capital tall, so it spans the letters rather than the font's line box*/}
                     <span aria-hidden="true" className={`h-[1cap] w-1 shrink-0 ${radiantWon ? "bg-radiant" : "bg-dire"}`}/>
                     {/*Season games name the winning team; in-houses have no teams, only sides*/}
-                    {(radiantWon ? match.radiantTeamName : match.direTeamName) ?? (radiantWon ? "Radiant" : "Dire")} victory
+                    {(radiantWon ? radiantTeam : direTeam).name} victory
                 </span>
             }
             subtitle={
                 <span className="flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="figures">{formatDate(match.timePlayed)}</span>
+                    <span>{formatDate(match.timePlayed)}</span>
                     <span>{match.seasonName ?? "In-house"}</span>
-                    <span className="figures">{match.avgElo.toLocaleString("en-GB")} avg ELO</span>
-                    <span className="figures">Match {match.matchId}</span>
+                    {match.avgElo !== null && <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>}
+                    <span>Match {match.matchId}</span>
                 </span>
             }
             aside={match.seasonName && (
                 <div className="flex flex-wrap gap-3">
-                    {/* Only admins get the button; the API enforces the same rule, and refuses a finished season's matches */}
+                    {/*The API refuses a finished season's matches*/}
                     {user?.admin && (
                         <button className="secondary-button text-danger" onClick={openDeleteDialog}>Delete match</button>
                     )}
@@ -68,30 +89,66 @@ export default function MatchDetail() {
                 </div>
             )}
         >
+            {match.seasonName && isLegacySeason(match.seasonName) && (
+                <section aria-labelledby="legacy-match-title" className="mb-4 flex gap-3 rounded-lg border border-warning bg-warning/10 p-4">
+                    {/*Phosphor's Warning*/}
+                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="mt-0.5 shrink-0 text-warning">
+                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
+                    </svg>
+                    <div>
+                        <h2 id="legacy-match-title" className="font-semibold text-warning">Legacy season</h2>
+                        <p className="mt-1 text-bone/80">
+                            This match comes from the old league records. Some players are no longer tracked, so teams, results
+                            and ELO may look off.
+                        </p>
+                    </div>
+                </section>
+            )}
+            {/*Radiant left and Dire right, the same as the team panels below*/}
+            {radiantChance !== null && (
+                <Panel title="Pre-game odds" className="mb-4">
+                    <StatStrip stats={[
+                        {label: radiantTeam.name, value: `${radiantChance}%`},
+                        {label: "Avg ELO gap", value: formatElo(eloGap)},
+                        {label: direTeam.name, value: `${100 - radiantChance}%`},
+                    ]}/>
+                </Panel>
+            )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
-                {sides.map(side => {
-                    const radiant = side === "RADIANT";
+                {teams.map(({side, team, name, standing, missing, avgElo}) => {
                     const won = match.winner === side;
-                    const team = players.filter(p => p.side === side);
-                    const elos = team.flatMap(p => p.eloBefore ?? []);
-                    const avgElo = elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
-                    const teamName = radiant ? match.radiantTeamName : match.direTeamName;
+                    const played = standing ? standing.wins + standing.losses : 0;
                     return (
                         <Panel key={side}
                                title={
                                    <span className="flex items-baseline gap-2">
-                                       {teamName ?? (radiant ? "Radiant" : "Dire")}
-                                       {teamName && <span className="text-sm font-normal text-ash">{radiant ? "Radiant" : "Dire"}</span>}
+                                       {name}
+                                       {name !== sideName[side] && <span className="text-sm font-normal text-ash">{sideName[side]}</span>}
                                    </span>
                                }
                                meta={
-                                   <span className="flex gap-3">
-                                       {avgElo !== null && <span className="figures">{formatElo(avgElo)} avg</span>}
-                                       <span className={won ? "font-medium text-bone" : ""}>{won ? "Won" : "Lost"}</span>
+                                   <span className="flex items-center gap-3">
+                                       {/*tabular-nums rather than figures: figures' narrowed type is too thin to read at this size*/}
+                                       {avgElo !== null && <span className="text-bone tabular-nums">{formatElo(avgElo)} avg</span>}
+                                       {/*Filled for the winner, hollow for the loser, so the result doesn't rest on the side colour*/}
+                                       <span className={`rounded-[3px] border px-2 py-0.5 font-semibold ${won ? "border-bone bg-bone text-night" : "border-rule text-ash"}`}>
+                                           {won ? "Won" : "Lost"}
+                                       </span>
                                    </span>
                                }
-                               className={won ? (radiant ? "ring-1 ring-radiant/70" : "ring-1 ring-dire/70") : ""}
+                               className={won ? winnerRing[side] : ""}
                                padded={false}>
+                            {/*Where the team stood in the season just before this game; a first game has no standing or rate yet*/}
+                            {standing && (
+                                <div className="border-b border-rule pt-2 pb-3">
+                                    <h3 className="mb-1.5 text-center text-sm text-ash">Coming into this match</h3>
+                                    <StatStrip stats={[
+                                        {label: "Standing", value: played ? `${formatOrdinal(standing.position)} of ${standing.teamCount}` : "–"},
+                                        {label: "Record", value: `${standing.wins}W ${standing.losses}L`},
+                                        {label: "Win rate", value: played ? `${Math.round(100 * standing.wins / played)}%` : "–"},
+                                    ]}/>
+                                </div>
+                            )}
                             {team.length ? (
                                 <>
                                     <div aria-hidden="true" className={`${rowColumns} px-3 pt-1.5 pb-2 text-sm text-ash`}>
@@ -102,28 +159,38 @@ export default function MatchDetail() {
                                     <ul>
                                         {team.map(player => (
                                             <li key={player.steamId}>
-                                                <Link to={`/players/${player.steamId}`} className={`row-link ${rowColumns} items-center px-3 py-2`}>
-                                                    <span className="flex min-w-0 items-center gap-2">
+                                                <Link to={`/players/${player.steamId}`} className={`row-link ${rowColumns} items-center px-3 py-2.5 text-lg`}>
+                                                    {/*On the name's line, so a sub doesn't make their row, and the panel, taller*/}
+                                                    <span className="flex min-w-0 items-baseline gap-2">
                                                         <span className="truncate">{player.username}</span>
                                                         {player.sub && (
-                                                            <span className="shrink-0 rounded-sm bg-panel-raised px-1 text-xs text-ash">
-                                                                Sub{player.subbingFor && <span className="sr-only"> for {player.subbingFor}</span>}
+                                                            <span className="truncate text-sm text-ash">
+                                                                {player.subbingFor ? `Sub for ${player.subbingFor}` : "Sub"}
                                                             </span>
                                                         )}
                                                     </span>
                                                     {player.eloBefore === null || player.eloChange === null ? (
                                                         <span className="col-span-2 text-right text-ash" title="No ELO record for this match">
-                                                            <span aria-hidden="true">&ndash;</span><span className="sr-only">No ELO record</span>
+                                                            <NoValue label="No ELO record"/>
                                                         </span>
                                                     ) : (
                                                         <>
                                                             <span className="figures text-right"><span className="sr-only">ELO </span>{formatElo(player.eloBefore)}</span>
-                                                            <span className={`figures text-right ${player.eloChange < 0 ? "text-ash" : ""}`}>
-                                                                {formatEloChange(player.eloChange)}
+                                                            {/*The sign carries gain or loss; the colour only backs it up*/}
+                                                            <span className={`figures text-right ${changeColour(player.eloChange)}`}>
+                                                                <span className="sr-only">Change </span>{formatEloChange(player.eloChange)}
                                                             </span>
                                                         </>
                                                     )}
                                                 </Link>
+                                            </li>
+                                        ))}
+                                        {Array.from({length: missing}, (_, i) => (
+                                            <li key={i} className={`${rowColumns} items-center px-3 py-2.5 text-lg text-ash`}>
+                                                <span>Unknown player</span>
+                                                <span className="col-span-2 text-right">
+                                                    <NoValue label="No ELO record"/>
+                                                </span>
                                             </li>
                                         ))}
                                     </ul>
@@ -153,7 +220,7 @@ export default function MatchDetail() {
                         {deleteMatch.isError && <p role="alert" className="text-sm text-ash">{deleteMatch.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
+                            <button type="submit" className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
                         </div>
                     </form>
                 </dialog>

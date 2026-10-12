@@ -12,7 +12,7 @@ class SeasonSignupRequestTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     private boolean valid(String rolePreference) {
-        return validator.validate(new SeasonSignupRequest(rolePreference, false)).isEmpty();
+        return validator.validate(new SeasonSignupRequest(rolePreference, false, false)).isEmpty();
     }
 
     @Test
@@ -21,8 +21,14 @@ class SeasonSignupRequestTest {
             assertEquals(true, valid(ok), ok);
         }
         // The last one matches the pattern but is too long for the column
-        for (String bad : new String[]{"1 > 1", "2/2 > 1", "6", "1 >", ">1", "1,2", "any > 1", "anyone", "", null, "1 " + ">".repeat(300) + " 2"}) {
+        for (String bad : new String[]{"1 > 1", "2/2 > 1", "1\n> 1", "6", "1 >", ">1", "1,2", "any > 1", "anyone", "", null, "1 " + ">".repeat(300) + " 2"}) {
             assertEquals(false, valid(bad), bad);
         }
+    }
+
+    @Test
+    void subsNeedNoRolePreference() {
+        assertEquals(true, validator.validate(new SeasonSignupRequest(null, false, true)).isEmpty());
+        assertEquals(false, validator.validate(new SeasonSignupRequest(null, false, false)).isEmpty());
     }
 }
