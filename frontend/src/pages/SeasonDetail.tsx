@@ -23,6 +23,7 @@ import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import SeasonDraft from "./SeasonDraft.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
+import {hasDefaultName} from "../util/draft.ts";
 import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
 import type {SeasonSignup} from "../types.ts";
 
@@ -64,6 +65,8 @@ export default function SeasonDetail() {
     const {data: draft} = useDraft(seasonId, season?.status === "DRAFTING");
     // Same rule as the API: the pool only empties once every team has a captain and 5 players
     const draftComplete = !!draft && !draft.pool.length;
+    // Starting doesn't wait for these, so one absent captain can't hold up the league; the dialog just says so
+    const defaultNamed = draft?.teams.filter(hasDefaultName).length ?? 0;
     const startSeason = useStartSeason(seasonId);
     const startSeasonDialogRef = useRef<HTMLDialogElement>(null);
 
@@ -215,7 +218,9 @@ export default function SeasonDetail() {
             subtitle={
                 <>
                     <span className="figures">{formatDateRange(season.startDate, season.endDate)}</span>
-                    <span className={`ml-4 font-medium ${statusStyles[season.status].text}`}>{statusStyles[season.status].label}</span>
+                    <span className={`ml-4 font-medium ${statusStyles[season.status].text}`}>
+                        {draftComplete ? "Draft complete" : statusStyles[season.status].label}
+                    </span>
                     {user?.admin && (
                         <button aria-label="Delete season" onClick={openDeleteDialog} disabled={!deletable}
                                 title={deletable ? "Delete season" : "Seasons with teams or matches can't be deleted"}
@@ -241,7 +246,12 @@ export default function SeasonDetail() {
                         <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
                     )
                 ) : season.status === "DRAFTING" ? (
-                    user?.admin && draftComplete && <button className="primary-button" onClick={openStartSeasonDialog}>Start season</button>
+                    user?.admin && (
+                        <button className="primary-button" onClick={openStartSeasonDialog} disabled={!draftComplete}
+                                title={draftComplete ? undefined : "Every team needs 5 players first"}>
+                            Start season
+                        </button>
+                    )
                 ) : canAddMatch ? (
                     <div className="flex gap-3">
                         <button className="secondary-button" onClick={openEndDialog}>End season</button>
@@ -554,6 +564,7 @@ export default function SeasonDetail() {
                 </dialog>
             )}
 
+
             {user?.admin && draftComplete && (
                 <dialog ref={startSeasonDialogRef} aria-labelledby="start-season-title" className="dialog">
                     <h2 id="start-season-title" className="font-display text-3xl font-bold">Start season</h2>
@@ -562,6 +573,11 @@ export default function SeasonDetail() {
                             This starts <strong>{season.name}</strong> with the teams as drafted. Captains can&apos;t rename their teams
                             after this, and matches can be added.
                         </p>
+                        {defaultNamed > 0 && (
+                            <p className="text-sm text-ash">
+                                {defaultNamed === 1 ? "1 team still has its default name." : `${defaultNamed} teams still have their default name.`}
+                            </p>
+                        )}
                         {startSeason.isError && <p role="alert" className="text-sm text-ash">{startSeason.error.message}</p>}
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => startSeasonDialogRef.current?.close()}>Cancel</button>

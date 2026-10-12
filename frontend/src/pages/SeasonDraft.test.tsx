@@ -199,17 +199,87 @@ const completeDraft: Draft = {
     teamCount: 2,
 };
 
-it("says the draft is complete and lets an admin start the season", async () => {
+const renamed = (draft: Draft, ...teamIds: string[]): Draft => ({
+    ...draft,
+    teams: draft.teams.map(team => teamIds.includes(team.teamId) ? {...team, name: `${team.name} renamed`} : team),
+});
+
+const note = "Name your team before the season starts.";
+
+it("greys out Start season in the header while picks remain", async () => {
+    renderDraft(fullDraft, as("someadmin", true));
+
+    await section("Pool");
+    expect((screen.getByRole("button", {name: "Start season"}) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Drafting")).toBeTruthy();
+});
+
+it("hides the pool and labels the season draft complete after the last pick", async () => {
+    renderDraft(completeDraft);
+
+    await section("Custard's team");
+    expect(screen.queryByRole("heading", {name: "Pool"})).toBeNull();
+    expect(screen.getByText("Draft complete")).toBeTruthy();
+    expect(screen.queryByText("Drafting")).toBeNull();
+});
+
+it("lets an admin start the season from the header once every team is full", async () => {
     renderDraft(completeDraft, as("someadmin", true));
 
-    const pool = await section("Pool");
-    expect(within(pool).getByText("Draft complete. An admin starts the season once the team names are in.")).toBeTruthy();
-
-    await userEvent.click(screen.getByRole("button", {name: "Start season"}));
+    await section("Custard's team");
+    const start = screen.getByRole("button", {name: "Start season"}) as HTMLButtonElement;
+    expect(start.disabled).toBe(false);
+    await userEvent.click(start);
     const dialog = screen.getByRole("dialog", {name: "Start season"});
     await userEvent.click(within(dialog).getByRole("button", {name: "Start season"}));
 
     await vi.waitFor(() => expect(sent).toContainEqual({method: "POST", path: "/api/seasons/s1/draft/start", body: undefined}));
+});
+
+it.each([
+    {draft: completeDraft, warning: "2 teams still have their default name."},
+    {draft: renamed(completeDraft, "t1"), warning: "1 team still has its default name."},
+])("warns before starting with default team names: $warning", async ({draft, warning}) => {
+    renderDraft(draft, as("someadmin", true));
+
+    await section("Jabba's team");
+    await userEvent.click(screen.getByRole("button", {name: "Start season"}));
+    expect(within(screen.getByRole("dialog", {name: "Start season"})).getByText(warning)).toBeTruthy();
+});
+
+it("doesn't warn when every team has been named", async () => {
+    renderDraft(renamed(completeDraft, "t1", "t2"), as("someadmin", true));
+
+    await section("Custard's team renamed");
+    await userEvent.click(screen.getByRole("button", {name: "Start season"}));
+    expect(within(screen.getByRole("dialog", {name: "Start season"})).queryByText(/default name/)).toBeNull();
+});
+
+it("notes to a captain on a default name that they should rename their team", async () => {
+    renderDraft(completeDraft, as("custard"));
+
+    const prompt = (await screen.findByText(note)).parentElement!;
+    await userEvent.click(within(prompt).getByRole("button", {name: "Rename team"}));
+
+    const dialog = screen.getByRole("dialog", {name: "Rename team"});
+    const name = within(dialog).getByRole("textbox", {name: "Team name"}) as HTMLInputElement;
+    expect(name.value).toBe("Custard's team");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Custard Pie");
+    await userEvent.click(within(dialog).getByRole("button", {name: "Save"}));
+
+    await vi.waitFor(() => expect(sent).toContainEqual({method: "PUT", path: "/api/seasons/s1/draft/teams/t1", body: {name: "Custard Pie"}}));
+});
+
+it.each([
+    {who: "a captain whose team is named", draft: renamed(completeDraft, "t1"), user: as("custard")},
+    {who: "a player who isn't a captain", draft: completeDraft, user: as("p01")},
+    {who: "while picks remain", draft: fullDraft, user: as("custard")},
+])("doesn't show the note to $who", async ({draft, user}) => {
+    renderDraft(draft, user);
+
+    await screen.findAllByRole("heading", {name: /team/});
+    expect(screen.queryByText(note)).toBeNull();
 });
 
 it("lets captains rename after the last pick, but only admins start the season", async () => {
@@ -219,9 +289,3 @@ it("lets captains rename after the last pick, but only admins start the season",
     expect(screen.queryByRole("button", {name: "Start season"})).toBeNull();
 });
 
-it("doesn't offer to start the season while picks remain", async () => {
-    renderDraft(fullDraft, as("someadmin", true));
-
-    await section("Pool");
-    expect(screen.queryByRole("button", {name: "Start season"})).toBeNull();
-});

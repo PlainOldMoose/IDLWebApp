@@ -5,6 +5,7 @@ import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {formatElo} from "../util/format.ts";
+import {hasDefaultName} from "../util/draft.ts";
 import type {DraftPlayer, DraftTeam, SteamUser} from "../types.ts";
 
 const TEAM_SIZE = 5;
@@ -40,6 +41,9 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
     // Same rule as the API: captains are fixed once the first pick is in
     const canChangeCaptains = !!user?.admin && draft.teams.every(team => team.members.length === 1);
     const columns = poolColumns(canChangeCaptains && missingCaptains > 0);
+    // Same rule as the API: the pool only empties once every team has a captain and 5 players
+    const complete = !draft.pool.length;
+    const myDefaultNamedTeam = draft.teams.find(team => team.captainSteamId === user?.steamId && hasDefaultName(team));
 
     const openRenameDialog = (team: DraftTeam) => {
         rename.reset();
@@ -66,6 +70,17 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
 
     return (
         <>
+            {complete && myDefaultNamedTeam && (
+                // A one-line take on a legacy season's warning note
+                <section aria-label="Name your team" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning bg-warning/10 px-4 py-2.5">
+                    {/*Phosphor's Warning*/}
+                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="shrink-0 text-warning">
+                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
+                    </svg>
+                    <p className="flex-1 font-semibold text-warning">Name your team before the season starts.</p>
+                    <button type="button" className="secondary-button px-3 py-1 text-sm" onClick={() => openRenameDialog(myDefaultNamedTeam)}>Rename team</button>
+                </section>
+            )}
             {/*Picks arrive by polling, so screen readers hear whose turn it is without hunting for the label*/}
             <p className="sr-only" aria-live="polite">{onTheClock ? `${onTheClock.name} is picking now.` : ""}</p>
             {missingCaptains > 0 && (
@@ -93,9 +108,9 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
 
             {/*Pool first in the markup, so on phones it comes before the teams; from lg the board moves above it*/}
             <div className="grid gap-4">
-                <Panel title="Pool" meta={`${draft.pool.length} left`} padded={false} className="min-w-0">
-                    {captain.error && <p role="alert" className="px-3 pt-2 text-sm text-ash">{captain.error.message}</p>}
-                    {draft.pool.length ? (<>
+                {!complete && (
+                    <Panel title="Pool" meta={`${draft.pool.length} left`} padded={false} className="min-w-0">
+                        {captain.error && <p role="alert" className="px-3 pt-2 text-sm text-ash">{captain.error.message}</p>}
                         {/*From lg the pool flows down four columns so it all fits on screen, each with its own headings*/}
                         <div aria-hidden="true" className="lg:grid lg:grid-cols-4 lg:gap-x-4">
                             {[0, 1, 2, 3].map(column => (
@@ -145,10 +160,8 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
                                 );
                             })}
                         </ul>
-                    </>) : (
-                        <p className="p-3 text-ash">Draft complete. An admin starts the season once the team names are in.</p>
-                    )}
-                </Panel>
+                    </Panel>
+                )}
 
                 {/*Phones jump here from the bar's "View teams"; scroll-mt keeps the heading clear of the bar. From lg it's the
                     board, above the pool and pinned under the navbar like the bar: the first shadow fills the gap above it so

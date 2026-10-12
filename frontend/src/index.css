@@ -32,6 +32,9 @@
     /* Season champions only, always next to the word "Champions" */
     --color-aegis: #E6B94F;
 
+    /* Warning notes, like legacy season data. Brighter and colder than aegis so the two don't get mixed up. Always with a warning icon */
+    --color-warning: #FACC15;
+
     /* Season status, with sign-ups open in the accent: in progress, then finished */
     --color-live: #B39DFF;
     --color-rosewood: #BE9A95;
