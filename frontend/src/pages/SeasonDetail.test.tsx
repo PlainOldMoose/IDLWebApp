@@ -94,6 +94,13 @@ it("keeps the subs list once the season has started", async () => {
     expect(within(subs).queryByText("alice")).toBeNull();
 });
 
+it("hides the subs list during the draft", async () => {
+    renderSeason({status: "DRAFTING", signups: [signup("alice"), signup("carol", true)]});
+
+    await screen.findByText("Drafting");
+    expect(screen.queryByRole("heading", {name: "Subs"})).toBeNull();
+});
+
 it("says when a started season has no subs", async () => {
     renderSeason({status: "ACTIVE", signups: [signup("alice")]});
 

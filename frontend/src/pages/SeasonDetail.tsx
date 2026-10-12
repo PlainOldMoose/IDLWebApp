@@ -376,7 +376,8 @@ export default function SeasonDetail() {
                 </>
             )}
 
-            {season.status !== "REGISTRATION" && (
+            {/*Not while drafting: subs aren't in the pool, so they'd only push it further down*/}
+            {started && (
                 <Panel title="Subs" className="mt-4">
                     {subs.length ? signupList(subs) : <p className="text-ash">No subs for this season.</p>}
                 </Panel>

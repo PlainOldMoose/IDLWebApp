@@ -73,13 +73,23 @@ it("shows each team's total and who is on the clock", async () => {
     renderDraft(fullDraft);
 
     const custards = await section("Custard's team");
-    expect(within(custards).getByText("On the clock")).toBeTruthy();
+    expect(within(custards).getByText("Picking now")).toBeTruthy();
     expect(within(custards).getByText("251")).toBeTruthy();
     expect(within(custards).getByText("Custard")).toBeTruthy();
 
     const jabbas = await section("Jabba's team");
-    expect(within(jabbas).queryByText("On the clock")).toBeNull();
+    expect(within(jabbas).queryByText("Picking now")).toBeNull();
     expect(within(jabbas).getByText("326")).toBeTruthy();
+});
+
+it("keeps the team on the clock in a bar above the pool for phones", async () => {
+    renderDraft(fullDraft);
+
+    const bar = await screen.findByRole("complementary", {name: "Picking now"});
+    expect(within(bar).getByText("Custard's team")).toBeTruthy();
+    expect(within(bar).getByText("1/5")).toBeTruthy();
+    expect(within(bar).getByText("251")).toBeTruthy();
+    expect(within(bar).getByRole("link", {name: "View teams"}).getAttribute("href")).toBe("#teams");
 });
 
 it("lists the pool highest score first", async () => {
