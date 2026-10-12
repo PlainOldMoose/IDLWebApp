@@ -5,7 +5,8 @@ import Panel from "../components/Panel.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, formatRelative} from "../util/format.ts";
+import NoValue from "../components/NoValue.tsx";
+import {formatDate, formatElo, formatEloChange, formatRelative, sideName} from "../util/format.ts";
 import opendotaIcon from "../assets/opendota.png";
 import stratzIcon from "../assets/stratz.png";
 import dotabuffIcon from "../assets/dotabuff.png";
@@ -115,13 +116,13 @@ export default function PlayerDetail() {
 
                                         {/*Too narrow for the side on phones; it's one tap away on the match page*/}
                                         <p className="sr-only flex items-center gap-2 text-sm text-ash sm:not-sr-only">
-                                            {match.side === "RADIANT" ? "Radiant" : "Dire"}
+                                            {sideName[match.side]}
                                             {match.sub && <span className="rounded-sm bg-panel-raised px-1 text-xs">Sub</span>}
                                         </p>
 
                                         {change === null ? (
                                             <p className="text-right text-ash sm:border-l sm:border-rule sm:pl-4" title="No ELO record for this match">
-                                                <span aria-hidden="true">&ndash;</span><span className="sr-only">No ELO record</span>
+                                                <NoValue label="No ELO record"/>
                                             </p>
                                         ) : (
                                             <p className={`figures text-right sm:border-l sm:border-rule sm:pl-4 ${gained ? "" : "text-ash"}`}>

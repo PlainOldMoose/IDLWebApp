@@ -4,8 +4,10 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchPlayerResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.match.TeamStandingResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.model.TeamMember;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
@@ -16,15 +18,18 @@ import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -76,12 +81,54 @@ public class MatchService {
                 .sorted(Comparator.comparing(MatchPlayerResponse::eloBefore, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
-        return new MatchDetailResponse(mapToSummaryResponse(match), players);
+        Map<UUID, TeamStandingResponse> standings = match.getSeason() != null ? standingsGoingInto(match) : Map.of();
+        return new MatchDetailResponse(mapToSummaryResponse(match), players,
+                match.getRadiantTeam() != null ? standings.get(match.getRadiantTeam().getTeamId()) : null,
+                match.getDireTeam() != null ? standings.get(match.getDireTeam().getTeamId()) : null,
+                radiantWinChance(players));
+    }
+
+    // Only when all 10 players have an ELO record: then their ELO going in is what the replay averaged for this game
+    private static Double radiantWinChance(List<MatchPlayerResponse> players) {
+        if (players.size() != 10 || players.stream().anyMatch(p -> p.eloBefore() == null)) return null;
+        return EloService.expectedResult(averageEloBefore(players, Side.RADIANT), averageEloBefore(players, Side.DIRE));
+    }
+
+    private static double averageEloBefore(List<MatchPlayerResponse> players, Side side) {
+        return players.stream().filter(p -> p.side() == side).mapToDouble(MatchPlayerResponse::eloBefore).average().orElse(0);
+    }
+
+    // Each team's place in the season table just before this match. The stored W/L are today's, so this match and every
+    // later one (in the ELO replay's order) come off them. Exact as long as the sheet's seeded games came first
+    private Map<UUID, TeamStandingResponse> standingsGoingInto(Match match) {
+        Map<UUID, Integer> wins = new HashMap<>();
+        Map<UUID, Integer> losses = new HashMap<>();
+        List<Team> teams = match.getSeason().getTeams();
+        teams.forEach(team -> {
+            wins.put(team.getTeamId(), team.getWins());
+            losses.put(team.getTeamId(), team.getLosses());
+        });
+
+        Comparator<Match> replayOrder = Comparator.comparing(Match::getPlayedTime).thenComparing(Match::getMatchId);
+        for (Match later : matchRepository.findBySeasonIdOrderByPlayedTimeDesc(match.getSeason().getId())) {
+            if (replayOrder.compare(later, match) < 0) continue;
+            Team winner = winner(later);
+            Team loser = loser(later);
+            if (winner != null) wins.merge(winner.getTeamId(), -1, Integer::sum);
+            if (loser != null) losses.merge(loser.getTeamId(), -1, Integer::sum);
+        }
+
+        List<UUID> table = teams.stream()
+                .map(Team::getTeamId)
+                .sorted(Team.tableOrder(wins::get, losses::get))
+                .toList();
+        return table.stream().collect(Collectors.toMap(Function.identity(),
+                id -> new TeamStandingResponse(table.indexOf(id) + 1, table.size(), wins.get(id), losses.get(id))));
     }
 
     // An admin's record of a season game the league ticket missed. Only in an active season, which keeps the ELO replay
     // to that season's games
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void create(CreateMatchRequest request) {
         Season season = seasonRepository.findById(request.seasonId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
@@ -116,16 +163,29 @@ public class MatchService {
         match.setPlayedTime(played);
         match.setMatchWinner(request.winner());
         match.setParticipants(new ArrayList<>());
+        Map<String, String> subbingFor = request.subbingFor() == null ? Map.of() : request.subbingFor();
         for (Side side : Side.values()) {
             Team team = side == Side.RADIANT ? radiantTeam : direTeam;
+            Map<String, Player> members = team.getMembers().stream()
+                    .collect(Collectors.toMap(member -> member.getPlayer().getSteamId(), TeamMember::getPlayer));
             for (String steamId : side == Side.RADIANT ? request.radiant() : request.dire()) {
                 MatchParticipant participant = new MatchParticipant();
                 participant.setMatch(match);
                 participant.setPlayer(players.get(steamId));
                 participant.setSide(side);
-                participant.setSub(team.getMembers().stream().noneMatch(member -> member.getPlayer().getSteamId().equals(steamId)));
+                participant.setSub(!members.containsKey(steamId));
+                if (participant.isSub() && subbingFor.containsKey(steamId)) {
+                    participant.setSubbingFor(replaced(subbingFor.get(steamId), members, players));
+                }
                 match.getParticipants().add(participant);
             }
+        }
+        long recorded = match.getParticipants().stream().filter(participant -> participant.getSubbingFor() != null).count();
+        if (recorded != subbingFor.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only a sub in this match can stand in for someone");
+        }
+        if (new HashSet<>(subbingFor.values()).size() != subbingFor.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two subs can't stand in for the same player");
         }
 
         eloService.rewind(played);
@@ -135,7 +195,7 @@ public class MatchService {
     }
 
     // For a game that was ticketed but shouldn't count. ELO is replayed from it without it
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void delete(Long matchId) {
         Match match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found"));
@@ -150,6 +210,17 @@ public class MatchService {
         eloService.replay(played);
     }
 
+    // The team member a sub stood in for: on the sub's own team, and not playing in the match themselves
+    private static Player replaced(String steamId, Map<String, Player> members, Map<String, Player> playing) {
+        if (!members.containsKey(steamId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A sub can only stand in for someone on their side's team");
+        }
+        if (playing.containsKey(steamId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A sub can't stand in for someone who played");
+        }
+        return members.get(steamId);
+    }
+
     private static Team findTeam(Season season, UUID teamId) {
         return season.getTeams().stream()
                 .filter(team -> team.getTeamId().equals(teamId))
@@ -159,11 +230,19 @@ public class MatchService {
 
     // The standings' W/L are stored (seeded from the sheet), not counted from matches, so they follow a match in and out
     private static void countResult(Match match, int by) {
-        boolean radiantWon = match.getMatchWinner() == Side.RADIANT;
-        Team winner = radiantWon ? match.getRadiantTeam() : match.getDireTeam();
-        Team loser = radiantWon ? match.getDireTeam() : match.getRadiantTeam();
+        Team winner = winner(match);
+        Team loser = loser(match);
         if (winner != null) winner.setWins(winner.getWins() + by);
         if (loser != null) loser.setLosses(loser.getLosses() + by);
+    }
+
+    // null for an in-house, which has no teams
+    private static Team winner(Match match) {
+        return match.getMatchWinner() == Side.RADIANT ? match.getRadiantTeam() : match.getDireTeam();
+    }
+
+    private static Team loser(Match match) {
+        return match.getMatchWinner() == Side.RADIANT ? match.getDireTeam() : match.getRadiantTeam();
     }
 
     private MatchSummaryResponse mapToSummaryResponse(Match match) {

@@ -1,6 +1,7 @@
 import {Link} from "react-router";
 import type {MatchSummary} from "../types.ts";
 import {formatDate} from "../util/format.ts";
+import NoValue from "./NoValue.tsx";
 
 // Desktop columns, shared with the column headings Matches and SeasonDetail draw above the rows
 export const matchColumns = "md:grid-cols-[1fr_auto_1fr_7rem_5rem_7rem]";
@@ -28,7 +29,9 @@ export default function MatchSummaryCard({match}: { match: MatchSummary }) {
             <p className="col-span-3 flex justify-center gap-4 text-sm text-ash md:contents">
                 <span className="figures md:text-right">{formatDate(match.timePlayed)}</span>
                 <span className="figures md:text-right">
-                    {match.avgElo.toLocaleString("en-GB")}<span className="md:sr-only"> avg ELO</span>
+                    {/*null for games the old sheet kept no ELO for. Phones have no column heading, so the suffix labels it there*/}
+                    {match.avgElo !== null ? match.avgElo.toLocaleString("en-GB") : <NoValue label="No"/>}
+                    <span className="md:sr-only"> avg ELO</span>
                 </span>
                 <span className="truncate md:text-right">{match.seasonName ?? "In-house"}</span>
             </p>

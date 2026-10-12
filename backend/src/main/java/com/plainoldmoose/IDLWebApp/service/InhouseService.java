@@ -11,10 +11,11 @@ import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.InhouseRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -81,7 +82,7 @@ public class InhouseService {
     }
 
     // Turns the in-house into a match under the same ID and moves everyone's ELO
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void approve(Long id) {
         Inhouse inhouse = inhouseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "In-house not found"));

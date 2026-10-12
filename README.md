@@ -48,7 +48,7 @@ IDLWebApp/
 │       ├── model/                    # JPA entities and enums
 │       ├── dto/                      # Data transfer objects
 │       └── config/                   # Security and app configuration
-│   └── scripts/reset-db.sh           # Reset a DB to the seed snapshot (data.sql, not in git)
+│   └── scripts/reset-db.sh           # Reset the dev DB to the seed snapshot (data.sql, not in git)
 ├── frontend/                         # React SPA
 │   └── src/
 │       ├── components/               # Reusable UI components

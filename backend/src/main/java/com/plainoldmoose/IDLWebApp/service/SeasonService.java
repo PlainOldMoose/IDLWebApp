@@ -96,6 +96,7 @@ public class SeasonService {
                 season.getEndDate(),
                 season.getTeams()
                         .stream()
+                        .sorted(Team.tableOrder(Team::getWins, Team::getLosses))
                         .map(this::mapToTeamResponse)
                         .toList(),
                 season.getWinner() != null ? season.getWinner()

@@ -22,7 +22,7 @@ public class SeasonSignupController {
     // SecurityConfig only lets signed-in players through, so principal is never null
     @PostMapping
     public SeasonSignupResponse signup(@PathVariable UUID seasonId, @Valid @RequestBody SeasonSignupRequest request, Principal principal) {
-        return seasonSignupService.signup(seasonId, principal.getName(), request.rolePreference().trim(), request.willingToCaptain());
+        return seasonSignupService.signup(seasonId, principal.getName(), request.rolePreference(), request.willingToCaptain(), request.sub());
     }
 
     // Only ever the caller's own sign-up
