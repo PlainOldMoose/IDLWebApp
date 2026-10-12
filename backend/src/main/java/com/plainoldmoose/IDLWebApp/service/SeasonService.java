@@ -7,7 +7,12 @@ import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.model.TeamMember;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
+import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
+import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import jakarta.transaction.Transactional;
@@ -16,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +33,7 @@ public class SeasonService {
 
     private SeasonRepository seasonRepository;
     private MatchRepository matchRepository;
+    private EloHistoryRepository eloHistoryRepository;
 
     public SeasonSummaryResponse createSeason(CreateSeasonRequest request) {
         Season season = new Season();
@@ -97,16 +104,43 @@ public class SeasonService {
                 season.getTeams()
                         .stream()
                         .sorted(Team.tableOrder(Team::getWins, Team::getLosses))
-                        .map(this::mapToTeamResponse)
+                        .map(team -> mapToTeamResponse(team, seasonEnd(season)))
                         .toList(),
                 season.getWinner() != null ? season.getWinner()
                         .getName() : null);
     }
 
-    private TeamResponse mapToTeamResponse(Team team) {
+    // A finished season's last game, or null while it's still going (or never had one) and current ELO is the right one
+    private LocalDateTime seasonEnd(Season season) {
+        if (season.getStatus() != SeasonStatus.COMPLETED) {
+            return null;
+        }
+        return matchRepository.findBySeasonIdOrderByPlayedTimeDesc(season.getId())
+                .stream()
+                .findFirst()
+                .map(Match::getPlayedTime)
+                .orElse(null);
+    }
+
+    // Their ELO once the season's last game was played: the last change by then, or else what they had going into
+    // their next game. Neither means it never moved, so it's still their current ELO
+    private double eloAt(Player player, LocalDateTime end) {
+        if (end == null) {
+            return player.getElo();
+        }
+        String steamId = player.getSteamId();
+        return eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampLessThanEqualOrderByTimestampDescIdDesc(steamId, end)
+                .map(EloHistory::getElo)
+                .or(() -> eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampAfterOrderByTimestampAscIdAsc(steamId, end)
+                        .map(next -> next.getElo() - next.getEloChange()))
+                .orElse(player.getElo());
+    }
+
+    private TeamResponse mapToTeamResponse(Team team, LocalDateTime end) {
         List<PlayerSummaryResponse> members = team.getMembers()
                 .stream()
-                .map(member -> PlayerSummaryResponse.from(member.getPlayer()))
+                .map(TeamMember::getPlayer)
+                .map(player -> new PlayerSummaryResponse(player.getUsername(), eloAt(player, end), player.getSteamId()))
                 .toList();
 
         return new TeamResponse(
