@@ -97,7 +97,7 @@ export function useCreateMatch() {
     return useMutation({
         mutationFn: (match: {
             matchId: number, seasonId: string, playedTime: string, radiantTeamId: string, direTeamId: string,
-            winner: "RADIANT" | "DIRE", radiant: string[], dire: string[]
+            winner: "RADIANT" | "DIRE", radiant: string[], dire: string[], subbingFor: Record<string, string>
         }) => request<void>("/api/matches", {method: "POST", json: match}),
         onSuccess: () => void queryClient.invalidateQueries(),
     });

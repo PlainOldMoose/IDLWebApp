@@ -17,6 +17,8 @@ import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
@@ -25,7 +27,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -45,8 +49,8 @@ class MatchServiceTest {
     private final EloHistoryRepository eloHistory = mock(EloHistoryRepository.class);
     private final MatchService service = new MatchService(matches, eloHistory, seasons, players, elo);
 
-    // Players 0-4 on the first team, 5-9 on the second, and 10 on neither
-    private final List<Player> everyone = IntStream.range(0, 11).mapToObj(i -> {
+    // Players 0-4 on the first team, 5-9 on the second, and 10 and 11 on neither
+    private final List<Player> everyone = IntStream.range(0, 12).mapToObj(i -> {
         Player player = new Player();
         player.setSteamId(String.valueOf(i));
         return player;
@@ -81,8 +85,60 @@ class MatchServiceTest {
 
     // Radiant has player 10 standing in for player 4, and wins
     private CreateMatchRequest request() {
+        return request(null);
+    }
+
+    private CreateMatchRequest request(Map<String, String> subbingFor) {
         return new CreateMatchRequest(8652158100L, season.getId(), LocalDateTime.now().minusDays(1), radiant.getTeamId(),
-                dire.getTeamId(), Side.RADIANT, List.of("0", "1", "2", "3", "10"), List.of("5", "6", "7", "8", "9"));
+                dire.getTeamId(), Side.RADIANT, List.of("0", "1", "2", "3", "10"), List.of("5", "6", "7", "8", "9"), subbingFor);
+    }
+
+    // The player lookup finds everyone the request names
+    private void stubPlayers() {
+        when(players.findAllById(any())).thenAnswer(call -> {
+            List<String> ids = call.getArgument(0);
+            return everyone.stream().filter(player -> ids.contains(player.getSteamId())).toList();
+        });
+    }
+
+    // Who each player stood in for, by Steam ID, from the match create() saved
+    private Map<String, String> createAndGetSubbingFor(Map<String, String> subbingFor) {
+        stubPlayers();
+        service.create(request(subbingFor));
+        ArgumentCaptor<Match> saved = ArgumentCaptor.forClass(Match.class);
+        verify(matches).save(saved.capture());
+        Map<String, String> result = new HashMap<>();
+        saved.getValue().getParticipants().forEach(participant -> result.put(participant.getPlayer().getSteamId(),
+                participant.getSubbingFor() == null ? null : participant.getSubbingFor().getSteamId()));
+        return result;
+    }
+
+    @Test
+    void recordsWhoASubReplaced() {
+        Map<String, String> subbingFor = createAndGetSubbingFor(Map.of("10", "4"));
+
+        assertEquals("4", subbingFor.get("10"));
+        assertNull(subbingFor.get("0"));
+    }
+
+    @Test
+    void subsWithoutAReplacementStayPlainSubs() {
+        assertNull(createAndGetSubbingFor(null).get("10"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "replaced player is on the other team, 10, 5",
+            "replaced player also played, 10, 3",
+            "key isn't a sub, 0, 4",
+            "key isn't in the match, 4, 3",
+    })
+    void refusesSubbingForThatDoesNotFit(String why, String sub, String replaced) {
+        stubPlayers();
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.create(request(Map.of(sub, replaced))));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
     }
 
     @Test
@@ -94,10 +150,20 @@ class MatchServiceTest {
     }
 
     @Test
+    void refusesTwoSubsStandingInForTheSamePlayer() {
+        stubPlayers();
+        CreateMatchRequest request = new CreateMatchRequest(8652158100L, season.getId(), LocalDateTime.now().minusDays(1),
+                radiant.getTeamId(), dire.getTeamId(), Side.RADIANT, List.of("0", "1", "2", "10", "11"),
+                List.of("5", "6", "7", "8", "9"), Map.of("10", "4", "11", "4"));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.create(request));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
+    @Test
     void addingAndDeletingMovesStandingsAndReplaysElo() {
-        when(players.findAllById(any())).thenReturn(everyone.stream()
-                .filter(player -> !player.getSteamId().equals("4"))
-                .toList());
+        stubPlayers();
         CreateMatchRequest request = request();
 
         service.create(request);
