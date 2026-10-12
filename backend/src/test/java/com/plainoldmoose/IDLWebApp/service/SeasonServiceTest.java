@@ -1,28 +1,37 @@
 package com.plainoldmoose.IDLWebApp.service;
 
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.model.TeamMember;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
+import com.plainoldmoose.IDLWebApp.model.match.Match;
+import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SeasonServiceTest {
 
     private final UUID seasonId = UUID.randomUUID();
     private final Season season = new Season();
-    private final SeasonService service =
-            new SeasonService(mock(SeasonRepository.class, inv -> Optional.of(season)), mock(MatchRepository.class));
+    private final MatchRepository matchRepository = mock(MatchRepository.class);
+    private final EloHistoryRepository eloHistoryRepository = mock(EloHistoryRepository.class);
+    private final SeasonService service = new SeasonService(
+            mock(SeasonRepository.class, inv -> Optional.of(season)), matchRepository, eloHistoryRepository);
 
     @Test
     void completeSeason() {
@@ -60,5 +69,52 @@ class SeasonServiceTest {
 
         assertEquals(List.of("Top", "Second", "Third", "Bottom"),
                 service.getSeasonById(seasonId).teams().stream().map(TeamResponse::name).toList());
+    }
+
+    private static EloHistory eloHistory(double elo, double change) {
+        EloHistory row = new EloHistory();
+        row.setElo(elo);
+        row.setEloChange(change);
+        return row;
+    }
+
+    @Test
+    void finishedSeasonShowsEloAsOfItsLastGame() {
+        LocalDateTime lastGame = LocalDateTime.of(2026, 9, 1, 20, 0);
+        Match last = new Match();
+        last.setPlayedTime(lastGame);
+        season.setId(seasonId);
+        when(matchRepository.findBySeasonIdOrderByPlayedTimeDesc(seasonId)).thenReturn(List.of(last));
+
+        // Played up to the end, only played after it, and never played
+        Player played = new Player(), joinedLater = new Player(), idle = new Player();
+        played.setSteamId("played");
+        played.setElo(1300);
+        joinedLater.setSteamId("later");
+        joinedLater.setElo(1250);
+        idle.setSteamId("idle");
+        idle.setElo(1000);
+        when(eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampLessThanEqualOrderByTimestampDescIdDesc("played", lastGame))
+                .thenReturn(Optional.of(eloHistory(1100, 20)));
+        when(eloHistoryRepository.findFirstByPlayerSteamIdAndTimestampAfterOrderByTimestampAscIdAsc("later", lastGame))
+                .thenReturn(Optional.of(eloHistory(1215, 15)));
+
+        Team team = team("Team", 3, 1);
+        team.setMembers(List.of(played, joinedLater, idle).stream().map(player -> {
+            TeamMember member = new TeamMember();
+            member.setPlayer(player);
+            return member;
+        }).toList());
+        season.setTeams(List.of(team));
+
+        season.setStatus(SeasonStatus.ACTIVE);
+        assertEquals(List.of(1300.0, 1250.0, 1000.0), memberElos());
+
+        season.setStatus(SeasonStatus.COMPLETED);
+        assertEquals(List.of(1100.0, 1200.0, 1000.0), memberElos());
+    }
+
+    private List<Double> memberElos() {
+        return service.getSeasonById(seasonId).teams().get(0).members().stream().map(PlayerSummaryResponse::elo).toList();
     }
 }
