@@ -25,9 +25,18 @@ import SeasonDraft from "./SeasonDraft.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
 import {hasDefaultName} from "../util/draft.ts";
 import {formatDate, formatDateRange, formatElo, isLegacySeason, sideName} from "../util/format.ts";
-import type {SeasonSignup} from "../types.ts";
+import type {PlayerSummary, SeasonSignup} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 10;
+
+// Who each Add match box's player stood in for: the team member the box started with, when someone off the team was
+// typed over them and they aren't playing from another box. Names match case-insensitively, as the lookup does
+const replacedMembers = (names: string[], members: PlayerSummary[]) => {
+    const typed = names.map(name => name.trim().toLowerCase());
+    const memberNames = members.map(member => member.username.toLowerCase());
+    return members.map((member, i) => typed[i] && !memberNames.includes(typed[i]) && !typed.includes(member.username.toLowerCase())
+        ? member : null);
+};
 const TEAM_SIZE = 5;
 
 export default function SeasonDetail() {
@@ -55,6 +64,8 @@ export default function SeasonDetail() {
     const [radiantTeamId, setRadiantTeamId] = useState("");
     const [direTeamId, setDireTeamId] = useState("");
     const [unknownNames, setUnknownNames] = useState<string[]>([]);
+    // What's typed in each side's player boxes, for the "Subbing for" hints. A side is absent until a box is edited
+    const [boxNames, setBoxNames] = useState<Record<string, string[] | undefined>>({});
     const completeSeason = useCompleteSeason(seasonId);
     const endDialogRef = useRef<HTMLDialogElement>(null);
     const [winnerTeamId, setWinnerTeamId] = useState("");
@@ -108,6 +119,7 @@ export default function SeasonDetail() {
     const openAddMatchDialog = () => {
         createMatch.reset();
         setUnknownNames([]);
+        setBoxNames({});
         addMatchDialogRef.current?.showModal();
     };
 
@@ -122,6 +134,12 @@ export default function SeasonDetail() {
         if (unknown.length) return;
 
         const steamIds = (names: string[]) => names.map(name => steamIdByName.get(name.toLowerCase())!);
+        const subbingFor: Record<string, string> = {};
+        for (const [names, teamId] of [[radiant, radiantTeamId], [dire, direTeamId]] as const) {
+            replacedMembers(names, season!.teams.find(team => team.teamId === teamId)!.members).forEach((member, i) => {
+                if (member) subbingFor[steamIdByName.get(names[i].toLowerCase())!] = member.steamId;
+            });
+        }
         createMatch.mutate({
             matchId: Number(data.get("matchId")),
             seasonId: season!.id,
@@ -131,6 +149,7 @@ export default function SeasonDetail() {
             winner: data.get("winner") as "RADIANT" | "DIRE",
             radiant: steamIds(radiant),
             dire: steamIds(dire),
+            subbingFor,
         }, {
             onSuccess: () => {
                 form.reset();
@@ -525,10 +544,15 @@ export default function SeasonDetail() {
                                 {side: "dire", label: "Dire", teamId: direTeamId, setTeamId: setDireTeamId},
                             ].map(({side, label, teamId, setTeamId}) => {
                                 const team = season.teams.find(t => t.teamId === teamId);
+                                const names = boxNames[side] ?? team?.members.map(member => member.username) ?? [];
+                                const replaced = team ? replacedMembers(names, team.members) : [];
                                 return (
                                     <fieldset key={side}>
                                         <legend>{label}</legend>
-                                        <select value={teamId} onChange={(e) => setTeamId(e.target.value)} required
+                                        <select value={teamId} onChange={(e) => {
+                                            setTeamId(e.target.value);
+                                            setBoxNames({...boxNames, [side]: undefined});
+                                        }} required
                                                 aria-label={`${label} team`} className="text-input mt-2 block w-full">
                                             <option value="">Pick a team…</option>
                                             {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
@@ -537,9 +561,16 @@ export default function SeasonDetail() {
                                         {team && (
                                             <div key={team.teamId} className="mt-2 space-y-2">
                                                 {team.members.map((member, i) => (
-                                                    <input key={member.steamId} name={side} list="match-player-names" required
-                                                           defaultValue={member.username} aria-label={`${label} player ${i + 1}`}
-                                                           autoComplete="off" spellCheck={false} className="text-input block w-full"/>
+                                                    <div key={member.steamId}>
+                                                        <input name={side} list="match-player-names" required
+                                                               defaultValue={member.username} aria-label={`${label} player ${i + 1}`}
+                                                               onChange={(e) => setBoxNames({...boxNames, [side]: names.map((name, j) => j === i ? e.target.value : name)})}
+                                                               aria-describedby={replaced[i] ? `${side}-sub-${i}` : undefined}
+                                                               autoComplete="off" spellCheck={false} className="text-input block w-full"/>
+                                                        {replaced[i] && (
+                                                            <p id={`${side}-sub-${i}`} className="mt-1 text-sm text-ash">Subbing for {replaced[i].username}</p>
+                                                        )}
+                                                    </div>
                                                 ))}
                                             </div>
                                         )}

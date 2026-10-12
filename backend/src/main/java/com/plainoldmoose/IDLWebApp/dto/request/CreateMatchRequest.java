@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 // A season game the league ticket missed, entered by an admin. The match ID is Dota's. radiant and dire are the Steam IDs
@@ -21,5 +22,6 @@ public record CreateMatchRequest(
         @NotNull @Size(min = 5, max = 5, message = "Radiant needs 5 players")
         List<@NotBlank String> radiant,
         @NotNull @Size(min = 5, max = 5, message = "Dire needs 5 players")
-        List<@NotBlank String> dire) {
+        List<@NotBlank String> dire,
+        Map<String, String> subbingFor) { // sub's Steam ID to the team member they stood in for; null when none are known
 }

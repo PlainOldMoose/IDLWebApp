@@ -7,6 +7,7 @@ import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.TeamStandingResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
+import com.plainoldmoose.IDLWebApp.model.TeamMember;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -161,16 +163,29 @@ public class MatchService {
         match.setPlayedTime(played);
         match.setMatchWinner(request.winner());
         match.setParticipants(new ArrayList<>());
+        Map<String, String> subbingFor = request.subbingFor() == null ? Map.of() : request.subbingFor();
         for (Side side : Side.values()) {
             Team team = side == Side.RADIANT ? radiantTeam : direTeam;
+            Map<String, Player> members = team.getMembers().stream()
+                    .collect(Collectors.toMap(member -> member.getPlayer().getSteamId(), TeamMember::getPlayer));
             for (String steamId : side == Side.RADIANT ? request.radiant() : request.dire()) {
                 MatchParticipant participant = new MatchParticipant();
                 participant.setMatch(match);
                 participant.setPlayer(players.get(steamId));
                 participant.setSide(side);
-                participant.setSub(team.getMembers().stream().noneMatch(member -> member.getPlayer().getSteamId().equals(steamId)));
+                participant.setSub(!members.containsKey(steamId));
+                if (participant.isSub() && subbingFor.containsKey(steamId)) {
+                    participant.setSubbingFor(replaced(subbingFor.get(steamId), members, players));
+                }
                 match.getParticipants().add(participant);
             }
+        }
+        long recorded = match.getParticipants().stream().filter(participant -> participant.getSubbingFor() != null).count();
+        if (recorded != subbingFor.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only a sub in this match can stand in for someone");
+        }
+        if (new HashSet<>(subbingFor.values()).size() != subbingFor.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two subs can't stand in for the same player");
         }
 
         eloService.rewind(played);
@@ -193,6 +208,17 @@ public class MatchService {
         countResult(match, -1);
         matchRepository.delete(match);
         eloService.replay(played);
+    }
+
+    // The team member a sub stood in for: on the sub's own team, and not playing in the match themselves
+    private static Player replaced(String steamId, Map<String, Player> members, Map<String, Player> playing) {
+        if (!members.containsKey(steamId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A sub can only stand in for someone on their side's team");
+        }
+        if (playing.containsKey(steamId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A sub can't stand in for someone who played");
+        }
+        return members.get(steamId);
     }
 
     private static Team findTeam(Season season, UUID teamId) {

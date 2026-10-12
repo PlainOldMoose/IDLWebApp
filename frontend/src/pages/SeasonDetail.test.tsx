@@ -1,10 +1,10 @@
 import {beforeEach, expect, it, vi} from "vitest";
-import {render, screen, within} from "@testing-library/react";
+import {fireEvent, render, screen, within} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter, Route, Routes} from "react-router";
 import SeasonDetail from "./SeasonDetail";
-import type {SeasonDetail as SeasonDetailData, SeasonSignup, SteamUser} from "../types.ts";
+import type {PlayerSummary, SeasonDetail as SeasonDetailData, SeasonSignup, SteamUser} from "../types.ts";
 
 const signup = (steamId: string, sub = false): SeasonSignup => ({
     steamId, username: steamId, rolePreference: sub ? null : "any", willingToCaptain: false, signedUpAt: "2026-01-01T12:00", sub,
@@ -13,8 +13,9 @@ const signup = (steamId: string, sub = false): SeasonSignup => ({
 let posted: unknown;
 let postedTo: string | undefined;
 
-function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = []}: {
-    status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null, name?: string, teams?: SeasonDetailData["teams"]
+function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = [], players = []}: {
+    status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null, name?: string, teams?: SeasonDetailData["teams"],
+    players?: PlayerSummary[]
 }) {
     const season: SeasonDetailData = {id: "s1", name, startDate: "2026-02-01", endDate: "2026-03-01", status, teams};
     vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
@@ -25,6 +26,7 @@ function renderSeason({status = "REGISTRATION", signups, user = null, name = "Se
         const body = path === "/auth/me" ? user
             : path === "/api/seasons/s1" ? season
             : path === "/api/seasons/s1/signups" ? signups
+            : path === "/api/players" ? players
             : [];
         return new Response(JSON.stringify(body), {status: user || path !== "/auth/me" ? 200 : 401});
     }));
@@ -170,4 +172,34 @@ it("leaves a full team of five alone", async () => {
     const card = await panel("full");
     expect(within(card).queryByText("Unknown player")).toBeNull();
     expect(within(card).getByText("Average ELO").nextElementSibling?.textContent).toBe("1,500.0");
+});
+
+it("records who a sub replaced from the box they were typed into", async () => {
+    const red = team("red", 5);
+    const blue = team("blue", 5);
+    const players = [...red.members, ...blue.members, {steamId: "sub1", username: "sub1", elo: 1500}];
+    renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], players, user: {steamId: "admin", username: "admin", admin: true}});
+
+    await userEvent.click(await screen.findByRole("button", {name: "Add match"}));
+    const dialog = screen.getByRole("dialog", {name: "Add match"});
+    await userEvent.type(within(dialog).getByRole("textbox", {name: "Dota match ID"}), "8652158100");
+    fireEvent.change(within(dialog).getByLabelText("Played"), {target: {value: "2026-02-10T19:00"}});
+    await userEvent.selectOptions(within(dialog).getByRole("combobox", {name: "Radiant team"}), "red");
+    await userEvent.selectOptions(within(dialog).getByRole("combobox", {name: "Dire team"}), "blue");
+    const box = within(dialog).getByRole("combobox", {name: "Radiant player 2"});
+
+    await userEvent.clear(box);
+    await userEvent.type(box, "sub1");
+    expect(within(dialog).getByText("Subbing for red2")).toBeTruthy();
+    await userEvent.clear(box);
+    await userEvent.type(box, "red2");
+    expect(within(dialog).queryByText(/Subbing for/)).toBeNull();
+
+    await userEvent.clear(box);
+    await userEvent.type(box, "sub1");
+    await userEvent.click(within(dialog).getByRole("radio", {name: "Radiant"}));
+    await userEvent.click(within(dialog).getByRole("button", {name: "Add match"}));
+
+    expect(postedTo).toBe("/api/matches");
+    expect(posted).toMatchObject({radiant: ["red1", "sub1", "red3", "red4", "red5"], subbingFor: {sub1: "red2"}});
 });
