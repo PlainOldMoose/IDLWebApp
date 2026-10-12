@@ -327,34 +327,32 @@ export default function SeasonDetail() {
 
             {started && (
                 <>
-                    {/*Latest few, with the rest on the season-filtered Matches page; the button is trimmed to keep the header one line tall*/}
-                    <Panel title="Recent matches" padded={false} className="min-w-0" meta={matches && matches.length > RECENT_MATCH_COUNT
-                        ? <Link to={`/matches?season=${seasonId}`} className="secondary-button px-3 py-0.5 text-sm">See all {matches.length}</Link>
-                        : matches?.length ? `${matches.length} played` : undefined}>
-                        {matches?.length ? (
-                            <>
-                                {/*Column headings, hidden on small screens where the rows stack*/}
-                                <div aria-hidden="true" className={`hidden gap-x-3 border-b border-rule px-3 pb-2 text-sm text-ash md:grid ${matchColumns}`}>
-                                    <p className="text-right">Radiant</p>
-                                    <span className="w-0.5"/>
-                                    <p>Dire</p>
-                                    <p className="text-right">Played</p>
-                                    <p className="text-right">Avg ELO</p>
-                                    <p className="text-right">Season</p>
-                                </div>
-                                {matches.slice(0, RECENT_MATCH_COUNT).map((match) => (
-                                    <MatchSummaryCard key={match.matchId} match={match}/>
-                                ))}
-                            </>
-                        ) : (
-                            <p className="p-3 text-ash">No matches played yet.</p>
-                        )}
-                    </Panel>
+                    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                        {/*Latest few, with the rest on the season-filtered Matches page; the button is trimmed to keep this header level with Standings*/}
+                        <Panel title="Recent matches" padded={false} className="min-w-0" meta={matches && matches.length > RECENT_MATCH_COUNT
+                            ? <Link to={`/matches?season=${seasonId}`} className="secondary-button px-3 py-0.5 text-sm">See all {matches.length}</Link>
+                            : matches?.length ? `${matches.length} played` : undefined}>
+                            {matches?.length ? (
+                                <>
+                                    {/*Column headings, hidden on small screens where the rows stack*/}
+                                    <div aria-hidden="true" className={`hidden gap-x-3 border-b border-rule px-3 pb-2 text-sm text-ash md:grid ${matchColumns}`}>
+                                        <p className="text-right">Radiant</p>
+                                        <span className="w-0.5"/>
+                                        <p>Dire</p>
+                                        <p className="text-right">Played</p>
+                                        <p className="text-right">Avg ELO</p>
+                                        <p className="text-right">Season</p>
+                                    </div>
+                                    {matches.slice(0, RECENT_MATCH_COUNT).map((match) => (
+                                        <MatchSummaryCard key={match.matchId} match={match}/>
+                                    ))}
+                                </>
+                            ) : (
+                                <p className="p-3 text-ash">No matches played yet.</p>
+                            )}
+                        </Panel>
 
-                    {/*Standings first on phones; beside the teams from lg, level with the first row of cards and kept in view
-                       while scrolling them*/}
-                    <div className="mt-10 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                        <Panel title="Standings" padded={false} className="lg:sticky lg:top-16 lg:col-start-2 lg:row-start-1 lg:mt-13">
+                        <Panel title="Standings" padded={false}>
                             <div aria-hidden="true" className="grid grid-cols-[1.5rem_1fr_2rem_2rem] gap-x-3 px-3 pt-1.5 pb-2 text-sm text-ash">
                                 <p/>
                                 <p>Team</p>
@@ -375,57 +373,56 @@ export default function SeasonDetail() {
                                 ))}
                             </ol>
                         </Panel>
-                        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-                            <h2 className="mb-4 px-4 font-display text-3xl font-bold">Teams</h2>
-                            {/*Each card's header and roster sit on rows shared across the grid row (subgrid), so a long team name that
-                               wraps grows every header in its row and the rosters and averages still line up*/}
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {season.teams.map((team) => {
-                                    const captainFirst = [...team.members].sort((a, b) =>
-                                        Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
-                                    const isChampion = team.name === season.winnerTeamName;
-                                    const missing = Math.max(0, TEAM_SIZE - team.members.length);
-                                    return (
-                                        <Panel key={team.teamId}
-                                               title={<span className="font-display text-2xl font-bold">{team.name}</span>}
-                                               meta={isChampion
-                                                   ? <span className="font-medium text-aegis">Champions</span>
-                                                   : <span className="figures">{team.wins}W {team.losses}L</span>}
-                                               className={`row-span-2 grid grid-rows-subgrid gap-0 [&>div]:flex [&>div]:flex-col ${isChampion ? "ring-1 ring-aegis/70" : ""}`}
-                                               level={3}
-                                               padded={false}>
-                                            <ul className="mb-1.5">
-                                                {captainFirst.map(member => (
-                                                    <li key={member.steamId}>
-                                                        <Link to={`/players/${member.steamId}`}
-                                                              className="row-link flex justify-between gap-3 px-3 py-1.5">
-                                                            <span className="truncate">
-                                                                {member.username}
-                                                                {member.username === team.captainUsername &&
-                                                                    <span className="ml-2 text-sm text-ash">captain</span>}
-                                                            </span>
-                                                            <span className="figures text-ash">{formatElo(member.elo)}</span>
-                                                        </Link>
-                                                    </li>
-                                                ))}
-                                                {/*Untracked players, so the team still reads as five*/}
-                                                {Array.from({length: missing}, (_, i) => (
-                                                    <li key={i} className="flex justify-between gap-3 px-3 py-1.5 text-ash">
-                                                        <span>Unknown player</span>
-                                                        <span aria-hidden="true">&ndash;</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                            <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
-                                                <span>Average ELO</span>
-                                                {/*Only covers the tracked players, so it would mislead*/}
-                                                <span>{missing ? "–" : formatElo(team.avgElo)}</span>
-                                            </p>
-                                        </Panel>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                    </div>
+
+                    <h2 className="mt-10 mb-4 px-4 font-display text-3xl font-bold">Teams</h2>
+                    {/*Each card's header and roster sit on rows shared across the grid row (subgrid), so a long team name that
+                       wraps grows every header in its row and the rosters and averages still line up*/}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {season.teams.map((team) => {
+                            const captainFirst = [...team.members].sort((a, b) =>
+                                Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
+                            const isChampion = team.name === season.winnerTeamName;
+                            const missing = Math.max(0, TEAM_SIZE - team.members.length);
+                            return (
+                                <Panel key={team.teamId}
+                                       title={<span className="font-display text-2xl font-bold">{team.name}</span>}
+                                       meta={isChampion
+                                           ? <span className="font-medium text-aegis">Champions</span>
+                                           : <span className="figures">{team.wins}W {team.losses}L</span>}
+                                       className={`row-span-2 grid grid-rows-subgrid gap-0 [&>div]:flex [&>div]:flex-col ${isChampion ? "ring-1 ring-aegis/70" : ""}`}
+                                       level={3}
+                                       padded={false}>
+                                    <ul className="mb-1.5">
+                                        {captainFirst.map(member => (
+                                            <li key={member.steamId}>
+                                                <Link to={`/players/${member.steamId}`}
+                                                      className="row-link flex justify-between gap-3 px-3 py-1.5">
+                                                    <span className="truncate">
+                                                        {member.username}
+                                                        {member.username === team.captainUsername &&
+                                                            <span className="ml-2 text-sm text-ash">captain</span>}
+                                                    </span>
+                                                    <span className="figures text-ash">{formatElo(member.elo)}</span>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                        {/*Untracked players, so the team still reads as five*/}
+                                        {Array.from({length: missing}, (_, i) => (
+                                            <li key={i} className="flex justify-between gap-3 px-3 py-1.5 text-ash">
+                                                <span>Unknown player</span>
+                                                <span aria-hidden="true">&ndash;</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
+                                        <span>Average ELO</span>
+                                        {/*Only covers the tracked players, so it would mislead*/}
+                                        <span>{missing ? "–" : formatElo(team.avgElo)}</span>
+                                    </p>
+                                </Panel>
+                            );
+                        })}
                     </div>
                 </>
             )}
