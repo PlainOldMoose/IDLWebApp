@@ -27,7 +27,7 @@ BEGIN
   EXECUTE 'TRUNCATE ' || tables || ' RESTART IDENTITY CASCADE';
 END $$;
 SQL
-  cat "$seed"
+  cat "$seed" scripts/null-partial-avg-elo.sql
 } | run
 
 echo "Dev DB reset to seed snapshot."

@@ -83,7 +83,7 @@ export interface MatchSummary {
     matchId: number;
     winner: "RADIANT" | "DIRE";
     timePlayed: string;
-    avgElo: number;
+    avgElo: number | null; // null unless all 10 players have a recorded ELO for the match
     seasonId?: string; // Not set for in-houses
     seasonName?: string;
     radiantTeamName?: string;

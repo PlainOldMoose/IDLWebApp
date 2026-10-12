@@ -6,6 +6,7 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import NoValue from "../components/NoValue.tsx";
 import {formatDate, formatElo, formatEloChange, formatOrdinal, isLegacySeason, sideName} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
@@ -45,14 +46,16 @@ export default function MatchDetail() {
         const elos = team.flatMap(p => p.eloBefore ?? []);
         const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? sideName[side];
         const standing = side === "RADIANT" ? data.radiantStanding : data.direStanding;
-        // Players no longer tracked leave a side short; their slots are shown as unknown and the average would mislead
+        // Players no longer tracked leave a side short; their slots are shown as unknown
         const missing = Math.max(0, TEAM_SIZE - team.length);
-        const avgElo = elos.length && !missing ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
+        // Only with all five ELOs known, as an average of fewer would mislead
+        const avgElo = elos.length === TEAM_SIZE ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
         return {side, team, name, standing, missing, avgElo};
     });
     const [radiantTeam, direTeam] = teams;
-    // Worked out by the API with the ELO replay's own formula; Dire's is the rest, so the two always add to 100
-    const radiantChance = data.radiantWinChance === null || teams.some(t => t.missing) ? null : Math.round(100 * data.radiantWinChance);
+    // Worked out by the API with the ELO replay's own formula, only when all 10 have an ELO record; Dire's is the rest,
+    // so the two always add to 100
+    const radiantChance = data.radiantWinChance === null ? null : Math.round(100 * data.radiantWinChance);
     // Every player has an ELO record whenever there's a chance, so both averages are set
     const eloGap = Math.abs((radiantTeam.avgElo ?? 0) - (direTeam.avgElo ?? 0));
 
@@ -70,7 +73,7 @@ export default function MatchDetail() {
                 <span className="flex flex-wrap gap-x-4 gap-y-1">
                     <span>{formatDate(match.timePlayed)}</span>
                     <span>{match.seasonName ?? "In-house"}</span>
-                    <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>
+                    {match.avgElo !== null && <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>}
                     <span>Match {match.matchId}</span>
                 </span>
             }
@@ -138,6 +141,7 @@ export default function MatchDetail() {
                             {/*Where the team stood in the season just before this game; a first game has no standing or rate yet*/}
                             {standing && (
                                 <div className="border-b border-rule pt-2 pb-3">
+                                    <h3 className="mb-1.5 text-center text-sm text-ash">Coming into this match</h3>
                                     <StatStrip stats={[
                                         {label: "Standing", value: played ? `${formatOrdinal(standing.position)} of ${standing.teamCount}` : "–"},
                                         {label: "Record", value: `${standing.wins}W ${standing.losses}L`},
@@ -167,7 +171,7 @@ export default function MatchDetail() {
                                                     </span>
                                                     {player.eloBefore === null || player.eloChange === null ? (
                                                         <span className="col-span-2 text-right text-ash" title="No ELO record for this match">
-                                                            <span aria-hidden="true">&ndash;</span><span className="sr-only">No ELO record</span>
+                                                            <NoValue label="No ELO record"/>
                                                         </span>
                                                     ) : (
                                                         <>
@@ -185,7 +189,7 @@ export default function MatchDetail() {
                                             <li key={i} className={`${rowColumns} items-center px-3 py-2.5 text-lg text-ash`}>
                                                 <span>Unknown player</span>
                                                 <span className="col-span-2 text-right">
-                                                    <span aria-hidden="true">&ndash;</span><span className="sr-only">No ELO record</span>
+                                                    <NoValue label="No ELO record"/>
                                                 </span>
                                             </li>
                                         ))}

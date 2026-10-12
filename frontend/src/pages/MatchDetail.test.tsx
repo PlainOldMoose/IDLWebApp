@@ -73,6 +73,7 @@ it("shows each team's season standing going into the match", async () => {
     expect(stat(radiant, "Standing")).toBe("Standing2nd of 6");
     expect(stat(radiant, "Record")).toBe("Record5W 2L");
     expect(stat(radiant, "Win rate")).toBe("Win rate71%");
+    expect(within(radiant).getByRole("heading", {name: "Coming into this match"})).toBeTruthy();
 });
 
 it("shows dashes for a team's first game of the season", async () => {
@@ -127,12 +128,15 @@ it("fills a short side up to five with unknown players and hides its average", a
     expect(within(dire).getByText(/avg$/)).toBeTruthy();
 });
 
-it("hides the pre-game odds when a side is short", async () => {
-    detail = shortRadiant;
+it("hides a team's average when one of its players has no ELO record", async () => {
+    const unrecorded: Player = {steamId: "9", username: "Untracked", side: "RADIANT", sub: false, subbingFor: null, eloBefore: null, eloChange: null};
+    detail = {...seasonMatch, players: [...fillers("RADIANT", 4), unrecorded, ...fillers("DIRE", 5)]};
     renderMatch();
-    await teamPanel("Sporky Diver");
+    const radiant = await teamPanel("Sporky Diver");
+    const dire = await teamPanel("The Bad Guys");
 
-    expect(screen.queryByRole("heading", {name: "Pre-game odds"})).toBeNull();
+    expect(within(radiant).queryByText(/avg$/)).toBeNull();
+    expect(within(dire).getByText(/avg$/)).toBeTruthy();
 });
 
 it("counts a sub as filling the missing player's slot", async () => {
@@ -160,4 +164,19 @@ it.each([["Season 41", seasonMatch], ["an in-house", inhouse]])("doesn't warn on
     await screen.findByRole("heading", {name: /victory/});
 
     expect(screen.queryByRole("heading", {name: "Legacy season"})).toBeNull();
+});
+
+it("shows the match's average ELO in the subtitle when it's recorded", async () => {
+    detail = seasonMatch;
+    renderMatch();
+
+    expect(await screen.findByText("1,600 avg ELO")).toBeTruthy();
+});
+
+it("leaves the average ELO out of the subtitle when it isn't recorded", async () => {
+    detail = {...seasonMatch, match: {...seasonMatch.match, avgElo: null}};
+    renderMatch();
+
+    await screen.findByText("Match 1234");
+    expect(screen.queryByText(/avg ELO/)).toBeNull();
 });
