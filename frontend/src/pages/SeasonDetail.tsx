@@ -19,10 +19,11 @@ import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
-import {formatDate, formatDateRange, formatElo, sideName} from "../util/format.ts";
+import {formatDate, formatDateRange, formatElo, isLegacySeason, sideName} from "../util/format.ts";
 import type {SeasonSignup} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 10;
+const TEAM_SIZE = 5;
 
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
@@ -218,6 +219,21 @@ export default function SeasonDetail() {
                 )
             }
         >
+            {isLegacySeason(season.name) && (
+                <section aria-labelledby="legacy-season-title" className="mb-4 flex gap-3 rounded-lg border border-warning bg-warning/10 p-4">
+                    {/*Phosphor's Warning*/}
+                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="mt-0.5 shrink-0 text-warning">
+                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
+                    </svg>
+                    <div>
+                        <h2 id="legacy-season-title" className="font-semibold text-warning">Legacy season</h2>
+                        <p className="mt-1 text-bone/80">
+                            This season comes from the old league records. Some players are no longer tracked, so teams, results
+                            and ELO may look off.
+                        </p>
+                    </div>
+                </section>
+            )}
             {season.status === "REGISTRATION" && (
                 <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     <div className="space-y-4">
@@ -299,6 +315,7 @@ export default function SeasonDetail() {
                             const captainFirst = [...team.members].sort((a, b) =>
                                 Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
                             const isChampion = team.name === season.winnerTeamName;
+                            const missing = Math.max(0, TEAM_SIZE - team.members.length);
                             return (
                                 <Panel key={team.teamId}
                                        title={<span className="font-display text-2xl font-bold">{team.name}</span>}
@@ -322,10 +339,18 @@ export default function SeasonDetail() {
                                                 </Link>
                                             </li>
                                         ))}
+                                        {/*Untracked players, so the team still reads as five*/}
+                                        {Array.from({length: missing}, (_, i) => (
+                                            <li key={i} className="flex justify-between gap-3 px-3 py-1.5 text-ash">
+                                                <span>Unknown player</span>
+                                                <span aria-hidden="true">&ndash;</span>
+                                            </li>
+                                        ))}
                                     </ul>
                                     <p className="figures mt-auto flex justify-between border-t border-rule px-3 pt-2 pb-1 text-sm text-ash">
                                         <span>Average ELO</span>
-                                        <span>{formatElo(team.avgElo)}</span>
+                                        {/*Only covers the tracked players, so it would mislead*/}
+                                        <span>{missing ? "–" : formatElo(team.avgElo)}</span>
                                     </p>
                                 </Panel>
                             );
