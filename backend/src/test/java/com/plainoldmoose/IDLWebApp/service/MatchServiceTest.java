@@ -234,14 +234,21 @@ class MatchServiceTest {
     @Test
     void winChanceUsesTheEloReplaysFormula() {
         // Radiant averages 1600 going in, Dire 1500
-        inhouseWithElo(1650.0, 1550.0, 1500.0, 1500.0);
+        inhouseWithElo(1650.0, 1550.0, 1600.0, 1600.0, 1600.0, 1500.0, 1500.0, 1500.0, 1500.0, 1500.0);
 
         assertEquals(1 / (1 + Math.pow(10, -100.0 / 400)), service.getMatch(500L).radiantWinChance(), 1e-9);
     }
 
     @Test
     void noWinChanceWhenAPlayerHasNoEloRecord() {
-        inhouseWithElo(1650.0, null, 1500.0, 1500.0);
+        inhouseWithElo(1650.0, null, 1600.0, 1600.0, 1600.0, 1500.0, 1500.0, 1500.0, 1500.0, 1500.0);
+
+        assertNull(service.getMatch(500L).radiantWinChance());
+    }
+
+    @Test
+    void noWinChanceWithoutAllTenPlayers() {
+        inhouseWithElo(1650.0, 1550.0, 1500.0, 1500.0);
 
         assertNull(service.getMatch(500L).radiantWinChance());
     }

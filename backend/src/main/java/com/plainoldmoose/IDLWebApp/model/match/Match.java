@@ -37,7 +37,8 @@ public class Match {
     @Enumerated(EnumType.STRING)
     private Side matchWinner;
 
-    private int avgElo;
+    // null for the old sheet's games that don't have all 10 players' ELO; the ELO replay sets it for every other game
+    private Integer avgElo;
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL)
     private List<MatchParticipant> participants;

@@ -85,9 +85,9 @@ public class MatchService {
                 radiantWinChance(players));
     }
 
-    // Only when every player has an ELO record: then their ELO going in is what the replay averaged for this game
+    // Only when all 10 players have an ELO record: then their ELO going in is what the replay averaged for this game
     private static Double radiantWinChance(List<MatchPlayerResponse> players) {
-        if (players.isEmpty() || players.stream().anyMatch(p -> p.eloBefore() == null)) return null;
+        if (players.size() != 10 || players.stream().anyMatch(p -> p.eloBefore() == null)) return null;
         return EloService.expectedResult(averageEloBefore(players, Side.RADIANT), averageEloBefore(players, Side.DIRE));
     }
 
