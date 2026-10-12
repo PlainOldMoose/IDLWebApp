@@ -40,6 +40,9 @@ public class SeasonSignup {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean sub;
 
+    // Set when sign-ups close, for the players who go into the draft. Null for subs and overflow
+    private Integer draftScore;
+
     @PrePersist
     public void prePersist() {
         signedUpAt = LocalDateTime.now();

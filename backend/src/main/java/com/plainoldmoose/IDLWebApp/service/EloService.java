@@ -139,7 +139,7 @@ public class EloService {
         return 1 / (1 + Math.pow(10, (opponentAvg - teamAvg) / 400));
     }
 
-    private static double average(List<Player> team) {
+    static double average(List<Player> team) {
         return team.stream().mapToDouble(Player::getElo).average().orElse(0);
     }
 
