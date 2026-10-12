@@ -12,10 +12,10 @@ const signup = (steamId: string, sub = false): SeasonSignup => ({
 
 let posted: unknown;
 
-function renderSeason({status = "REGISTRATION", signups, user = null}: {
-    status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null
+function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = []}: {
+    status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null, name?: string, teams?: SeasonDetailData["teams"]
 }) {
-    const season: SeasonDetailData = {id: "s1", name: "Season 5", startDate: "2026-02-01", endDate: "2026-03-01", status, teams: []};
+    const season: SeasonDetailData = {id: "s1", name, startDate: "2026-02-01", endDate: "2026-03-01", status, teams};
     vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
         if (init?.method === "POST") posted = JSON.parse(String(init.body));
         const body = path === "/auth/me" ? user
@@ -94,4 +94,45 @@ it("says when a started season has no subs", async () => {
 
     const subs = await panel("Subs");
     expect(await within(subs).findByText("No subs for this season.")).toBeTruthy();
+});
+
+const team = (name: string, size: number): SeasonDetailData["teams"][number] => ({
+    teamId: name, name, captainUsername: `${name}1`, avgElo: 1500, wins: 1, losses: 1,
+    members: Array.from({length: size}, (_, i) => ({steamId: `${name}${i + 1}`, username: `${name}${i + 1}`, elo: 1500})),
+});
+
+const legacyNote = /This season comes from the old league records/;
+
+it("warns that a season before Season 25 is legacy data", async () => {
+    renderSeason({status: "COMPLETED", signups: [], name: "Season 24"});
+
+    expect(await screen.findByText("Legacy season")).toBeTruthy();
+    expect(screen.getByText(legacyNote)).toBeTruthy();
+});
+
+it.each(["Season 25", "Winter Cup"])("doesn't warn on %s", async (name) => {
+    renderSeason({status: "COMPLETED", signups: [], name});
+    await screen.findByRole("heading", {name});
+
+    expect(screen.queryByText("Legacy season")).toBeNull();
+    expect(screen.queryByText(legacyNote)).toBeNull();
+});
+
+it("fills a short team up to five with unknown players and hides its average", async () => {
+    renderSeason({status: "COMPLETED", signups: [], name: "Season 30", teams: [team("short", 3)]});
+
+    const card = await panel("short");
+    const unknown = within(card).getAllByText("Unknown player");
+    expect(unknown).toHaveLength(2);
+    expect(unknown[0].closest("a")).toBeNull();
+    expect(within(card).getAllByRole("link")).toHaveLength(3);
+    expect(within(card).getByText("Average ELO").nextElementSibling?.textContent).toBe("–");
+});
+
+it("leaves a full team of five alone", async () => {
+    renderSeason({status: "COMPLETED", signups: [], name: "Season 30", teams: [team("full", 5)]});
+
+    const card = await panel("full");
+    expect(within(card).queryByText("Unknown player")).toBeNull();
+    expect(within(card).getByText("Average ELO").nextElementSibling?.textContent).toBe("1,500.0");
 });

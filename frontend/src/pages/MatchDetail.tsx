@@ -6,9 +6,10 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
-import {formatDate, formatElo, formatEloChange, formatOrdinal, sideName} from "../util/format.ts";
+import {formatDate, formatElo, formatEloChange, formatOrdinal, isLegacySeason, sideName} from "../util/format.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
+const TEAM_SIZE = 5;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
 const winnerRing = {RADIANT: "ring-1 ring-radiant/70", DIRE: "ring-1 ring-dire/70"};
 const changeColour = (change: number) => change > 0 ? "text-win" : change < 0 ? "text-loss" : "";
@@ -44,11 +45,14 @@ export default function MatchDetail() {
         const elos = team.flatMap(p => p.eloBefore ?? []);
         const name = (side === "RADIANT" ? match.radiantTeamName : match.direTeamName) ?? sideName[side];
         const standing = side === "RADIANT" ? data.radiantStanding : data.direStanding;
-        return {side, team, name, standing, avgElo: elos.length ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null};
+        // Players no longer tracked leave a side short; their slots are shown as unknown and the average would mislead
+        const missing = Math.max(0, TEAM_SIZE - team.length);
+        const avgElo = elos.length && !missing ? elos.reduce((sum, elo) => sum + elo, 0) / elos.length : null;
+        return {side, team, name, standing, missing, avgElo};
     });
     const [radiantTeam, direTeam] = teams;
     // Worked out by the API with the ELO replay's own formula; Dire's is the rest, so the two always add to 100
-    const radiantChance = data.radiantWinChance === null ? null : Math.round(100 * data.radiantWinChance);
+    const radiantChance = data.radiantWinChance === null || teams.some(t => t.missing) ? null : Math.round(100 * data.radiantWinChance);
     // Every player has an ELO record whenever there's a chance, so both averages are set
     const eloGap = Math.abs((radiantTeam.avgElo ?? 0) - (direTeam.avgElo ?? 0));
 
@@ -82,6 +86,21 @@ export default function MatchDetail() {
                 </div>
             )}
         >
+            {match.seasonName && isLegacySeason(match.seasonName) && (
+                <section aria-labelledby="legacy-match-title" className="mb-4 flex gap-3 rounded-lg border border-warning bg-warning/10 p-4">
+                    {/*Phosphor's Warning*/}
+                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="mt-0.5 shrink-0 text-warning">
+                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
+                    </svg>
+                    <div>
+                        <h2 id="legacy-match-title" className="font-semibold text-warning">Legacy season</h2>
+                        <p className="mt-1 text-bone/80">
+                            This match comes from the old league records. Some players are no longer tracked, so teams, results
+                            and ELO may look off.
+                        </p>
+                    </div>
+                </section>
+            )}
             {/*Radiant left and Dire right, the same as the team panels below*/}
             {radiantChance !== null && (
                 <Panel title="Pre-game odds" className="mb-4">
@@ -93,7 +112,7 @@ export default function MatchDetail() {
                 </Panel>
             )}
             <div className="grid items-start gap-4 lg:grid-cols-2">
-                {teams.map(({side, team, name, standing, avgElo}) => {
+                {teams.map(({side, team, name, standing, missing, avgElo}) => {
                     const won = match.winner === side;
                     const played = standing ? standing.wins + standing.losses : 0;
                     return (
@@ -160,6 +179,14 @@ export default function MatchDetail() {
                                                         </>
                                                     )}
                                                 </Link>
+                                            </li>
+                                        ))}
+                                        {Array.from({length: missing}, (_, i) => (
+                                            <li key={i} className={`${rowColumns} items-center px-3 py-2.5 text-lg text-ash`}>
+                                                <span>Unknown player</span>
+                                                <span className="col-span-2 text-right">
+                                                    <span aria-hidden="true">&ndash;</span><span className="sr-only">No ELO record</span>
+                                                </span>
                                             </li>
                                         ))}
                                     </ul>
