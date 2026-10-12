@@ -5,6 +5,15 @@ import {MemoryRouter, Route, Routes} from "react-router";
 import MatchDetail from "./MatchDetail";
 import type {MatchDetail as MatchDetailData} from "../types";
 
+type Player = MatchDetailData["players"][number];
+
+// Extra players so a side has a full five
+function fillers(side: Player["side"], count: number): Player[] {
+    return Array.from({length: count}, (_, i) => ({
+        steamId: `${side}${i}`, username: `${side} ${i}`, side, sub: false, subbingFor: null, eloBefore: 1600, eloChange: 0,
+    }));
+}
+
 const seasonMatch: MatchDetailData = {
     match: {
         matchId: 1234, winner: "RADIANT", timePlayed: "2026-10-01T19:00:00", avgElo: 1600,
@@ -13,6 +22,7 @@ const seasonMatch: MatchDetailData = {
     players: [
         {steamId: "1", username: "Borky", side: "RADIANT", sub: false, subbingFor: null, eloBefore: 1600, eloChange: 10},
         {steamId: "2", username: "Dev", side: "DIRE", sub: false, subbingFor: null, eloBefore: 1600, eloChange: -10},
+        ...fillers("RADIANT", 4), ...fillers("DIRE", 4),
     ],
     radiantStanding: {position: 2, teamCount: 6, wins: 5, losses: 2},
     // Dire's first game of the season
@@ -98,4 +108,56 @@ it("shows no pre-game odds without a win chance", async () => {
     await screen.findByRole("heading", {name: /Radiant victory/});
 
     expect(screen.queryByRole("heading", {name: "Pre-game odds"})).toBeNull();
+});
+
+// Three on Radiant (none padded on Dire), so Radiant needs two unknowns
+const shortRadiant: MatchDetailData = {...seasonMatch, players: [...fillers("RADIANT", 3), ...fillers("DIRE", 5)]};
+
+it("fills a short side up to five with unknown players and hides its average", async () => {
+    detail = shortRadiant;
+    renderMatch();
+    const radiant = await teamPanel("Sporky Diver");
+    const dire = await teamPanel("The Bad Guys");
+
+    const unknown = within(radiant).getAllByText("Unknown player");
+    expect(unknown).toHaveLength(2);
+    expect(unknown[0].closest("a")).toBeNull();
+    expect(within(radiant).queryByText(/avg$/)).toBeNull();
+    expect(within(dire).queryByText("Unknown player")).toBeNull();
+    expect(within(dire).getByText(/avg$/)).toBeTruthy();
+});
+
+it("hides the pre-game odds when a side is short", async () => {
+    detail = shortRadiant;
+    renderMatch();
+    await teamPanel("Sporky Diver");
+
+    expect(screen.queryByRole("heading", {name: "Pre-game odds"})).toBeNull();
+});
+
+it("counts a sub as filling the missing player's slot", async () => {
+    const sub: Player = {steamId: "9", username: "Subby", side: "RADIANT", sub: true, subbingFor: "Gone", eloBefore: 1600, eloChange: 0};
+    detail = {...seasonMatch, players: [...fillers("RADIANT", 4), sub, ...fillers("DIRE", 5)]};
+    renderMatch();
+    const radiant = await teamPanel("Sporky Diver");
+
+    expect(within(radiant).getByText("Subby")).toBeTruthy();
+    expect(within(radiant).queryByText("Unknown player")).toBeNull();
+    expect(within(radiant).getByText(/avg$/)).toBeTruthy();
+});
+
+it("warns that a match from before Season 25 is legacy data", async () => {
+    detail = {...seasonMatch, match: {...seasonMatch.match, seasonName: "Season 24"}};
+    renderMatch();
+
+    expect(await screen.findByRole("heading", {name: "Legacy season"})).toBeTruthy();
+    expect(screen.getByText(/This match comes from the old league records/)).toBeTruthy();
+});
+
+it.each([["Season 41", seasonMatch], ["an in-house", inhouse]])("doesn't warn on %s", async (_, match) => {
+    detail = match;
+    renderMatch();
+    await screen.findByRole("heading", {name: /victory/});
+
+    expect(screen.queryByRole("heading", {name: "Legacy season"})).toBeNull();
 });

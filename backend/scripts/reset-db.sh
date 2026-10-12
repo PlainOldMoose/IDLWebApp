@@ -1,30 +1,18 @@
 #!/usr/bin/env bash
 # Wipes every table and reloads src/main/resources/data.sql, in a single transaction.
-# Usage: scripts/reset-db.sh [dev|prod]   (default: dev)
-#   dev:  the Postgres container from backend/docker-compose.yml
-#   prod: the server's Postgres over SSH, via the idl-prod host in ~/.ssh/config (override with IDL_PROD_SSH)
+# Dev only: prod holds data entered since the snapshot, so it's never reset from it.
+# Usage: scripts/reset-db.sh
 # The tables must already exist (start the backend once against the DB first).
 set -euo pipefail
+(( $# == 0 )) || { echo "usage: $0 (dev only, takes no arguments)" >&2; exit 1; }
 cd "$(dirname "$0")/.."
 
 seed=src/main/resources/data.sql
 # Not in git (real league data). Checked up front: a missing file would otherwise commit the TRUNCATE alone
 [[ -f "$seed" ]] || { echo "Missing $seed (it's gitignored; copy it in first)." >&2; exit 1; }
 
-target="${1:-dev}"
 PSQL='psql -U admin -d idlwebapp -v ON_ERROR_STOP=1 --single-transaction -q'
-
-case "$target" in
-  dev)
-    run() { docker compose -f docker-compose.yml exec -T db $PSQL; } ;;
-  prod)
-    host="${IDL_PROD_SSH:-idl-prod}"
-    read -rp "This will WIPE the PROD database. Type 'prod' to continue: " ok
-    [[ "$ok" == prod ]] || { echo "Aborted."; exit 1; }
-    run() { ssh "$host" "cd /opt/idlwebapp && docker compose exec -T db $PSQL"; } ;;
-  *)
-    echo "usage: $0 [dev|prod]" >&2; exit 1 ;;
-esac
+run() { docker compose -f docker-compose.yml exec -T db $PSQL; }
 
 {
   cat <<'SQL'
@@ -42,4 +30,4 @@ SQL
   cat "$seed"
 } | run
 
-echo "$target DB reset to seed snapshot."
+echo "Dev DB reset to seed snapshot."

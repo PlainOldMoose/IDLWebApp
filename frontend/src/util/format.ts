@@ -1,5 +1,8 @@
 export const sideName = {RADIANT: "Radiant", DIRE: "Dire"} as const;
 
+// Seasons before 25 were imported from the old league records, with players who are no longer tracked
+export const isLegacySeason = (name: string) => Number(/Season (\d+)/i.exec(name)?.[1] ?? Infinity) < 25;
+
 const eloFormat = new Intl.NumberFormat("en-GB", {minimumFractionDigits: 1, maximumFractionDigits: 1});
 const dayFormat = new Intl.DateTimeFormat("en-GB", {day: "numeric", month: "short", year: "numeric"});
 
