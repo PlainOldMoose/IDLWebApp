@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.repository;
 
 import com.plainoldmoose.IDLWebApp.model.match.Match;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -9,9 +10,11 @@ import java.util.List;
 import java.util.UUID;
 
 public interface MatchRepository extends JpaRepository<Match, Long> {
-    List<Match> findAllByOrderByPlayedTimeDesc();
+    List<Match> findAllByOrderByPlayedTimeDesc(Limit limit);
 
     List<Match> findBySeasonIdOrderByPlayedTimeDesc(UUID seasonId);
+
+    List<Match> findBySeasonIdOrderByPlayedTimeDesc(UUID seasonId, Limit limit);
 
     boolean existsBySeasonId(UUID seasonId);
 

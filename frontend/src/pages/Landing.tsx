@@ -3,12 +3,12 @@ import EloLadder from "../components/EloLadder.tsx";
 import MatchSummaryCard from "../components/MatchSummaryCard.tsx";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
-import {useCurrentUser, useMatches, usePlayers, useSeasons} from "../services/Queries.ts";
+import {useCurrentUser, usePlayers, useRecentMatches, useSeasons} from "../services/Queries.ts";
 import {formatDateRange} from "../util/format.ts";
 import {statusStyles} from "../util/statusStyles.ts";
 import type {Season} from "../types.ts";
 
-const RECENT_MATCH_COUNT = 5;
+const RECENT_MATCH_COUNT = 6;
 const HALL_OF_FAME_COUNT = 5;
 
 // The season people most likely want: one taking sign-ups or drafting, else one in progress, else the latest (API sends
@@ -20,7 +20,7 @@ const pickCurrentSeason = (seasons: Season[]): Season | undefined =>
 
 export default function Landing() {
     const {data: players} = usePlayers();
-    const {data: matches} = useMatches();
+    const {data: matches} = useRecentMatches(RECENT_MATCH_COUNT);
     const {data: seasons} = useSeasons();
     const {data: user} = useCurrentUser();
 
@@ -50,26 +50,12 @@ export default function Landing() {
 
     return (
         <Page title="IDL Web Manager" subtitle="In-house Dota 2 league, UK">
-            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                <div className="min-w-0 space-y-4">
-                    {players && players.length > 0 && (
-                        <Panel title="Ladder" meta={<Link to="/players" className="hover:text-bone">{players.length} players</Link>}>
-                            <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
-                        </Panel>
-                    )}
-                    {matches && matches.length > 0 && (
-                        <Panel title="Recent matches" meta={<Link to="/matches" className="hover:text-bone">See all {matches.length}</Link>}
-                               padded={false}>
-                            {matches.slice(0, RECENT_MATCH_COUNT).map(match => (
-                                <MatchSummaryCard key={match.matchId} match={match}/>
-                            ))}
-                        </Panel>
-                    )}
-                </div>
-
-                <aside className="min-w-0 space-y-4">
-                    {currentSeason && (
-                        <Panel title="Current season">
+            {/*Bands of paired panels, so neither column runs on alone. Season first, so phones see it before the ladder*/}
+            <div className="space-y-4">
+                {/*A lone panel takes the full width rather than leaving its partner's column empty*/}
+                <div className={`grid gap-4 ${players?.length ? "lg:grid-cols-[20rem_minmax(0,1fr)]" : ""}`}>
+                    <Panel title="Current season">
+                        {currentSeason ? (<>
                             <p className="font-display text-3xl font-bold leading-none">{currentSeason.name}</p>
                             <p className="mt-2 text-sm text-ash">
                                 <span className="figures">{formatDateRange(currentSeason.startDate, currentSeason.endDate)}</span>
@@ -77,10 +63,33 @@ export default function Landing() {
                                     {statusStyles[currentSeason.status].label}
                                 </span>
                             </p>
-                            <Link to={`/seasons/${currentSeason.id}`}
-                                  className={`mt-4 w-full justify-center ${currentSeason.status === "REGISTRATION" ? "primary-button" : "secondary-button"}`}>
-                                {currentSeason.status === "REGISTRATION" ? "View and sign up" : "View season"}
-                            </Link>
+                        </>) : seasons && (
+                            <p className="text-ash">No seasons yet. The first one appears here when an admin creates it.</p>
+                        )}
+                        <div className="mt-4 grid gap-2">
+                            {currentSeason && (
+                                <Link to={`/seasons/${currentSeason.id}`}
+                                      className={`justify-center ${currentSeason.status === "REGISTRATION" ? "primary-button" : "secondary-button"}`}>
+                                    {currentSeason.status === "REGISTRATION" ? "View and sign up" : "View season"}
+                                </Link>
+                            )}
+                            <Link to="/rules" className="secondary-button justify-center">Read the rules</Link>
+                        </div>
+                    </Panel>
+                    {players && players.length > 0 && (
+                        <Panel title="Ladder" meta={<Link to="/players" className="hover:text-bone">{players.length} players</Link>}>
+                            <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
+                        </Panel>
+                    )}
+                </div>
+
+                <div className={`grid gap-4 ${matches?.length && champions ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : ""}`}>
+                    {matches && matches.length > 0 && (
+                        <Panel title="Recent matches" meta={<Link to="/matches" className="hover:text-bone">See all matches</Link>}
+                               padded={false}>
+                            {matches.map(match => (
+                                <MatchSummaryCard key={match.matchId} match={match}/>
+                            ))}
                         </Panel>
                     )}
                     {champions && (
@@ -111,21 +120,18 @@ export default function Landing() {
                             )}
                         </Panel>
                     )}
-                    <Panel title="Rules">
-                        <p className="leading-relaxed text-ash">Sign-ups, the draft, subs, conduct and penalties.</p>
-                        <Link to="/rules" className="secondary-button mt-4 w-full justify-center">Read the rules</Link>
-                    </Panel>
-                    <Panel title="About">
-                        <div className="space-y-4">
-                            {about.map(({title, body}) => (
-                                <div key={title}>
-                                    <h3 className="font-semibold">{title}</h3>
-                                    <p className="mt-1 leading-relaxed text-ash">{body}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </Panel>
-                </aside>
+                </div>
+
+                <Panel title="About">
+                    <div className="grid gap-x-8 gap-y-4 md:grid-cols-3">
+                        {about.map(({title, body}) => (
+                            <div key={title}>
+                                <h3 className="font-semibold">{title}</h3>
+                                <p className="mt-1 leading-relaxed text-ash">{body}</p>
+                            </div>
+                        ))}
+                    </div>
+                </Panel>
             </div>
         </Page>
     );

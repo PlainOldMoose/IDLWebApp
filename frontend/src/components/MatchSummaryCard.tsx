@@ -29,9 +29,10 @@ export default function MatchSummaryCard({match}: { match: MatchSummary }) {
             <p className="col-span-3 flex justify-center gap-4 text-sm text-ash md:contents">
                 <span className="figures md:text-right">{formatDate(match.timePlayed)}</span>
                 <span className="figures md:text-right">
-                    {/*null for games the old sheet kept no ELO for. Phones have no column heading, so the suffix labels it there*/}
+                    {/*null for games the old sheet kept no ELO for. "avg" always shows, as the home page has no column heading;
+                       phones also get "ELO"*/}
                     {match.avgElo !== null ? match.avgElo.toLocaleString("en-GB") : <NoValue label="No"/>}
-                    <span className="md:sr-only"> avg ELO</span>
+                    {" avg"}<span className="md:sr-only"> ELO</span>
                 </span>
                 <span className="truncate md:text-right">{match.seasonName ?? "In-house"}</span>
             </p>

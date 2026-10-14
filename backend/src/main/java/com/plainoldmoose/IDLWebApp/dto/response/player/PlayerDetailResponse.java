@@ -9,6 +9,7 @@ public record PlayerDetailResponse(
         int wins,
         int losses,
         double winRate,
-        List<RecentMatchResponse> recentMatches// Last 20 matches
+        // NOTE: grows with each match, move paging to the API if a player reaches the thousands
+        List<PlayerMatchResponse> matches
 ) {
 }
