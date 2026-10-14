@@ -10,6 +10,7 @@ import Unregistered from "./pages/Unregistered.tsx";
 import PlayerDetail from "./pages/PlayerDetail.tsx";
 import Inhouses from "./pages/Inhouses.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Rules from "./pages/Rules.tsx";
 
 function App() {
     const {data: user} = useCurrentUser();
@@ -23,12 +24,13 @@ function App() {
                     <Link to="/" className="flex h-12 shrink-0 items-center" aria-label="IDL home">
                         <img src="/idl.png" alt="" width={28} height={28} className="h-7 w-7"/>
                     </Link>
-                    {/*Links drop to their own row on small screens*/}
-                    <div className="order-last -ml-2.5 flex h-10 w-full items-center gap-1 sm:order-none sm:ml-0 sm:h-12 sm:w-auto">
+                    {/*Links drop to their own row on small screens. The px-1 keeps the focus ring inside the scrolling row*/}
+                    <div className="order-last -ml-3.5 flex h-10 w-full items-center gap-1 overflow-x-auto px-1 sm:order-none sm:ml-0 sm:px-0 sm:h-12 sm:w-auto">
                         <NavLink to="/players" className="nav-link">Players</NavLink>
                         <NavLink to="/seasons" className="nav-link">Seasons</NavLink>
                         <NavLink to="/matches" className="nav-link">Matches</NavLink>
                         <NavLink to="/inhouses" className="nav-link">In-houses</NavLink>
+                        <NavLink to="/rules" className="nav-link">Rules</NavLink>
                     </div>
                     {/*Outlined so they read as buttons rather than more nav links*/}
                     <div className="ml-auto flex h-12 shrink-0 items-center gap-2">
@@ -62,6 +64,7 @@ function App() {
                     <Route path="/matches" element={<Matches/>}/>
                     <Route path="/matches/:matchId" element={<MatchDetail/>}/>
                     <Route path="/inhouses" element={<Inhouses/>}/>
+                    <Route path="/rules" element={<Rules/>}/>
                     <Route path="/unregistered" element={<Unregistered/>}/>
                     <Route path="*" element={<NotFound/>}/>
                 </Routes>

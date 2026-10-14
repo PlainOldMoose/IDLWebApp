@@ -81,6 +81,10 @@ export default function Landing() {
                             </Link>
                         </Panel>
                     )}
+                    <Panel title="Rules">
+                        <p className="leading-relaxed text-ash">Sign-ups, the draft, subs, conduct and penalties.</p>
+                        <Link to="/rules" className="secondary-button mt-4 w-full justify-center">Read the rules</Link>
+                    </Panel>
                     <Panel title="About">
                         <div className="space-y-4">
                             {about.map(({title, body}) => (
