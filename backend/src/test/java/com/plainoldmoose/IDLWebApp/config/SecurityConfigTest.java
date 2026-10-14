@@ -2,12 +2,14 @@ package com.plainoldmoose.IDLWebApp.config;
 
 import com.plainoldmoose.IDLWebApp.controller.DraftController;
 import com.plainoldmoose.IDLWebApp.controller.InhouseController;
+import com.plainoldmoose.IDLWebApp.controller.LeagueSyncController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
 import com.plainoldmoose.IDLWebApp.controller.MatchController;
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.DraftService;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
+import com.plainoldmoose.IDLWebApp.service.MatchSyncService;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import com.plainoldmoose.IDLWebApp.service.SeasonService;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // SecurityConfig's rule order is the whole authorisation model, so these pin down who gets through to what
-@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class, DraftController.class})
+@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class, DraftController.class, LeagueSyncController.class})
 @Import(SecurityConfig.class)
 class SecurityConfigTest {
 
@@ -58,6 +60,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private DraftService draftService;
+
+    @MockitoBean
+    private MatchSyncService matchSyncService;
 
     // Roles come from the player row on every request, so the signed-in users need one
     @BeforeEach
@@ -100,6 +105,16 @@ class SecurityConfigTest {
         mvc.perform(delete("/api/matches/1").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
     }
 
+    // Behaviour 56
+    @Test
+    void onlyAdminsSeeTheBinOrRestore() throws Exception {
+        mvc.perform(get("/api/matches/bin").param("seasonId", UUID.randomUUID().toString())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/matches/bin").param("seasonId", UUID.randomUUID().toString()).with(PLAYER)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/matches/1/restore").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/matches/bin").param("seasonId", UUID.randomUUID().toString()).with(ADMIN)).andExpect(status().isOk());
+        mvc.perform(post("/api/matches/1/restore").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
     @Test
     void onlyAdminsSeeOrApproveTheQueue() throws Exception {
         mvc.perform(get("/api/inhouses/pending")).andExpect(status().isForbidden());
@@ -111,6 +126,25 @@ class SecurityConfigTest {
     void adminCanSeeAndApproveTheQueue() throws Exception {
         mvc.perform(get("/api/inhouses/pending").with(ADMIN)).andExpect(status().isOk());
         mvc.perform(post("/api/inhouses/1/approve").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    // The league queue shows unregistered Steam accounts, so even reading it is admin-only
+    @Test
+    void onlyAdminsSeeOrRunTheLeagueSync() throws Exception {
+        mvc.perform(get(SEASON + "/league")).andExpect(status().isForbidden());
+        mvc.perform(get(SEASON + "/league").with(PLAYER)).andExpect(status().isForbidden());
+        mvc.perform(post(SEASON + "/league/sync").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(delete(SEASON + "/league/pending/1").with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(put(SEASON + "/league").with(PLAYER).with(csrf())
+                .contentType("application/json").content("{\"leagueId\":15728}")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanSeeAndRunTheLeagueSync() throws Exception {
+        mvc.perform(get(SEASON + "/league").with(ADMIN)).andExpect(status().isOk());
+        mvc.perform(post(SEASON + "/league/sync").with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(put(SEASON + "/league").with(ADMIN).with(csrf())
+                .contentType("application/json").content("{\"leagueId\":15728}")).andExpect(status().isNoContent());
     }
 
     @Test

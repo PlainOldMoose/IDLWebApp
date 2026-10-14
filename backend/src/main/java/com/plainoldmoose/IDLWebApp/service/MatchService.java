@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
+import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchPlayerResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
@@ -8,18 +9,25 @@ import com.plainoldmoose.IDLWebApp.dto.response.match.TeamStandingResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.TeamMember;
+import com.plainoldmoose.IDLWebApp.model.enums.LeagueMatchStatus;
+import com.plainoldmoose.IDLWebApp.model.enums.MatchSource;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
+import com.plainoldmoose.IDLWebApp.model.match.DeletedMatch;
+import com.plainoldmoose.IDLWebApp.model.match.LeagueMatch;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
+import com.plainoldmoose.IDLWebApp.repository.LeagueMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -40,11 +49,16 @@ import java.util.stream.Stream;
 @Service
 @AllArgsConstructor
 public class MatchService {
+    // How long a deleted match stays in the bin
+    private static final int BIN_DAYS = 7;
+
     private final MatchRepository matchRepository;
     private final EloHistoryRepository eloHistoryRepository;
     private final SeasonRepository seasonRepository;
     private final PlayerRepository playerRepository;
     private final EloService eloService;
+    private final LeagueMatchRepository leagueMatchRepository;
+    private final DeletedMatchRepository deletedMatchRepository;
 
     public List<MatchSummaryResponse> getAllMatches(UUID seasonId) {
         List<Match> matches = seasonId != null
@@ -85,7 +99,9 @@ public class MatchService {
         return new MatchDetailResponse(mapToSummaryResponse(match), players,
                 match.getRadiantTeam() != null ? standings.get(match.getRadiantTeam().getTeamId()) : null,
                 match.getDireTeam() != null ? standings.get(match.getDireTeam().getTeamId()) : null,
-                radiantWinChance(players));
+                radiantWinChance(players),
+                // A match the sync ever found is its, even when an admin typed it in from the queue
+                leagueMatchRepository.existsById(matchId) ? MatchSource.API_SYNC : MatchSource.MANUAL);
     }
 
     // Only when all 10 players have an ELO record: then their ELO going in is what the replay averaged for this game
@@ -155,6 +171,8 @@ public class MatchService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The match has to be played between the season's start and now");
         }
 
+        // A game the sync has seen stays tracked by it, even when an admin types it in (from the queue, or back after a delete)
+        Optional<LeagueMatch> synced = leagueMatchRepository.findById(request.matchId());
         Match match = new Match();
         match.setMatchId(request.matchId());
         match.setSeason(season);
@@ -192,6 +210,10 @@ public class MatchService {
         matchRepository.save(match);
         countResult(match, 1);
         eloService.replay(played);
+        // Restored, or typed back in by hand: either way it's no longer deleted
+        deletedMatchRepository.deleteById(request.matchId());
+        // Off the sync's queue, rejected list or deleted list, whichever it was on
+        synced.ifPresent(row -> row.setStatus(LeagueMatchStatus.IMPORTED));
     }
 
     // For a game that was ticketed but shouldn't count. ELO is replayed from it without it
@@ -203,11 +225,70 @@ public class MatchService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an active season's matches can be deleted");
         }
         LocalDateTime played = match.getPlayedTime();
+        deletedMatchRepository.save(binCopy(match));
         // Also drops this match's ELO history, which would otherwise block deleting it
         eloService.rewind(played);
         countResult(match, -1);
         matchRepository.delete(match);
+        // On the deleted list, so the next sync doesn't add it back. Add match still can
+        leagueMatchRepository.findById(matchId).ifPresent(row -> row.setStatus(LeagueMatchStatus.DELETED));
         eloService.replay(played);
+    }
+
+    public List<BinMatchResponse> getBin(UUID seasonId) {
+        return deletedMatchRepository.findBySeasonIdOrderByDeletedAtDesc(seasonId)
+                .stream()
+                .map(copy -> new BinMatchResponse(copy.getMatchId(),
+                        copy.getRadiantTeam() != null ? copy.getRadiantTeam().getName() : null,
+                        copy.getDireTeam() != null ? copy.getDireTeam().getName() : null,
+                        copy.getWinner(), copy.getDeletedAt(), copy.getDeletedAt().plusDays(BIN_DAYS)))
+                .toList();
+    }
+
+    // Puts a deleted match back as it was, through create, so standings and ELO replay and its checks still apply.
+    // If they refuse it, it stays in the bin
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public void restore(Long matchId) {
+        DeletedMatch copy = deletedMatchRepository.findById(matchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match " + matchId + " isn't in the bin"));
+        Map<String, String> subbingFor = copy.getParticipants().stream()
+                .filter(participant -> participant.getSubbingFor() != null)
+                .collect(Collectors.toMap(DeletedMatch.DeletedParticipant::getSteamId, DeletedMatch.DeletedParticipant::getSubbingFor));
+        create(new CreateMatchRequest(matchId, copy.getSeason().getId(), copy.getPlayedTime(), copy.getRadiantTeam().getTeamId(),
+                copy.getDireTeam().getTeamId(), copy.getWinner(), binSide(copy, Side.RADIANT), binSide(copy, Side.DIRE), subbingFor));
+    }
+
+    @Scheduled(fixedDelayString = "PT1H", initialDelayString = "PT1M")
+    @Transactional
+    public void purgeBin() {
+        deletedMatchRepository.deleteByDeletedAtBefore(LocalDateTime.now().minusDays(BIN_DAYS));
+    }
+
+    private static List<String> binSide(DeletedMatch copy, Side side) {
+        return copy.getParticipants().stream()
+                .filter(participant -> participant.getSide() == side)
+                .map(DeletedMatch.DeletedParticipant::getSteamId)
+                .toList();
+    }
+
+    // What create needs to add the match back
+    private static DeletedMatch binCopy(Match match) {
+        DeletedMatch copy = new DeletedMatch();
+        copy.setMatchId(match.getMatchId());
+        copy.setSeason(match.getSeason());
+        copy.setPlayedTime(match.getPlayedTime());
+        copy.setWinner(match.getMatchWinner());
+        copy.setRadiantTeam(match.getRadiantTeam());
+        copy.setDireTeam(match.getDireTeam());
+        copy.setDeletedAt(LocalDateTime.now());
+        copy.setParticipants(new ArrayList<>(match.getParticipants().stream().map(participant -> {
+            DeletedMatch.DeletedParticipant copied = new DeletedMatch.DeletedParticipant();
+            copied.setSteamId(participant.getPlayer().getSteamId());
+            copied.setSide(participant.getSide());
+            copied.setSubbingFor(participant.getSubbingFor() != null ? participant.getSubbingFor().getSteamId() : null);
+            return copied;
+        }).toList()));
+        return copy;
     }
 
     // The team member a sub stood in for: on the sub's own team, and not playing in the match themselves

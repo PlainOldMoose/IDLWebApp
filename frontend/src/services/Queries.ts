@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import type {Draft, Inhouse, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
+import type {BinMatch, Draft, Inhouse, LeagueSync, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
 const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> => {
@@ -83,6 +83,40 @@ export function useCompleteSeason(seasonId: string | undefined) {
     });
 }
 
+// Admin-only, so only admins ask; under ["season", id] so the season's own invalidations refresh it
+export function useLeagueSync(seasonId: string | undefined, enabled: boolean) {
+    return useQuery({
+        queryKey: ["season", seasonId, "league"],
+        queryFn: () => request<LeagueSync>(`/api/seasons/${seasonId}/league`),
+        enabled: !!seasonId && enabled,
+    });
+}
+
+export function useSetLeague(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (leagueId: number | null) => request<void>(`/api/seasons/${seasonId}/league`, {method: "PUT", json: {leagueId}}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["season", seasonId]}),
+    });
+}
+
+// Imported games replay everyone's ELO, and a failure is recorded on the season, so everything is stale either way
+export function useSyncLeague(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => request<void>(`/api/seasons/${seasonId}/league/sync`, {method: "POST"}),
+        onSettled: () => void queryClient.invalidateQueries(),
+    });
+}
+
+export function useRejectPendingMatch(seasonId: string | undefined) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (matchId: number) => request<void>(`/api/seasons/${seasonId}/league/pending/${matchId}`, {method: "DELETE"}),
+        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["season", seasonId, "league"]}),
+    });
+}
+
 export function useMatches(seasonId?: string, enabled = true) {
     return useQuery({
         queryKey: ["matches", seasonId],
@@ -99,6 +133,24 @@ export function useCreateMatch() {
             matchId: number, seasonId: string, playedTime: string, radiantTeamId: string, direTeamId: string,
             winner: "RADIANT" | "DIRE", radiant: string[], dire: string[], subbingFor: Record<string, string>
         }) => request<void>("/api/matches", {method: "POST", json: match}),
+        onSuccess: () => void queryClient.invalidateQueries(),
+    });
+}
+
+// A season's "Recently deleted" bin. Admin-only, so only admins ask
+export function useMatchBin(seasonId: string | undefined, enabled: boolean) {
+    return useQuery({
+        queryKey: ["matches", "bin", seasonId],
+        queryFn: () => request<BinMatch[]>(`/api/matches/bin?seasonId=${seasonId}`),
+        enabled: !!seasonId && enabled,
+    });
+}
+
+// Back in with ELO replayed from the game on, so everything cached is stale
+export function useRestoreMatch() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (matchId: number) => request<void>(`/api/matches/${matchId}/restore`, {method: "POST"}),
         onSuccess: () => void queryClient.invalidateQueries(),
     });
 }

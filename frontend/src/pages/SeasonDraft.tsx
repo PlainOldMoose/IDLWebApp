@@ -4,6 +4,7 @@ import {useDraft, useDraftCaptain, useDraftPick, useRenameTeam} from "../service
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import WarningIcon from "../components/WarningIcon.tsx";
 import {formatElo} from "../util/format.ts";
 import {hasDefaultName} from "../util/draft.ts";
 import type {DraftPlayer, DraftTeam, SteamUser} from "../types.ts";
@@ -73,10 +74,7 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
             {complete && myDefaultNamedTeam && (
                 // A one-line take on a legacy season's warning note
                 <section aria-label="Name your team" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning bg-warning/10 px-4 py-2.5">
-                    {/*Phosphor's Warning*/}
-                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="shrink-0 text-warning">
-                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
-                    </svg>
+                    <WarningIcon size={22} className="shrink-0 text-warning"/>
                     <p className="flex-1 font-semibold text-warning">Name your team before the season starts.</p>
                     <button type="button" className="secondary-button px-3 py-1 text-sm" onClick={() => openRenameDialog(myDefaultNamedTeam)}>Rename team</button>
                 </section>

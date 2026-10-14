@@ -6,6 +6,7 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import WarningIcon from "../components/WarningIcon.tsx";
 import NoValue from "../components/NoValue.tsx";
 import {formatDate, formatElo, formatEloChange, formatOrdinal, isLegacySeason, sideName} from "../util/format.ts";
 
@@ -14,6 +15,8 @@ const TEAM_SIZE = 5;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
 const winnerRing = {RADIANT: "ring-1 ring-radiant/70", DIRE: "ring-1 ring-dire/70"};
 const changeColour = (change: number) => change > 0 ? "text-win" : change < 0 ? "text-loss" : "";
+// Admins only: a manual match can't be found again by the league sync once deleted
+const sourceName = {MANUAL: "Manually added by an Admin", API_SYNC: "API synced"} as const;
 
 // Our own match page, laid out like Stratz's: who played on each side and the ELO they took in. In-houses have no Stratz page
 export default function MatchDetail() {
@@ -75,6 +78,8 @@ export default function MatchDetail() {
                     <span>{match.seasonName ?? "In-house"}</span>
                     {match.avgElo !== null && <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>}
                     <span>Match {match.matchId}</span>
+                    {/*Season games only: in-houses are always reported by players*/}
+                    {user?.admin && match.seasonName && <span><span className="sr-only">Source: </span>{sourceName[data.source]}</span>}
                 </span>
             }
             aside={match.seasonName && (
@@ -91,10 +96,7 @@ export default function MatchDetail() {
         >
             {match.seasonName && isLegacySeason(match.seasonName) && (
                 <section aria-labelledby="legacy-match-title" className="mb-4 flex gap-3 rounded-lg border border-warning bg-warning/10 p-4">
-                    {/*Phosphor's Warning*/}
-                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="mt-0.5 shrink-0 text-warning">
-                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
-                    </svg>
+                    <WarningIcon size={22} className="mt-0.5 shrink-0 text-warning"/>
                     <div>
                         <h2 id="legacy-match-title" className="font-semibold text-warning">Legacy season</h2>
                         <p className="mt-1 text-bone/80">
@@ -212,6 +214,7 @@ export default function MatchDetail() {
                             This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
                             off the standings. Everyone's ELO is worked out again from this game on.
                         </p>
+                        <p className="text-sm text-ash">It goes to Recently deleted for 7 days, where you can restore it.</p>
                         <label className="block">
                             Type <strong>delete</strong> to confirm
                             <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"

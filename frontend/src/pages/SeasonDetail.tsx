@@ -5,14 +5,20 @@ import {
     useCreateMatch,
     useCurrentUser,
     useDeleteSeason,
+    useLeagueSync,
+    useMatchBin,
     useMatches,
     usePlayers,
+    useRejectPendingMatch,
+    useRestoreMatch,
     useSeasonDetail,
     useSeasonSignup,
+    useSetLeague,
     useDraft,
     useSeasonSignups,
     useStartDraft,
     useStartSeason,
+    useSyncLeague,
     useWithdrawSignup
 } from "../services/Queries.ts";
 import MatchSummaryCard, {matchColumns} from "../components/MatchSummaryCard.tsx";
@@ -21,11 +27,12 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import WarningIcon from "../components/WarningIcon.tsx";
 import SeasonDraft from "./SeasonDraft.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
 import {hasDefaultName} from "../util/draft.ts";
-import {formatDate, formatDateRange, formatElo, isLegacySeason, sideName} from "../util/format.ts";
-import type {PlayerSummary, SeasonSignup} from "../types.ts";
+import {formatDate, formatDateRange, formatElo, formatRelative, isLegacySeason, sideName} from "../util/format.ts";
+import type {PendingMatch, PlayerSummary, SeasonSignup} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 10;
 
@@ -38,6 +45,13 @@ const replacedMembers = (names: string[], members: PlayerSummary[]) => {
         ? member : null);
 };
 const TEAM_SIZE = 5;
+
+// A queued game's players in a team's Add match boxes: members who played in their own box, then the side's other
+// players in the boxes of members who didn't, so they show as subbing. Blank where the sync couldn't name anyone
+const slotted = (members: PlayerSummary[], played: PendingMatch["radiant"]) => {
+    const others = played.filter(p => !members.some(m => m.steamId === p.steamId)).map(p => p.username ?? "");
+    return members.map(m => played.some(p => p.steamId === m.steamId) ? m.username : others.shift() ?? "");
+};
 
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
@@ -66,6 +80,16 @@ export default function SeasonDetail() {
     const [unknownNames, setUnknownNames] = useState<string[]>([]);
     // What's typed in each side's player boxes, for the "Subbing for" hints. A side is absent until a box is edited
     const [boxNames, setBoxNames] = useState<Record<string, string[] | undefined>>({});
+    // The queued game being reviewed, which fills in the Add match form; null for a game typed in from scratch
+    const [prefill, setPrefill] = useState<PendingMatch | null>(null);
+    const canSync = canAddMatch && !!season?.leagueId;
+    const {data: league, isPending: leaguePending, isError: leagueError} = useLeagueSync(seasonId, canSync);
+    const syncLeague = useSyncLeague(seasonId);
+    const rejectPending = useRejectPendingMatch(seasonId);
+    const setLeague = useSetLeague(seasonId);
+    const leagueDialogRef = useRef<HTMLDialogElement>(null);
+    const {data: bin} = useMatchBin(seasonId, canAddMatch);
+    const restoreMatch = useRestoreMatch();
     const completeSeason = useCompleteSeason(seasonId);
     const endDialogRef = useRef<HTMLDialogElement>(null);
     const [winnerTeamId, setWinnerTeamId] = useState("");
@@ -116,11 +140,35 @@ export default function SeasonDetail() {
         deleteSeason.mutate(undefined, {onSuccess: () => navigate("/seasons")});
     };
 
-    const openAddMatchDialog = () => {
+    const openAddMatchDialog = (pending?: PendingMatch) => {
         createMatch.reset();
         setUnknownNames([]);
-        setBoxNames({});
+        setPrefill(pending ?? null);
+        if (pending) {
+            const team = (teamId: string | null) => season!.teams.find(t => t.teamId === teamId);
+            const radiantTeam = team(pending.radiantTeamId);
+            const direTeam = team(pending.direTeamId);
+            setRadiantTeamId(radiantTeam?.teamId ?? "");
+            setDireTeamId(direTeam?.teamId ?? "");
+            setBoxNames({
+                radiant: radiantTeam && slotted(radiantTeam.members, pending.radiant),
+                dire: direTeam && slotted(direTeam.members, pending.dire),
+            });
+        } else {
+            setBoxNames({});
+        }
         addMatchDialogRef.current?.showModal();
+    };
+
+    const openLeagueDialog = () => {
+        setLeague.reset();
+        leagueDialogRef.current?.showModal();
+    };
+
+    const handleSetLeague = (e: SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const leagueId = String(new FormData(e.currentTarget).get("leagueId")).trim();
+        setLeague.mutate(leagueId ? Number(leagueId) : null, {onSuccess: () => leagueDialogRef.current?.close()});
     };
 
     const handleAddMatch = (e: SubmitEvent<HTMLFormElement>) => {
@@ -273,9 +321,15 @@ export default function SeasonDetail() {
                         </button>
                     )
                 ) : canAddMatch ? (
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap justify-end gap-3">
                         <button className="secondary-button" onClick={openEndDialog}>End season</button>
-                        <button className="primary-button" onClick={openAddMatchDialog}>Add match</button>
+                        <button className="secondary-button" onClick={openLeagueDialog}>League ticket</button>
+                        {canSync && (
+                            <button className="secondary-button" onClick={() => syncLeague.mutate()} disabled={syncLeague.isPending}>
+                                {syncLeague.isPending ? "Syncing…" : "Sync now"}
+                            </button>
+                        )}
+                        <button className="primary-button" onClick={() => openAddMatchDialog()}>Add match</button>
                     </div>
                 ) : season.winnerTeamName && (
                     <div className="border-l-3 border-aegis pl-4">
@@ -287,10 +341,7 @@ export default function SeasonDetail() {
         >
             {isLegacySeason(season.name) && (
                 <section aria-labelledby="legacy-season-title" className="mb-4 flex gap-3 rounded-lg border border-warning bg-warning/10 p-4">
-                    {/*Phosphor's Warning*/}
-                    <svg aria-hidden="true" width={22} height={22} viewBox="0 0 256 256" fill="currentColor" className="mt-0.5 shrink-0 text-warning">
-                        <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
-                    </svg>
+                    <WarningIcon size={22} className="mt-0.5 shrink-0 text-warning"/>
                     <div>
                         <h2 id="legacy-season-title" className="font-semibold text-warning">Legacy season</h2>
                         <p className="mt-1 text-bone/80">
@@ -324,6 +375,79 @@ export default function SeasonDetail() {
             )}
 
             {season.status === "DRAFTING" && <SeasonDraft seasonId={season.id} user={user}/>}
+
+            {canSync && (
+                <Panel title="Matches to check" className="mb-4" meta={league?.pending.length ? `${league.pending.length} waiting` : undefined}>
+                    {leaguePending ? <Loader label="Loading the league sync"/>
+                        : leagueError ? <QueryError message="Couldn't load the league sync."/>
+                        : (
+                            <>
+                                {league.pending.length ? (
+                                    <ul className="divide-y divide-rule">
+                                        {league.pending.map(match => (
+                                            <li key={match.matchId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 first:pt-0">
+                                                <div className="min-w-0">
+                                                    <p>
+                                                        <span id={`pending-${match.matchId}`} className="figures">{match.matchId}</span>
+                                                        <span className="figures ml-3 text-sm text-ash">{formatDate(match.playedTime)}</span>
+                                                    </p>
+                                                    <p className="text-sm text-ash">
+                                                        <span>{match.reason}</span>
+                                                        {" · "}
+                                                        <a href={`https://www.opendota.com/matches/${match.matchId}`} target="_blank" rel="noreferrer"
+                                                           className="text-accent underline-offset-2 hover:underline">View on OpenDota</a>
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button className="secondary-button" onClick={() => openAddMatchDialog(match)}
+                                                            aria-describedby={`pending-${match.matchId}`}>Review</button>
+                                                    <button className="secondary-button" onClick={() => rejectPending.mutate(match.matchId)}
+                                                            aria-describedby={`pending-${match.matchId}`} disabled={rejectPending.isPending}>Reject</button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-ash">Nothing to check. Ticketed games that can't be added on their own show up here.</p>
+                                )}
+                                {rejectPending.isError && <p role="alert" className="mt-2 text-sm text-ash">{rejectPending.error.message}</p>}
+                                {/*Announced, so "Sync now" says how it went*/}
+                                <div aria-live="polite" className="mt-4 border-t border-rule pt-3 text-sm text-ash">
+                                    {league.error ? (
+                                        <p className="flex items-center gap-2">
+                                            <WarningIcon size={18} className="shrink-0 text-warning"/>
+                                            <span>{`Last sync failed: ${league.error}`}</span>
+                                        </p>
+                                    ) : (
+                                        <p>{league.syncedAt ? `Last synced ${formatRelative(league.syncedAt)}` : "Not synced yet. Games are checked every 30 minutes."}</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                </Panel>
+            )}
+
+            {/*Only when there's something in it: deletes are rare*/}
+            {canAddMatch && !!bin?.length && (
+                <Panel title="Recently deleted" className="mb-4">
+                    <ul className="divide-y divide-rule">
+                        {bin.map(match => (
+                            <li key={match.matchId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 first:pt-0">
+                                <div className="min-w-0">
+                                    <p id={`binned-${match.matchId}`} className="figures">{match.matchId}</p>
+                                    <p className="truncate text-sm">{`${match.radiantTeamName ?? sideName.RADIANT} vs ${match.direTeamName ?? sideName.DIRE} · ${sideName[match.winner]} won`}</p>
+                                    <p className="text-sm text-ash">{`Deleted ${formatRelative(match.deletedAt)} · goes ${formatRelative(match.purgeAt)}`}</p>
+                                </div>
+                                <button className="secondary-button" onClick={() => restoreMatch.mutate(match.matchId)}
+                                        aria-describedby={`binned-${match.matchId}`} disabled={restoreMatch.isPending}>
+                                    {restoreMatch.isPending && restoreMatch.variables === match.matchId ? "Restoring…" : "Restore"}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    {restoreMatch.isError && <p role="alert" className="mt-2 text-sm text-ash">{restoreMatch.error.message}</p>}
+                </Panel>
+            )}
 
             {started && (
                 <>
@@ -522,17 +646,18 @@ export default function SeasonDetail() {
                 <dialog ref={addMatchDialogRef} aria-labelledby="add-match-title"
                         className="dialog max-w-2xl">
                     <h2 id="add-match-title" className="font-display text-3xl font-bold">Add match</h2>
-                    <form onSubmit={handleAddMatch} className="mt-4 space-y-4">
+                    {/*Keyed by the reviewed game, so its values fill the form's boxes afresh*/}
+                    <form key={prefill?.matchId ?? "new"} onSubmit={handleAddMatch} className="mt-4 space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                             <label className="block">
                                 Dota match ID
                                 <input name="matchId" required inputMode="numeric" pattern="\d+" title="The number in the game's Stratz or Dotabuff link"
-                                       autoComplete="off" className="text-input mt-2 block w-full"/>
+                                       defaultValue={prefill?.matchId} autoComplete="off" className="text-input mt-2 block w-full"/>
                             </label>
                             <label className="block">
                                 Played
                                 <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
-                                       className="text-input mt-2 block w-full"/>
+                                       defaultValue={prefill?.playedTime.slice(0, 16)} className="text-input mt-2 block w-full"/>
                             </label>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -560,7 +685,7 @@ export default function SeasonDetail() {
                                                 {team.members.map((member, i) => (
                                                     <div key={member.steamId}>
                                                         <input name={side} list="match-player-names" required
-                                                               defaultValue={member.username} aria-label={`${label} player ${i + 1}`}
+                                                               defaultValue={names[i]} aria-label={`${label} player ${i + 1}`}
                                                                onChange={(e) => setBoxNames({...boxNames, [side]: names.map((name, j) => j === i ? e.target.value : name)})}
                                                                aria-describedby={replaced[i] ? `${side}-sub-${i}` : undefined}
                                                                autoComplete="off" spellCheck={false} className="text-input block w-full"/>
@@ -583,7 +708,8 @@ export default function SeasonDetail() {
                             <div className="mt-1 flex gap-4">
                                 {(["RADIANT", "DIRE"] as const).map(side => (
                                     <label key={side} className="flex items-center gap-1.5">
-                                        <input type="radio" name="winner" value={side} required className="accent-accent"/>
+                                        <input type="radio" name="winner" value={side} required defaultChecked={prefill?.winner === side}
+                                               className="accent-accent"/>
                                         {sideName[side]}
                                     </label>
                                 ))}
@@ -595,6 +721,25 @@ export default function SeasonDetail() {
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
                             <button type="submit" className="primary-button" disabled={createMatch.isPending}>Add match</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {canAddMatch && (
+                <dialog ref={leagueDialogRef} aria-labelledby="league-ticket-title" className="dialog">
+                    <h2 id="league-ticket-title" className="font-display text-3xl font-bold">League ticket</h2>
+                    <form key={season.leagueId ?? "none"} onSubmit={handleSetLeague} className="mt-4 space-y-4">
+                        <label className="block">
+                            League ticket ID
+                            <input name="leagueId" inputMode="numeric" pattern="\d+" title="The number in the ticket's OpenDota or Dotabuff league link"
+                                   defaultValue={season.leagueId ?? ""} autoComplete="off" className="text-input mt-2 block w-full"/>
+                        </label>
+                        <p className="text-sm text-ash">Games on the ticket are checked every 30 minutes. Leave it empty to stop.</p>
+                        {setLeague.isError && <p role="alert" className="text-sm text-ash">{setLeague.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => leagueDialogRef.current?.close()}>Cancel</button>
+                            <button type="submit" className="primary-button" disabled={setLeague.isPending}>Save</button>
                         </div>
                     </form>
                 </dialog>
