@@ -8,6 +8,7 @@ import MatchDetail from "./pages/MatchDetail.tsx";
 import SeasonDetail from "./pages/SeasonDetail.tsx";
 import Unregistered from "./pages/Unregistered.tsx";
 import PlayerDetail from "./pages/PlayerDetail.tsx";
+import PlayerMatches from "./pages/PlayerMatches.tsx";
 import Inhouses from "./pages/Inhouses.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Rules from "./pages/Rules.tsx";
@@ -59,6 +60,7 @@ function App() {
                     <Route path="/" element={<Landing/>}/>
                     <Route path="/players" element={<Players/>}/>
                     <Route path="/players/:steamId" element={<PlayerDetail/>}/>
+                    <Route path="/players/:steamId/matches" element={<PlayerMatches/>}/>
                     <Route path="/seasons" element={<Seasons/>}/>
                     <Route path="/seasons/:seasonId" element={<SeasonDetail/>}/>
                     <Route path="/matches" element={<Matches/>}/>
