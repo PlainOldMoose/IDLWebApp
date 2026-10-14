@@ -29,11 +29,12 @@ export interface Season {
     startDate: string;
     endDate: string;
     status: "REGISTRATION" | "DRAFTING" | "ACTIVE" | "COMPLETED";
+    winnerTeamName?: string | null;
+    winnerPlayers?: string[]; // Captain first
 }
 
 export interface SeasonDetail extends Season {
     teams: TeamSummary[]; // In table order: most wins, then fewest losses
-    winnerTeamName?: string;
     leagueId?: number | null; // The Dota league ticket the sync pulls games from
 }
 
