@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {formatElo, formatEloChange, formatOrdinal} from "./format";
+import {formatElo, formatEloChange, formatOrdinal, formatRelative} from "./format";
 
 describe("formatEloChange", () => {
     it("signs gains and losses with a true minus sign", () => {
@@ -19,5 +19,12 @@ describe("formatOrdinal", () => {
     it("gives English ordinal suffixes, including the teens", () => {
         expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(formatOrdinal))
             .toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);
+    });
+});
+
+describe("formatRelative", () => {
+    // The backend sends times without an offset, all in UTC
+    it("reads a time without an offset as UTC", () => {
+        expect(formatRelative(new Date().toISOString().slice(0, 19))).toBe("this minute");
     });
 });

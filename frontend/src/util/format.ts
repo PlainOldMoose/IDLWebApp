@@ -18,10 +18,13 @@ const ordinalSuffixes: Partial<Record<Intl.LDMLPluralRule, string>> = {one: "st"
 // "1st", "2nd", "3rd", "11th", "21st"
 export const formatOrdinal = (n: number): string => n + (ordinalSuffixes[ordinalRules.select(n)] ?? "th");
 
-export const formatDate = (date: string): string => dayFormat.format(new Date(date));
+// The backend's times are UTC without an offset, which new Date would read as the browser's local time
+const parse = (date: string): Date => new Date(/T[^Z+-]*$/.test(date) ? date + "Z" : date);
+
+export const formatDate = (date: string): string => dayFormat.format(parse(date));
 
 // Leaves out what both ends share: "1 – 20 Oct 2026", "1 Dec 2026 – 12 Jan 2027"
-export const formatDateRange = (start: string, end: string): string => dayFormat.formatRange(new Date(start), new Date(end));
+export const formatDateRange = (start: string, end: string): string => dayFormat.formatRange(parse(start), parse(end));
 
 const relativeFormat = new Intl.RelativeTimeFormat("en-GB", {numeric: "auto"});
 const relativeSteps: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -30,7 +33,7 @@ const relativeSteps: [Intl.RelativeTimeFormatUnit, number][] = [
 
 // "2 hours ago", "3 days ago", "last month"
 export const formatRelative = (date: string): string => {
-    let value = (new Date(date).getTime() - Date.now()) / 60000;
+    let value = (parse(date).getTime() - Date.now()) / 60000;
     for (const [unit, size] of relativeSteps) {
         if (Math.abs(value) < size) return relativeFormat.format(Math.round(value), unit);
         value /= size;
