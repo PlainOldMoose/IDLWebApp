@@ -125,6 +125,14 @@ export function useMatches(seasonId?: string, enabled = true) {
     });
 }
 
+// The latest few matches, newest first, without fetching the rest
+export function useRecentMatches(limit: number) {
+    return useQuery({
+        queryKey: ["matches", "recent", limit],
+        queryFn: () => request<MatchSummary[]>(`/api/matches?limit=${limit}`),
+    });
+}
+
 // Everyone's ELO is replayed from the game on, so everything cached is stale
 export function useCreateMatch() {
     const queryClient = useQueryClient();

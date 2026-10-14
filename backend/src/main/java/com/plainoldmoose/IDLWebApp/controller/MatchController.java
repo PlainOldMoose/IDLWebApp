@@ -30,8 +30,9 @@ public class MatchController {
     private final MatchService matchService;
 
     @GetMapping
-    public List<MatchSummaryResponse> getAllMatches(@RequestParam(required = false) UUID seasonId) {
-        return matchService.getAllMatches(seasonId);
+    public List<MatchSummaryResponse> getAllMatches(@RequestParam(required = false) UUID seasonId,
+                                                    @RequestParam(required = false) Integer limit) {
+        return matchService.getAllMatches(seasonId, limit);
     }
 
     // A season's "Recently deleted" bin. Admin-only, by SecurityConfig
