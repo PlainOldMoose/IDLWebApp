@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
+import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchSummaryResponse;
 import com.plainoldmoose.IDLWebApp.service.MatchService;
@@ -31,6 +32,18 @@ public class MatchController {
     @GetMapping
     public List<MatchSummaryResponse> getAllMatches(@RequestParam(required = false) UUID seasonId) {
         return matchService.getAllMatches(seasonId);
+    }
+
+    // A season's "Recently deleted" bin. Admin-only, by SecurityConfig
+    @GetMapping("/bin")
+    public List<BinMatchResponse> getBin(@RequestParam UUID seasonId) {
+        return matchService.getBin(seasonId);
+    }
+
+    @PostMapping("/{matchId}/restore")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void restoreMatch(@PathVariable Long matchId) {
+        matchService.restore(matchId);
     }
 
     @GetMapping("/{matchId}")

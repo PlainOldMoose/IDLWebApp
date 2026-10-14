@@ -42,6 +42,10 @@ public class SecurityConfig {
                         // The approval queue: only admins see reported results or approve them into ELO
                         .requestMatchers(HttpMethod.GET, "/api/inhouses/pending").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/inhouses/*/approve").hasRole(ADMIN)
+                        // The league sync's queue lists Steam accounts that aren't players, so it's admin-only too
+                        .requestMatchers(HttpMethod.GET, "/api/seasons/*/league").hasRole(ADMIN)
+                        // Deleted matches: only admins can delete them, so only admins see or restore them
+                        .requestMatchers(HttpMethod.GET, "/api/matches/bin").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/seasons/*/signups").authenticated()
                         // SeasonSignupController only deletes the caller's own sign-up

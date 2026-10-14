@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter, Route, Routes} from "react-router";
 import SeasonDetail from "./SeasonDetail";
-import type {PlayerSummary, SeasonDetail as SeasonDetailData, SeasonSignup, SteamUser} from "../types.ts";
+import type {BinMatch, LeagueSync, PlayerSummary, SeasonDetail as SeasonDetailData, SeasonSignup, SteamUser} from "../types.ts";
 
 const signup = (steamId: string, sub = false): SeasonSignup => ({
     steamId, username: steamId, rolePreference: sub ? null : "any", willingToCaptain: false, signedUpAt: "2026-01-01T12:00", sub,
@@ -12,21 +12,32 @@ const signup = (steamId: string, sub = false): SeasonSignup => ({
 
 let posted: unknown;
 let postedTo: string | undefined;
+let writes: {method: string, path: string, body: unknown}[];
+let fetched: string[];
 
-function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = [], players = []}: {
+function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = [], players = [], leagueId, league, bin = [], restoreFails}: {
     status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null, name?: string, teams?: SeasonDetailData["teams"],
-    players?: PlayerSummary[]
+    players?: PlayerSummary[], leagueId?: number, league?: LeagueSync, bin?: BinMatch[], restoreFails?: string
 }) {
-    const season: SeasonDetailData = {id: "s1", name, startDate: "2026-02-01", endDate: "2026-03-01", status, teams};
+    const season: SeasonDetailData = {id: "s1", name, startDate: "2026-02-01", endDate: "2026-03-01", status, teams, leagueId};
     vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
+        fetched.push(path);
         if (init?.method === "POST") {
             postedTo = path;
             posted = init.body ? JSON.parse(String(init.body)) : undefined;
+        }
+        if (init?.method && init.method !== "GET") {
+            writes.push({method: init.method, path, body: init.body ? JSON.parse(String(init.body)) : undefined});
+        }
+        if (restoreFails && path.endsWith("/restore")) {
+            return new Response(JSON.stringify({detail: restoreFails}), {status: 409});
         }
         const body = path === "/auth/me" ? user
             : path === "/api/seasons/s1" ? season
             : path === "/api/seasons/s1/signups" ? signups
             : path === "/api/players" ? players
+            : path === "/api/seasons/s1/league" ? league
+            : path === "/api/matches/bin?seasonId=s1" ? bin
             : [];
         return new Response(JSON.stringify(body), {status: user || path !== "/auth/me" ? 200 : 401});
     }));
@@ -44,6 +55,8 @@ const panel = async (title: string) => (await screen.findByRole("heading", {name
 beforeEach(() => {
     posted = undefined;
     postedTo = undefined;
+    writes = [];
+    fetched = [];
     // NOTE: jsdom has no modal dialogs
     HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
     HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.open = false; };
@@ -202,4 +215,174 @@ it("records who a sub replaced from the box they were typed into", async () => {
 
     expect(postedTo).toBe("/api/matches");
     expect(posted).toMatchObject({radiant: ["red1", "sub1", "red3", "red4", "red5"], subbingFor: {sub1: "red2"}});
+});
+
+// The league sync's queue: red played Radiant with sub1 in for red5; Dire had blue1-4 and an unregistered account
+const ADMIN: SteamUser = {steamId: "admin", username: "admin", admin: true};
+const red = team("red", 5);
+const blue = team("blue", 5);
+const sub1 = {steamId: "sub1", username: "sub1", elo: 1500};
+const pendingMatch: LeagueSync["pending"][number] = {
+    matchId: 7406531302, playedTime: "2026-02-10T19:00:00", winner: "DIRE", radiantTeamId: "red", direTeamId: "blue",
+    radiant: [...red.members.slice(0, 4), sub1].map(({steamId, username}) => ({steamId, username})),
+    dire: [...blue.members.slice(0, 4).map(({steamId, username}) => ({steamId, username})), {steamId: "76561198051995905", username: null}],
+    reason: "1 unregistered account",
+};
+const syncState = (overrides: Partial<LeagueSync> = {}): LeagueSync =>
+    ({syncedAt: "2026-02-10T20:00:00", error: null, pending: [pendingMatch], ...overrides});
+const renderSynced = (league: LeagueSync, user: SteamUser = ADMIN) => renderSeason({
+    status: "ACTIVE", signups: [], teams: [red, blue], players: [...red.members, ...blue.members, sub1], user, leagueId: 15728, league,
+});
+
+it("shows admins the ticketed games that need checking", async () => {
+    renderSynced(syncState());
+
+    const queue = await panel("Matches to check");
+    expect(await within(queue).findByText(/7406531302/)).toBeTruthy();
+    expect(within(queue).getByText("1 unregistered account")).toBeTruthy();
+    expect(within(queue).getByRole("link", {name: /OpenDota/}).getAttribute("href")).toBe("https://www.opendota.com/matches/7406531302");
+});
+
+it("doesn't show players the league queue or ask for it", async () => {
+    renderSynced(syncState(), {steamId: "red1", username: "red1", admin: false});
+
+    await screen.findByRole("heading", {name: "Season 5"});
+    expect(screen.queryByRole("heading", {name: "Matches to check"})).toBeNull();
+    expect(fetched).not.toContain("/api/seasons/s1/league");
+});
+
+it("says when there's nothing to check", async () => {
+    renderSynced(syncState({pending: []}));
+
+    const queue = await panel("Matches to check");
+    expect(await within(queue).findByText("Nothing to check. Ticketed games that can't be added on their own show up here.")).toBeTruthy();
+});
+
+it("reviews a queued game in the Add match form, filled in", async () => {
+    renderSynced(syncState());
+
+    const queue = await panel("Matches to check");
+    await userEvent.click(await within(queue).findByRole("button", {name: "Review"}));
+    const dialog = screen.getByRole("dialog", {name: "Add match"});
+
+    expect((within(dialog).getByRole("textbox", {name: "Dota match ID"}) as HTMLInputElement).value).toBe("7406531302");
+    expect((within(dialog).getByLabelText("Played") as HTMLInputElement).value).toBe("2026-02-10T19:00");
+    expect((within(dialog).getByRole("combobox", {name: "Radiant team"}) as HTMLSelectElement).value).toBe("red");
+    expect((within(dialog).getByRole("combobox", {name: "Dire team"}) as HTMLSelectElement).value).toBe("blue");
+    expect((within(dialog).getByRole("combobox", {name: "Radiant player 1"}) as HTMLInputElement).value).toBe("red1");
+    // The sub goes in the box of the member who didn't play
+    expect((within(dialog).getByRole("combobox", {name: "Radiant player 5"}) as HTMLInputElement).value).toBe("sub1");
+    expect(within(dialog).getByText("Subbing for red5")).toBeTruthy();
+    // Nobody to fill in for the unregistered account
+    expect((within(dialog).getByRole("combobox", {name: "Dire player 5"}) as HTMLInputElement).value).toBe("");
+    expect((within(dialog).getByRole("radio", {name: "Dire"}) as HTMLInputElement).checked).toBe(true);
+});
+
+it("rejects a queued game", async () => {
+    renderSynced(syncState());
+
+    const queue = await panel("Matches to check");
+    await userEvent.click(await within(queue).findByRole("button", {name: "Reject"}));
+
+    await vi.waitFor(() => expect(writes).toContainEqual({method: "DELETE", path: "/api/seasons/s1/league/pending/7406531302", body: undefined}));
+});
+
+it("syncs the league on demand", async () => {
+    renderSynced(syncState());
+
+    await userEvent.click(await screen.findByRole("button", {name: "Sync now"}));
+
+    await vi.waitFor(() => expect(postedTo).toBe("/api/seasons/s1/league/sync"));
+});
+
+it("says when the last sync failed", async () => {
+    renderSynced(syncState({error: "Couldn't reach OpenDota"}));
+
+    const queue = await panel("Matches to check");
+    expect(await within(queue).findByText("Last sync failed: Couldn't reach OpenDota")).toBeTruthy();
+    expect(within(queue).queryByText(/Last synced/)).toBeNull();
+});
+
+it("says when the league last synced", async () => {
+    renderSynced(syncState());
+
+    const queue = await panel("Matches to check");
+    expect(await within(queue).findByText(/^Last synced /)).toBeTruthy();
+});
+
+it("sets the season's league ticket", async () => {
+    renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], user: ADMIN});
+
+    await userEvent.click(await screen.findByRole("button", {name: "League ticket"}));
+    const dialog = screen.getByRole("dialog", {name: "League ticket"});
+    await userEvent.type(within(dialog).getByRole("textbox", {name: "League ticket ID"}), "15728");
+    await userEvent.click(within(dialog).getByRole("button", {name: "Save"}));
+
+    await vi.waitFor(() => expect(writes).toContainEqual({method: "PUT", path: "/api/seasons/s1/league", body: {leagueId: 15728}}));
+});
+
+it("leaves the winner to the admin when the sync doesn't know it", async () => {
+    renderSynced(syncState({pending: [{...pendingMatch, winner: null, reason: "OpenDota doesn't have this game"}]}));
+
+    const queue = await panel("Matches to check");
+    await userEvent.click(await within(queue).findByRole("button", {name: "Review"}));
+    const dialog = screen.getByRole("dialog", {name: "Add match"});
+
+    expect((within(dialog).getByRole("radio", {name: "Radiant"}) as HTMLInputElement).checked).toBe(false);
+    expect((within(dialog).getByRole("radio", {name: "Dire"}) as HTMLInputElement).checked).toBe(false);
+});
+
+// Local times, as the API sends them
+const localIso = (offsetDays: number) => {
+    const date = new Date(Date.now() + offsetDays * 86400000);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+};
+const binned: BinMatch = {
+    matchId: 9036873306, radiantTeamName: "red", direTeamName: "blue", winner: "DIRE", deletedAt: localIso(-2), purgeAt: localIso(5),
+};
+const renderBin = (options: {bin?: BinMatch[], user?: SteamUser, restoreFails?: string} = {}) => renderSeason({
+    status: "ACTIVE", signups: [], teams: [red, blue], user: options.user ?? ADMIN, bin: options.bin ?? [binned], restoreFails: options.restoreFails,
+});
+
+it("shows admins the season's recently deleted matches", async () => {
+    renderBin();
+
+    const recent = await panel("Recently deleted");
+    expect(await within(recent).findByText("9036873306")).toBeTruthy();
+    expect(within(recent).getByText("red vs blue · Dire won")).toBeTruthy();
+    expect(within(recent).getByText("Deleted 2 days ago · goes in 5 days")).toBeTruthy();
+});
+
+it("hides an empty bin", async () => {
+    renderBin({bin: []});
+
+    await screen.findByRole("button", {name: "Add match"});
+    await vi.waitFor(() => expect(fetched).toContain("/api/matches/bin?seasonId=s1"));
+    expect(screen.queryByRole("heading", {name: "Recently deleted"})).toBeNull();
+});
+
+it("doesn't show players the bin or ask for it", async () => {
+    renderBin({user: {steamId: "red1", username: "red1", admin: false}});
+
+    await screen.findByRole("heading", {name: "Season 5"});
+    expect(screen.queryByRole("heading", {name: "Recently deleted"})).toBeNull();
+    expect(fetched).not.toContain("/api/matches/bin?seasonId=s1");
+});
+
+it("restores a deleted match", async () => {
+    renderBin();
+
+    const recent = await panel("Recently deleted");
+    await userEvent.click(await within(recent).findByRole("button", {name: "Restore"}));
+
+    await vi.waitFor(() => expect(postedTo).toBe("/api/matches/9036873306/restore"));
+});
+
+it("says why a restore failed", async () => {
+    renderBin({restoreFails: "Match 9036873306 is already recorded"});
+
+    const recent = await panel("Recently deleted");
+    await userEvent.click(await within(recent).findByRole("button", {name: "Restore"}));
+
+    expect(await within(recent).findByText("Match 9036873306 is already recorded")).toBeTruthy();
 });

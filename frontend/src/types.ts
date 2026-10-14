@@ -34,6 +34,40 @@ export interface Season {
 export interface SeasonDetail extends Season {
     teams: TeamSummary[]; // In table order: most wins, then fewest losses
     winnerTeamName?: string;
+    leagueId?: number | null; // The Dota league ticket the sync pulls games from
+}
+
+// A match in a season's "Recently deleted" bin, admin-only. Times are local, like every other time from the API
+export interface BinMatch {
+    matchId: number;
+    radiantTeamName: string | null;
+    direTeamName: string | null;
+    winner: "RADIANT" | "DIRE";
+    deletedAt: string;
+    purgeAt: string; // When it's cleared for good, a week after deletedAt
+}
+
+// A season's league sync, admin-only: the last run, and the ticketed games that couldn't go in on their own
+export interface LeagueSync {
+    syncedAt: string | null;
+    error: string | null; // Why the last sync failed; null once one works
+    pending: PendingMatch[];
+}
+
+export interface PendingMatch {
+    matchId: number;
+    playedTime: string;
+    winner: "RADIANT" | "DIRE" | null; // null when OpenDota never got the game, so only the admin knows
+    radiantTeamId: string | null; // The sync's guess; null when no team had a majority of the side
+    direTeamId: string | null;
+    radiant: PendingPlayer[]; // Public profiles only; the private ones are just counted
+    dire: PendingPlayer[];
+    reason: string;
+}
+
+interface PendingPlayer {
+    steamId: string;
+    username: string | null; // null when the account isn't a registered player
 }
 
 interface TeamSummary {
@@ -96,6 +130,7 @@ export interface MatchDetail {
     radiantStanding: TeamStanding | null; // null for an in-house
     direStanding: TeamStanding | null;
     radiantWinChance: number | null; // 0 to 1, from the ELO going in; null unless every player has an ELO record
+    source: "API_SYNC" | "MANUAL"; // Whether the league sync added it, or an admin (or an in-house)
 }
 
 // Where a team stood in its season going into a match

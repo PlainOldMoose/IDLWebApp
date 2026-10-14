@@ -12,6 +12,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
@@ -34,6 +35,7 @@ public class SeasonService {
     private SeasonRepository seasonRepository;
     private MatchRepository matchRepository;
     private EloHistoryRepository eloHistoryRepository;
+    private DeletedMatchRepository deletedMatchRepository;
 
     public SeasonSummaryResponse createSeason(CreateSeasonRequest request) {
         Season season = new Season();
@@ -88,6 +90,8 @@ public class SeasonService {
 
         season.setWinner(winner);
         season.setStatus(SeasonStatus.COMPLETED);
+        // Restoring needs an active season, so its bin can't be used any more
+        deletedMatchRepository.deleteBySeasonId(id);
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {
@@ -107,7 +111,15 @@ public class SeasonService {
                         .map(team -> mapToTeamResponse(team, seasonEnd(season)))
                         .toList(),
                 season.getWinner() != null ? season.getWinner()
-                        .getName() : null);
+                        .getName() : null,
+                season.getLeagueId());
+    }
+
+    @Transactional
+    public void setLeague(UUID id, Long leagueId) {
+        seasonRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND))
+                .setLeagueId(leagueId);
     }
 
     // A finished season's last game, or null while it's still going (or never had one) and current ELO is the right one

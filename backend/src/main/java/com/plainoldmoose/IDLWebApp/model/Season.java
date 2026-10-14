@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,4 +43,11 @@ public class Season {
     @ManyToOne
     @JoinColumn(name = "winner_team_id")
     private Team winner;
+
+    // The Dota league ticket its games are played on, for the league sync. Null until an admin sets it
+    private Long leagueId;
+
+    // When the last sync finished, and why the last one failed (cleared by the next one that works)
+    private LocalDateTime leagueSyncedAt;
+    private String leagueSyncError;
 }

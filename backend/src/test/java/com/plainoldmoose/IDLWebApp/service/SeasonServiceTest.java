@@ -9,6 +9,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SeasonServiceTest {
@@ -30,8 +32,9 @@ class SeasonServiceTest {
     private final Season season = new Season();
     private final MatchRepository matchRepository = mock(MatchRepository.class);
     private final EloHistoryRepository eloHistoryRepository = mock(EloHistoryRepository.class);
+    private final DeletedMatchRepository bin = mock(DeletedMatchRepository.class);
     private final SeasonService service = new SeasonService(
-            mock(SeasonRepository.class, inv -> Optional.of(season)), matchRepository, eloHistoryRepository);
+            mock(SeasonRepository.class, inv -> Optional.of(season)), matchRepository, eloHistoryRepository, bin);
 
     @Test
     void completeSeason() {
@@ -48,6 +51,33 @@ class SeasonServiceTest {
         assertEquals(SeasonStatus.COMPLETED, season.getStatus());
 
         assertThrows(ResponseStatusException.class, () -> service.completeSeason(seasonId, champions.getTeamId()));
+    }
+
+    @Test
+    void setsAndShowsTheLeagueTicket() {
+        season.setTeams(List.of());
+
+        service.setLeague(seasonId, 15728L);
+
+        assertEquals(15728L, season.getLeagueId());
+        assertEquals(15728L, service.getSeasonById(seasonId).leagueId());
+
+        service.setLeague(seasonId, null);
+        assertNull(season.getLeagueId());
+    }
+
+    // Behaviour 55: restoring needs an active season, so its bin goes when it ends
+    @Test
+    void endingASeasonEmptiesItsBin() {
+        Team champions = new Team();
+        champions.setTeamId(UUID.randomUUID());
+        season.setId(seasonId);
+        season.setTeams(List.of(champions));
+        season.setStatus(SeasonStatus.ACTIVE);
+
+        service.completeSeason(seasonId, champions.getTeamId());
+
+        verify(bin).deleteBySeasonId(seasonId);
     }
 
     private static Team team(String name, int wins, int losses) {
