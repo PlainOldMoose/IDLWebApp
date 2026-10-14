@@ -80,7 +80,7 @@ export default function Seasons() {
     return (
         <Page {...header} subtitle={`${seasons.length} seasons, newest first`}>
             {seasons.length ? (
-                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {seasons.map((season) => (
                         <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
