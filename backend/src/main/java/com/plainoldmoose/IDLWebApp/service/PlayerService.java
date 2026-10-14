@@ -4,7 +4,7 @@ import com.plainoldmoose.IDLWebApp.dto.request.CreatePlayerRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
-import com.plainoldmoose.IDLWebApp.dto.response.player.RecentMatchResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerMatchResponse;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
@@ -82,13 +82,13 @@ public class PlayerService {
         int losses = matchParticipations.size() - wins;
         double winrate = matchParticipations.isEmpty() ? 0.0 : Math.round((double) wins / matchParticipations.size() * 10000) / 100.0;
 
-        List<RecentMatchResponse> recentMatches = matchParticipations
+        List<PlayerMatchResponse> matches = matchParticipations
                 .stream()
                 .filter(mp -> mp.getMatch()
                         .getPlayedTime() != null)
                 .sorted(Comparator.comparing(mp -> mp.getMatch()
                         .getPlayedTime(), Comparator.reverseOrder()))
-                .limit(20).map(mp -> {
+                .map(mp -> {
                     Match match = mp.getMatch();
                     boolean won = mp.getSide() == match.getMatchWinner();
 
@@ -99,12 +99,13 @@ public class PlayerService {
                             .findFirst()
                             .map(EloHistory::getEloChange)
                             .orElse(null);
-                    return new RecentMatchResponse(match.getMatchId(),
+                    return new PlayerMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),
                             won,
                             mp.getSide(),
                             mp.isSub(),
                             eloChange,
+                            match.getSeason() != null ? match.getSeason().getId() : null,
                             match.getSeason() != null ? match.getSeason()
                                     .getName() : null);
                 }).toList();
@@ -116,7 +117,7 @@ public class PlayerService {
                 wins,
                 losses,
                 winrate,
-                recentMatches
+                matches
         );
     }
 }

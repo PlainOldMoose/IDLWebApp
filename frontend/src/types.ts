@@ -8,16 +8,17 @@ export interface PlayerDetail extends PlayerSummary {
     wins: number;
     losses: number;
     winRate: number;
-    recentMatches: PlayerMatchSummary[];
+    matches: PlayerMatchSummary[];
 }
 
-interface PlayerMatchSummary {
+export interface PlayerMatchSummary {
     matchId: number;
     timePlayed: string;
     won: boolean;
     side: "RADIANT" | "DIRE";
     sub: boolean;
     eloChange: number | null; // null when the match has no ELO record
+    seasonId: string | null; // null for an in-house
     seasonName: string | null;
 }
 
