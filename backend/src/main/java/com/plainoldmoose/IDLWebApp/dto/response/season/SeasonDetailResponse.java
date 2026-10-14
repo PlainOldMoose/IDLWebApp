@@ -14,5 +14,6 @@ public record SeasonDetailResponse(
         LocalDate startDate,
         LocalDate endDate,
         List<TeamResponse> teams,
-        String winnerTeamName) {
+        String winnerTeamName,
+        Long leagueId) {
 }

@@ -1,6 +1,7 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.season.SeasonSummaryResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.team.TeamResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
@@ -9,6 +10,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
@@ -21,7 +23,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SeasonServiceTest {
@@ -30,8 +34,9 @@ class SeasonServiceTest {
     private final Season season = new Season();
     private final MatchRepository matchRepository = mock(MatchRepository.class);
     private final EloHistoryRepository eloHistoryRepository = mock(EloHistoryRepository.class);
-    private final SeasonService service = new SeasonService(
-            mock(SeasonRepository.class, inv -> Optional.of(season)), matchRepository, eloHistoryRepository);
+    private final DeletedMatchRepository bin = mock(DeletedMatchRepository.class);
+    private final SeasonRepository seasonRepository = mock(SeasonRepository.class, inv -> Optional.of(season));
+    private final SeasonService service = new SeasonService(seasonRepository, matchRepository, eloHistoryRepository, bin);
 
     @Test
     void completeSeason() {
@@ -48,6 +53,33 @@ class SeasonServiceTest {
         assertEquals(SeasonStatus.COMPLETED, season.getStatus());
 
         assertThrows(ResponseStatusException.class, () -> service.completeSeason(seasonId, champions.getTeamId()));
+    }
+
+    @Test
+    void setsAndShowsTheLeagueTicket() {
+        season.setTeams(List.of());
+
+        service.setLeague(seasonId, 15728L);
+
+        assertEquals(15728L, season.getLeagueId());
+        assertEquals(15728L, service.getSeasonById(seasonId).leagueId());
+
+        service.setLeague(seasonId, null);
+        assertNull(season.getLeagueId());
+    }
+
+    // Behaviour 55: restoring needs an active season, so its bin goes when it ends
+    @Test
+    void endingASeasonEmptiesItsBin() {
+        Team champions = new Team();
+        champions.setTeamId(UUID.randomUUID());
+        season.setId(seasonId);
+        season.setTeams(List.of(champions));
+        season.setStatus(SeasonStatus.ACTIVE);
+
+        service.completeSeason(seasonId, champions.getTeamId());
+
+        verify(bin).deleteBySeasonId(seasonId);
     }
 
     private static Team team(String name, int wins, int losses) {
@@ -116,5 +148,40 @@ class SeasonServiceTest {
 
     private List<Double> memberElos() {
         return service.getSeasonById(seasonId).teams().get(0).members().stream().map(PlayerSummaryResponse::elo).toList();
+    }
+
+    // Behaviours 1-3: the season list carries each winner for the hall of fame, captain first
+    @Test
+    void seasonListShowsTheWinner() {
+        doReturn(List.of(season)).when(seasonRepository).findAllByOrderByStartDateDesc();
+
+        SeasonSummaryResponse summary = service.getAllSeasons().get(0);
+        assertNull(summary.winnerTeamName());
+        assertEquals(List.of(), summary.winnerPlayers());
+
+        Team champions = team("Commando Elite", 5, 0);
+        Player gron = new Player();
+        gron.setUsername("Gron");
+        champions.setMembers(List.of(gron, champions.getCaptain()).stream().map(player -> {
+            TeamMember member = new TeamMember();
+            member.setPlayer(player);
+            return member;
+        }).toList());
+        season.setWinner(champions);
+
+        summary = service.getAllSeasons().get(0);
+        assertEquals("Commando Elite", summary.winnerTeamName());
+        assertEquals(List.of("Commando Elite captain", "Gron"), summary.winnerPlayers());
+    }
+
+    @Test
+    void seasonListShowsAnImportedWinner() {
+        doReturn(List.of(season)).when(seasonRepository).findAllByOrderByStartDateDesc();
+        season.setLegacyWinnerName("Antab's team");
+        season.setLegacyWinnerPlayers(List.of("Antab", "Snubs"));
+
+        SeasonSummaryResponse summary = service.getAllSeasons().get(0);
+        assertEquals("Antab's team", summary.winnerTeamName());
+        assertEquals(List.of("Antab", "Snubs"), summary.winnerPlayers());
     }
 }

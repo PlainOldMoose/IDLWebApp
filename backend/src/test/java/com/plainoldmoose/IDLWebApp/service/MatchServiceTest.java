@@ -1,29 +1,38 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
+import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.TeamStandingResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
 import com.plainoldmoose.IDLWebApp.model.Team;
 import com.plainoldmoose.IDLWebApp.model.TeamMember;
+import com.plainoldmoose.IDLWebApp.model.enums.LeagueMatchStatus;
+import com.plainoldmoose.IDLWebApp.model.enums.MatchSource;
 import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
+import com.plainoldmoose.IDLWebApp.model.match.DeletedMatch;
+import com.plainoldmoose.IDLWebApp.model.match.LeagueMatch;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
+import com.plainoldmoose.IDLWebApp.repository.LeagueMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,7 +45,9 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -47,7 +58,9 @@ class MatchServiceTest {
     private final PlayerRepository players = mock(PlayerRepository.class);
     private final EloService elo = mock(EloService.class);
     private final EloHistoryRepository eloHistory = mock(EloHistoryRepository.class);
-    private final MatchService service = new MatchService(matches, eloHistory, seasons, players, elo);
+    private final LeagueMatchRepository leagueMatches = mock(LeagueMatchRepository.class);
+    private final DeletedMatchRepository bin = mock(DeletedMatchRepository.class);
+    private final MatchService service = new MatchService(matches, eloHistory, seasons, players, elo, leagueMatches, bin);
 
     // Players 0-4 on the first team, 5-9 on the second, and 10 and 11 on neither
     private final List<Player> everyone = IntStream.range(0, 12).mapToObj(i -> {
@@ -111,6 +124,216 @@ class MatchServiceTest {
         saved.getValue().getParticipants().forEach(participant -> result.put(participant.getPlayer().getSteamId(),
                 participant.getSubbingFor() == null ? null : participant.getSubbingFor().getSteamId()));
         return result;
+    }
+
+    // An admin adding a game from the league sync's queue takes it out of the queue
+    @Test
+    void addingAPendingLeagueMatchMarksItImported() {
+        LeagueMatch pending = new LeagueMatch();
+        pending.setMatchId(8652158100L);
+        pending.setStatus(LeagueMatchStatus.PENDING);
+        when(leagueMatches.findById(8652158100L)).thenReturn(Optional.of(pending));
+        stubPlayers();
+
+        service.create(request());
+
+        assertEquals(LeagueMatchStatus.IMPORTED, pending.getStatus());
+    }
+
+    private Match createAndGetSaved() {
+        stubPlayers();
+        service.create(request());
+        ArgumentCaptor<Match> saved = ArgumentCaptor.forClass(Match.class);
+        verify(matches).save(saved.capture());
+        return saved.getValue();
+    }
+
+    // Behaviour 42: the sync found it, whatever happened to it since, so it comes off the queue, the rejected list
+    // or the deleted list
+    @ParameterizedTest
+    @EnumSource(value = LeagueMatchStatus.class, names = {"PENDING", "REJECTED", "DELETED"})
+    void matchTheSyncKnowsComesOffItsListsWhenTypedIn(LeagueMatchStatus status) {
+        LeagueMatch known = new LeagueMatch();
+        known.setMatchId(8652158100L);
+        known.setStatus(status);
+        when(leagueMatches.findById(8652158100L)).thenReturn(Optional.of(known));
+
+        createAndGetSaved();
+
+        assertEquals(LeagueMatchStatus.IMPORTED, known.getStatus());
+    }
+
+    private Match activeSeasonMatch() {
+        Match match = new Match();
+        match.setMatchId(8652158100L);
+        match.setSeason(season);
+        match.setPlayedTime(LocalDateTime.now().minusDays(1));
+        match.setMatchWinner(Side.RADIANT);
+        match.setRadiantTeam(radiant);
+        match.setDireTeam(dire);
+        match.setParticipants(new ArrayList<>());
+        when(matches.findById(8652158100L)).thenReturn(Optional.of(match));
+        return match;
+    }
+
+    // Behaviour 43: on the deleted list, so the next sync leaves it out
+    @Test
+    void deletingASyncedMatchKeepsTheSyncFromAddingItBack() {
+        activeSeasonMatch();
+        LeagueMatch synced = new LeagueMatch();
+        synced.setMatchId(8652158100L);
+        synced.setStatus(LeagueMatchStatus.IMPORTED);
+        when(leagueMatches.findById(8652158100L)).thenReturn(Optional.of(synced));
+
+        service.delete(8652158100L);
+
+        assertEquals(LeagueMatchStatus.DELETED, synced.getStatus());
+    }
+
+    // Behaviours 40, 41 and 45: synced when the sync ever found it, whoever typed it in
+    @ParameterizedTest
+    @CsvSource({"true, API_SYNC", "false, MANUAL"})
+    void detailSaysWhereTheMatchCameFrom(boolean synced, MatchSource source) {
+        activeSeasonMatch();
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId())).thenReturn(List.of());
+        when(leagueMatches.existsById(8652158100L)).thenReturn(synced);
+
+        assertEquals(source, service.getMatch(8652158100L).source());
+    }
+
+    // The bin: player 10 stood in for player 4 on Radiant, players 5-9 on Dire
+    private List<DeletedMatch.DeletedParticipant> binParticipants() {
+        List<DeletedMatch.DeletedParticipant> list = new ArrayList<>();
+        for (int i : new int[]{0, 1, 2, 3, 10, 5, 6, 7, 8, 9}) {
+            DeletedMatch.DeletedParticipant p = new DeletedMatch.DeletedParticipant();
+            p.setSteamId(String.valueOf(i));
+            p.setSide(i < 5 || i == 10 ? Side.RADIANT : Side.DIRE);
+            p.setSubbingFor(i == 10 ? "4" : null);
+            list.add(p);
+        }
+        return list;
+    }
+
+    // Behaviour 48
+    @Test
+    void deletingKeepsACopyInTheBin() {
+        Match match = activeSeasonMatch();
+        for (int i : new int[]{0, 1, 2, 3, 10, 5, 6, 7, 8, 9}) {
+            MatchParticipant participant = new MatchParticipant();
+            participant.setMatch(match);
+            participant.setPlayer(everyone.get(i));
+            participant.setSide(i < 5 || i == 10 ? Side.RADIANT : Side.DIRE);
+            participant.setSub(i == 10);
+            participant.setSubbingFor(i == 10 ? everyone.get(4) : null);
+            match.getParticipants().add(participant);
+        }
+
+        service.delete(8652158100L);
+
+        ArgumentCaptor<DeletedMatch> saved = ArgumentCaptor.forClass(DeletedMatch.class);
+        verify(bin).save(saved.capture());
+        DeletedMatch copy = saved.getValue();
+        assertEquals(8652158100L, copy.getMatchId());
+        assertSame(season, copy.getSeason());
+        assertEquals(match.getPlayedTime(), copy.getPlayedTime());
+        assertEquals(Side.RADIANT, copy.getWinner());
+        assertSame(radiant, copy.getRadiantTeam());
+        assertSame(dire, copy.getDireTeam());
+        assertTrue(Duration.between(copy.getDeletedAt(), LocalDateTime.now()).abs().toMinutes() < 1);
+        assertEquals(List.of("0", "1", "2", "3", "10", "5", "6", "7", "8", "9"),
+                copy.getParticipants().stream().map(DeletedMatch.DeletedParticipant::getSteamId).toList());
+        assertEquals(Side.RADIANT, copy.getParticipants().get(4).getSide());
+        assertEquals("4", copy.getParticipants().get(4).getSubbingFor());
+        assertNull(copy.getParticipants().get(0).getSubbingFor());
+        assertEquals(Side.DIRE, copy.getParticipants().get(5).getSide());
+    }
+
+    private DeletedMatch binned() {
+        DeletedMatch copy = new DeletedMatch();
+        copy.setMatchId(8652158100L);
+        copy.setSeason(season);
+        copy.setPlayedTime(LocalDateTime.now().minusDays(1).withNano(0));
+        copy.setWinner(Side.DIRE);
+        copy.setRadiantTeam(radiant);
+        copy.setDireTeam(dire);
+        copy.setDeletedAt(LocalDateTime.of(2026, 10, 12, 20, 0));
+        copy.setParticipants(binParticipants());
+        when(bin.findById(8652158100L)).thenReturn(Optional.of(copy));
+        return copy;
+    }
+
+    // Behaviour 49
+    @Test
+    void binListsTheSeasonsDeletedMatches() {
+        radiant.setName("Third Times the Charm");
+        dire.setName("1 brain cell in 5 trenchcoats");
+        DeletedMatch copy = binned();
+        when(bin.findBySeasonIdOrderByDeletedAtDesc(season.getId())).thenReturn(List.of(copy));
+
+        assertEquals(List.of(new BinMatchResponse(8652158100L, "Third Times the Charm", "1 brain cell in 5 trenchcoats", Side.DIRE,
+                        LocalDateTime.of(2026, 10, 12, 20, 0), LocalDateTime.of(2026, 10, 19, 20, 0))),
+                service.getBin(season.getId()));
+    }
+
+    // Behaviour 50: back exactly as it was, through the normal add, so standings and ELO replay
+    @Test
+    void restoringPutsTheMatchBackAsItWas() {
+        DeletedMatch copy = binned();
+        stubPlayers();
+
+        service.restore(8652158100L);
+
+        ArgumentCaptor<Match> saved = ArgumentCaptor.forClass(Match.class);
+        verify(matches).save(saved.capture());
+        Match match = saved.getValue();
+        assertEquals(8652158100L, match.getMatchId());
+        assertEquals(copy.getPlayedTime(), match.getPlayedTime());
+        assertEquals(Side.DIRE, match.getMatchWinner());
+        assertSame(radiant, match.getRadiantTeam());
+        assertSame(dire, match.getDireTeam());
+        MatchParticipant sub = match.getParticipants().stream().filter(p -> p.getPlayer().getSteamId().equals("10")).findFirst().orElseThrow();
+        assertEquals(Side.RADIANT, sub.getSide());
+        assertEquals("4", sub.getSubbingFor().getSteamId());
+        verify(elo).replay(copy.getPlayedTime());
+    }
+
+    // Behaviour 51
+    @Test
+    void restoringSomethingNotInTheBinIsNotFound() {
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.restore(8652158100L));
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+    }
+
+    // Behaviour 52
+    @Test
+    void failedRestoreSaysWhyAndStaysInTheBin() {
+        binned();
+        stubPlayers();
+        when(matches.existsById(8652158100L)).thenReturn(true);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.restore(8652158100L));
+
+        assertEquals("Match 8652158100 is already recorded", e.getReason());
+        verify(bin, never()).deleteById(any());
+        verify(bin, never()).delete(any());
+    }
+
+    // Behaviour 53: restoring, or an admin adding the same game by hand, takes it out of the bin
+    @Test
+    void addingAMatchTakesItOutOfTheBin() {
+        createAndGetSaved();
+
+        verify(bin).deleteById(8652158100L);
+    }
+
+    // Behaviour 54
+    @Test
+    void binIsClearedAfterAWeek() {
+        service.purgeBin();
+
+        ArgumentCaptor<LocalDateTime> cutoff = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(bin).deleteByDeletedAtBefore(cutoff.capture());
+        assertTrue(Duration.between(cutoff.getValue(), LocalDateTime.now().minusDays(7)).abs().toMinutes() < 1);
     }
 
     @Test

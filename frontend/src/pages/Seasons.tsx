@@ -4,6 +4,7 @@ import {useCreateSeason, useCurrentUser, useSeasons} from "../services/Queries.t
 import Page from "../components/Page.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import WarningIcon from "../components/WarningIcon.tsx";
 import {formatDateRange, isLegacySeason} from "../util/format.ts";
 import {statusStyles} from "../util/statusStyles.ts";
 
@@ -83,7 +84,7 @@ export default function Seasons() {
                     {seasons.map((season) => (
                         <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
-                                  className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
+                                  className="block h-full rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
                                 <div className="flex items-center justify-between gap-3 text-sm font-medium">
                                     <p className={`flex items-center gap-2 ${statusStyles[season.status].text}`}>
                                         <span aria-hidden="true" className={`size-2.5 rounded-full border-2 ${statusStyles[season.status].node}`}/>
@@ -92,16 +93,19 @@ export default function Seasons() {
                                     {/*Same warning as on the season's own page, so the card says what you're opening*/}
                                     {isLegacySeason(season.name) && (
                                         <p className="flex items-center gap-1.5 text-warning" title="Imported from the old league records; some players are no longer tracked">
-                                            {/*Phosphor's Warning*/}
-                                            <svg aria-hidden="true" width={16} height={16} viewBox="0 0 256 256" fill="currentColor" className="shrink-0">
-                                                <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/>
-                                            </svg>
+                                            <WarningIcon size={16} className="shrink-0"/>
                                             Legacy
                                         </p>
                                     )}
                                 </div>
                                 <h2 className="mt-3 font-display text-4xl font-bold leading-none">{season.name}</h2>
                                 <p className="figures mt-2 text-ash">{formatDateRange(season.startDate, season.endDate)}</p>
+                                {season.winnerTeamName && (
+                                    <div className="mt-4 border-l-3 border-aegis pl-3">
+                                        <p className="text-sm text-ash">Champions</p>
+                                        <p className="truncate font-semibold text-aegis">{season.winnerTeamName}</p>
+                                    </div>
+                                )}
                             </Link>
                         </li>
                     ))}

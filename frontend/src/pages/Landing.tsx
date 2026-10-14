@@ -9,6 +9,7 @@ import {statusStyles} from "../util/statusStyles.ts";
 import type {Season} from "../types.ts";
 
 const RECENT_MATCH_COUNT = 5;
+const HALL_OF_FAME_COUNT = 5;
 
 // The season people most likely want: one taking sign-ups or drafting, else one in progress, else the latest (API sends
 // newest first)
@@ -24,6 +25,7 @@ export default function Landing() {
     const {data: user} = useCurrentUser();
 
     const currentSeason = seasons && pickCurrentSeason(seasons);
+    const champions = seasons?.filter(s => s.winnerTeamName);
 
     const about = [
         {
@@ -65,7 +67,7 @@ export default function Landing() {
                     )}
                 </div>
 
-                <aside className="space-y-4">
+                <aside className="min-w-0 space-y-4">
                     {currentSeason && (
                         <Panel title="Current season">
                             <p className="font-display text-3xl font-bold leading-none">{currentSeason.name}</p>
@@ -81,6 +83,38 @@ export default function Landing() {
                             </Link>
                         </Panel>
                     )}
+                    {champions && (
+                        <Panel title="Hall of fame" padded={false}
+                               meta={champions.length > HALL_OF_FAME_COUNT &&
+                                   <Link to="/seasons" className="hover:text-bone">See all {champions.length}</Link>}>
+                            {champions.length ? (
+                                <ul>
+                                    {champions.slice(0, HALL_OF_FAME_COUNT).map(season => (
+                                        <li key={season.id}>
+                                            <Link to={`/seasons/${season.id}`} className="row-link block px-2.5 py-2">
+                                                <span className="flex items-baseline gap-2">
+                                                    <span className="figures shrink-0 text-sm text-ash">{season.name}</span>
+                                                    <span className="truncate font-semibold">{season.winnerTeamName}</span>
+                                                </span>
+                                                {/*Captain first, so the first name is bold*/}
+                                                <span className="block truncate text-sm text-ash">
+                                                    {season.winnerPlayers?.map((name, i) => i === 0
+                                                        ? <span key={i}><strong className="font-bold">{name}</strong><span className="sr-only"> (captain)</span></span>
+                                                        : `, ${name}`)}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="p-2.5 text-ash">No champions yet. Winners appear here when a season ends.</p>
+                            )}
+                        </Panel>
+                    )}
+                    <Panel title="Rules">
+                        <p className="leading-relaxed text-ash">Sign-ups, the draft, subs, conduct and penalties.</p>
+                        <Link to="/rules" className="secondary-button mt-4 w-full justify-center">Read the rules</Link>
+                    </Panel>
                     <Panel title="About">
                         <div className="space-y-4">
                             {about.map(({title, body}) => (

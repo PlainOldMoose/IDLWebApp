@@ -1,9 +1,10 @@
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
 import {render, screen, within} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter, Route, Routes} from "react-router";
 import MatchDetail from "./MatchDetail";
-import type {MatchDetail as MatchDetailData} from "../types";
+import type {MatchDetail as MatchDetailData, SteamUser} from "../types";
 
 type Player = MatchDetailData["players"][number];
 
@@ -28,6 +29,7 @@ const seasonMatch: MatchDetailData = {
     // Dire's first game of the season
     direStanding: {position: 6, teamCount: 6, wins: 0, losses: 0},
     radiantWinChance: 0.544,
+    source: "MANUAL",
 };
 
 const inhouse: MatchDetailData = {
@@ -39,12 +41,17 @@ const inhouse: MatchDetailData = {
 };
 
 let detail: MatchDetailData;
+let user: SteamUser | null;
 
 beforeEach(() => {
+    user = null;
     vi.stubGlobal("fetch", vi.fn(async (path: string) => path.startsWith("/api/matches/")
         ? new Response(JSON.stringify(detail))
+        : path === "/auth/me" && user ? new Response(JSON.stringify(user))
         // Signed out
         : new Response(null, {status: 401})));
+    // NOTE: jsdom has no modal dialogs
+    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -179,4 +186,38 @@ it("leaves the average ELO out of the subtitle when it isn't recorded", async ()
 
     await screen.findByText("Match 1234");
     expect(screen.queryByText(/avg ELO/)).toBeNull();
+});
+
+const ADMIN: SteamUser = {steamId: "admin", username: "admin", admin: true};
+const manualWarning = "This match is not tracked by the API, likely because it was not ticketed properly. The sync button will not retrieve this match, you will have to re-add it manually.";
+
+it.each([["MANUAL", "Manually added by an Admin"], ["API_SYNC", "API synced"]] as const)("tells admins a %s match is %s", async (source, label) => {
+    detail = {...seasonMatch, source};
+    user = ADMIN;
+    renderMatch();
+
+    expect(await screen.findByText(label)).toBeTruthy();
+});
+
+it("doesn't show players where a match came from", async () => {
+    detail = seasonMatch;
+    user = {steamId: "1", username: "Borky", admin: false};
+    renderMatch();
+
+    await screen.findByText("Borky");
+    expect(screen.queryByText("Manually added by an Admin")).toBeNull();
+});
+
+// Behaviour 59: both kinds can be restored for a week, so both get the same line
+it.each(["MANUAL", "API_SYNC"] as const)("says a deleted %s match goes to the bin", async (source) => {
+    detail = {...seasonMatch, source};
+    user = ADMIN;
+    renderMatch();
+
+    await userEvent.click(await screen.findByRole("button", {name: "Delete match"}));
+    const dialog = screen.getByRole("dialog", {name: "Delete match"});
+
+    expect(within(dialog).getByText("It goes to Recently deleted for 7 days, where you can restore it.")).toBeTruthy();
+    expect(within(dialog).queryByText(manualWarning)).toBeNull();
+    expect(within(dialog).queryByText("The sync won't add it back. Add match can.")).toBeNull();
 });

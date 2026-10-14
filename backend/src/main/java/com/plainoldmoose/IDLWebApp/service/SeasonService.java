@@ -12,6 +12,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.player.EloHistory;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
+import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +36,7 @@ public class SeasonService {
     private SeasonRepository seasonRepository;
     private MatchRepository matchRepository;
     private EloHistoryRepository eloHistoryRepository;
+    private DeletedMatchRepository deletedMatchRepository;
 
     public SeasonSummaryResponse createSeason(CreateSeasonRequest request) {
         Season season = new Season();
@@ -88,10 +91,32 @@ public class SeasonService {
 
         season.setWinner(winner);
         season.setStatus(SeasonStatus.COMPLETED);
+        // Restoring needs an active season, so its bin can't be used any more
+        deletedMatchRepository.deleteBySeasonId(id);
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {
-        return new SeasonSummaryResponse(season.getName(), season.getStatus(), season.getId(), season.getStartDate(), season.getEndDate());
+        return new SeasonSummaryResponse(season.getName(), season.getStatus(), season.getId(), season.getStartDate(),
+                season.getEndDate(), winnerName(season), winnerPlayers(season));
+    }
+
+    // The winner team, else one imported from before the app
+    private String winnerName(Season season) {
+        return season.getWinner() != null ? season.getWinner().getName() : season.getLegacyWinnerName();
+    }
+
+    // Usernames, captain first
+    private List<String> winnerPlayers(Season season) {
+        Team winner = season.getWinner();
+        if (winner == null) {
+            return season.getLegacyWinnerPlayers();
+        }
+        return winner.getMembers()
+                .stream()
+                .map(TeamMember::getPlayer)
+                .sorted(Comparator.comparing((Player player) -> player != winner.getCaptain()))
+                .map(Player::getUsername)
+                .toList();
     }
 
     private SeasonDetailResponse mapToDetailResponse(Season season) {
@@ -106,8 +131,15 @@ public class SeasonService {
                         .sorted(Team.tableOrder(Team::getWins, Team::getLosses))
                         .map(team -> mapToTeamResponse(team, seasonEnd(season)))
                         .toList(),
-                season.getWinner() != null ? season.getWinner()
-                        .getName() : null);
+                winnerName(season),
+                season.getLeagueId());
+    }
+
+    @Transactional
+    public void setLeague(UUID id, Long leagueId) {
+        seasonRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND))
+                .setLeagueId(leagueId);
     }
 
     // A finished season's last game, or null while it's still going (or never had one) and current ELO is the right one
