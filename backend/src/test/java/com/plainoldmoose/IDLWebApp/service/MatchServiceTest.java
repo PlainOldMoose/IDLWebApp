@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -540,5 +541,32 @@ class MatchServiceTest {
         inhouseWithElo(1650.0, 1550.0, 1500.0, 1500.0);
 
         assertNull(service.getMatch(500L).radiantWinChance());
+    }
+
+    @Test
+    void getAllMatchesAsksTheDatabaseForOnlyTheLimit() {
+        when(matches.findAllByOrderByPlayedTimeDesc(any())).thenReturn(List.of());
+
+        service.getAllMatches(null, 6);
+        service.getAllMatches(null, null);
+
+        verify(matches).findAllByOrderByPlayedTimeDesc(Limit.of(6));
+        verify(matches).findAllByOrderByPlayedTimeDesc(Limit.unlimited());
+    }
+
+    @Test
+    void getAllMatchesLimitsASeasonsMatchesToo() {
+        UUID seasonId = UUID.randomUUID();
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(any(), any(Limit.class))).thenReturn(List.of());
+
+        service.getAllMatches(seasonId, 6);
+
+        verify(matches).findBySeasonIdOrderByPlayedTimeDesc(seasonId, Limit.of(6));
+    }
+
+    @Test
+    void getAllMatchesRejectsALimitBelowOne() {
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.getAllMatches(null, 0));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
     }
 }

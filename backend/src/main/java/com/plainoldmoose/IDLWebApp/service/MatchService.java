@@ -26,6 +26,7 @@ import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -60,10 +61,14 @@ public class MatchService {
     private final LeagueMatchRepository leagueMatchRepository;
     private final DeletedMatchRepository deletedMatchRepository;
 
-    public List<MatchSummaryResponse> getAllMatches(UUID seasonId) {
+    public List<MatchSummaryResponse> getAllMatches(UUID seasonId, Integer limit) {
+        if (limit != null && limit < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be at least 1");
+        }
+        Limit max = limit == null ? Limit.unlimited() : Limit.of(limit);
         List<Match> matches = seasonId != null
-                ? matchRepository.findBySeasonIdOrderByPlayedTimeDesc(seasonId)
-                : matchRepository.findAllByOrderByPlayedTimeDesc();
+                ? matchRepository.findBySeasonIdOrderByPlayedTimeDesc(seasonId, max)
+                : matchRepository.findAllByOrderByPlayedTimeDesc(max);
 
         return matches.stream()
                 .map(this::mapToSummaryResponse)
