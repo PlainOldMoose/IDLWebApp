@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -95,7 +96,27 @@ public class SeasonService {
     }
 
     private SeasonSummaryResponse mapToSummaryResponse(Season season) {
-        return new SeasonSummaryResponse(season.getName(), season.getStatus(), season.getId(), season.getStartDate(), season.getEndDate());
+        return new SeasonSummaryResponse(season.getName(), season.getStatus(), season.getId(), season.getStartDate(),
+                season.getEndDate(), winnerName(season), winnerPlayers(season));
+    }
+
+    // The winner team, else one imported from before the app
+    private String winnerName(Season season) {
+        return season.getWinner() != null ? season.getWinner().getName() : season.getLegacyWinnerName();
+    }
+
+    // Usernames, captain first
+    private List<String> winnerPlayers(Season season) {
+        Team winner = season.getWinner();
+        if (winner == null) {
+            return season.getLegacyWinnerPlayers();
+        }
+        return winner.getMembers()
+                .stream()
+                .map(TeamMember::getPlayer)
+                .sorted(Comparator.comparing((Player player) -> player != winner.getCaptain()))
+                .map(Player::getUsername)
+                .toList();
     }
 
     private SeasonDetailResponse mapToDetailResponse(Season season) {
@@ -110,8 +131,7 @@ public class SeasonService {
                         .sorted(Team.tableOrder(Team::getWins, Team::getLosses))
                         .map(team -> mapToTeamResponse(team, seasonEnd(season)))
                         .toList(),
-                season.getWinner() != null ? season.getWinner()
-                        .getName() : null,
+                winnerName(season),
                 season.getLeagueId());
     }
 

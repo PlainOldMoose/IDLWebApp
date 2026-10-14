@@ -20,3 +20,18 @@ it("marks seasons before Season 25 as legacy", async () => {
     expect((await screen.findByRole("link", {name: /Season 24/})).textContent).toMatch(/Legacy/);
     expect(screen.getByRole("link", {name: /Season 25/}).textContent).not.toMatch(/Legacy/);
 });
+
+// Behaviour 7
+it("shows the champions on a finished season's card", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (path: string) => path === "/auth/me"
+        ? new Response(null, {status: 401})
+        : new Response(JSON.stringify([{...season("Season 44"), winnerTeamName: "Commando Elite", winnerPlayers: ["Antab"]}, season("Season 45")]))));
+    render(
+        <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+            <MemoryRouter><Seasons/></MemoryRouter>
+        </QueryClientProvider>
+    );
+
+    expect((await screen.findByRole("link", {name: /Season 44/})).textContent).toMatch(/Champions\s*Commando Elite/);
+    expect(screen.getByRole("link", {name: /Season 45/}).textContent).not.toMatch(/Champions/);
+});

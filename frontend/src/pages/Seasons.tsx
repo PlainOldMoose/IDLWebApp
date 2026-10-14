@@ -84,7 +84,7 @@ export default function Seasons() {
                     {seasons.map((season) => (
                         <li key={season.id}>
                             <Link to={`/seasons/${season.id}`}
-                                  className="block rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
+                                  className="block h-full rounded-lg bg-panel p-5 transition-colors hover:bg-panel-raised">
                                 <div className="flex items-center justify-between gap-3 text-sm font-medium">
                                     <p className={`flex items-center gap-2 ${statusStyles[season.status].text}`}>
                                         <span aria-hidden="true" className={`size-2.5 rounded-full border-2 ${statusStyles[season.status].node}`}/>
@@ -100,6 +100,12 @@ export default function Seasons() {
                                 </div>
                                 <h2 className="mt-3 font-display text-4xl font-bold leading-none">{season.name}</h2>
                                 <p className="figures mt-2 text-ash">{formatDateRange(season.startDate, season.endDate)}</p>
+                                {season.winnerTeamName && (
+                                    <div className="mt-4 border-l-3 border-aegis pl-3">
+                                        <p className="text-sm text-ash">Champions</p>
+                                        <p className="truncate font-semibold text-aegis">{season.winnerTeamName}</p>
+                                    </div>
+                                )}
                             </Link>
                         </li>
                     ))}

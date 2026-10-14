@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,6 +44,16 @@ public class Season {
     @ManyToOne
     @JoinColumn(name = "winner_team_id")
     private Team winner;
+
+    // Winners from before the app, imported as text: they often have no team name and some players were never
+    // registered. Captain first. Only used when there's no winner team
+    private String legacyWinnerName;
+
+    @ElementCollection
+    @CollectionTable(name = "season_legacy_winner_players")
+    @OrderColumn
+    @Column(name = "username")
+    private List<String> legacyWinnerPlayers = new ArrayList<>();
 
     // The Dota league ticket its games are played on, for the league sync. Null until an admin sets it
     private Long leagueId;
