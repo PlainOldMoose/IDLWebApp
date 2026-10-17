@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -57,7 +59,8 @@ class MatchSyncServiceTest {
     private final LeagueMatchRepository leagueMatches = mock(LeagueMatchRepository.class);
     private final PlayerRepository players = mock(PlayerRepository.class);
     private final MatchService matchService = mock(MatchService.class);
-    private final MatchSyncService service = new MatchSyncService(steam, openDota, seasons, matches, leagueMatches, players, matchService);
+    private final MatchSyncService service = new MatchSyncService(steam, openDota, seasons, matches, leagueMatches, players, matchService,
+            new TransactionTemplate(mock(PlatformTransactionManager.class)));
 
     // Registered players "0" to "11": 0-4 on the first team, 5-9 on the second, 10 and 11 on neither
     private final List<Player> everyone = IntStream.range(0, 12).mapToObj(i -> {
@@ -334,6 +337,7 @@ class MatchSyncServiceTest {
         Season broken = new Season();
         broken.setStatus(SeasonStatus.ACTIVE);
         broken.setLeagueId(222L);
+        broken.setTeams(List.of());
         when(seasons.findAll()).thenReturn(List.of(broken, noTicket, finished, season));
         when(steam.leagueMatches(222L)).thenThrow(new RestClientException("Connection reset"));
 

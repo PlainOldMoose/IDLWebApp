@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -61,13 +62,23 @@ public class MatchSyncService {
     private final LeagueMatchRepository leagueMatchRepository;
     private final PlayerRepository playerRepository;
     private final MatchService matchService;
+    private final TransactionTemplate transactions;
 
     // NOTE: one Steam call per season with a ticket (per 100 games), plus one OpenDota call per new game. Well inside
     // OpenDota's free 3000 a day
     @Scheduled(fixedDelayString = "${app.league-sync.interval:PT30M}", initialDelayString = "PT1M")
     public void syncAll() {
-        for (Season season : seasonRepository.findAll()) {
-            if (season.getStatus() != SeasonStatus.ACTIVE || season.getLeagueId() == null) continue;
+        // Off a request there's no open session to load teams on demand like "Sync now" has, so the rosters are
+        // loaded up front
+        List<Season> seasons = transactions.execute(status -> {
+            List<Season> active = seasonRepository.findAll()
+                    .stream()
+                    .filter(season -> season.getStatus() == SeasonStatus.ACTIVE && season.getLeagueId() != null)
+                    .toList();
+            active.forEach(season -> season.getTeams().forEach(team -> team.getMembers().size()));
+            return active;
+        });
+        for (Season season : seasons) {
             try {
                 run(season);
             } catch (RuntimeException e) {
