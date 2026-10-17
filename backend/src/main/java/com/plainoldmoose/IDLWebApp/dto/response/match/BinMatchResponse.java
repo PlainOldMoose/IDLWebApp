@@ -11,5 +11,6 @@ public record BinMatchResponse(
         String direTeamName,
         Side winner,
         LocalDateTime deletedAt,
-        LocalDateTime purgeAt) {
+        LocalDateTime purgeAt,
+        boolean forfeit) {
 }

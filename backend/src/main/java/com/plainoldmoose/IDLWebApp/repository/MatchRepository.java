@@ -21,13 +21,17 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(LocalDateTime from);
 
     // Season games and in-houses alike
-    @Query("select count(p) from MatchParticipant p where p.player.steamId = :steamId and p.match.playedTime < :before")
+    @Query("select count(p) from MatchParticipant p where p.player.steamId = :steamId and p.match.playedTime < :before and p.match.forfeit = false")
     long countGamesBefore(String steamId, LocalDateTime before);
 
     // Null if they hadn't played by then
-    @Query("select max(p.match.playedTime) from MatchParticipant p where p.player.steamId = :steamId and p.match.playedTime < :before")
+    @Query("select max(p.match.playedTime) from MatchParticipant p where p.player.steamId = :steamId and p.match.playedTime < :before and p.match.forfeit = false")
     LocalDateTime lastPlayedBefore(String steamId, LocalDateTime before);
 
-    @Query("select count(m) from Match m where m.season is not null and m.playedTime > :after and m.playedTime < :before")
+    @Query("select count(m) from Match m where m.season is not null and m.forfeit = false and m.playedTime > :after and m.playedTime < :before")
     long countSeasonGamesBetween(LocalDateTime after, LocalDateTime before);
+
+    // Null with no matches. Forfeits count down from -1, below every Dota ID
+    @Query("select min(m.matchId) from Match m")
+    Long lowestMatchId();
 }

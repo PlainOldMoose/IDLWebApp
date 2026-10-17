@@ -11,7 +11,7 @@ const steamId = "76561197960265729";
 // Newest first, as the API returns them; ids count down so the newest is the highest
 const match = (matchId: number, season: string | null): PlayerMatchSummary => ({
     matchId, timePlayed: "2026-01-01T20:00:00", won: true, side: "RADIANT", sub: false, eloChange: 10,
-    seasonId: season, seasonName: season && `Season ${season}`,
+    seasonId: season, seasonName: season && `Season ${season}`, forfeit: false,
 });
 const range = (from: number, to: number, season: string | null) =>
     Array.from({length: from - to + 1}, (_, i) => match(from - i, season));
