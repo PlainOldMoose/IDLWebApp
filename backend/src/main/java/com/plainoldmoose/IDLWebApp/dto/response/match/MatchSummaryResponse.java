@@ -13,5 +13,6 @@ public record MatchSummaryResponse(
         UUID seasonId, // null for an in-house
         String seasonName,
         String radiantTeamName,
-        String direTeamName) {
+        String direTeamName,
+        boolean forfeit) { // Radiant forfeited: no ELO, and only the season table counts it
 }

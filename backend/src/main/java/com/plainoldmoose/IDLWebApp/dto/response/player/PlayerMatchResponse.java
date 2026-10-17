@@ -13,6 +13,7 @@ public record PlayerMatchResponse(
         boolean sub,
         Double eloChange, // null when no ELO history row is linked to the match
         UUID seasonId, // null for an in-house
-        String seasonName
+        String seasonName,
+        boolean forfeit // Listed, but left out of the player's W/L
 ) {
 }

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -95,6 +96,36 @@ class EloServiceTest {
         assertSame(later, last.getMatch());
         assertEquals(later.getPlayedTime(), last.getTimestamp());
         assertEquals(-7.2, last.getEloChange());
+    }
+
+    // Forfeit behaviour 5: nobody played, so the replay passes over it as if it weren't there
+    @Test
+    void replaySkipsForfeits() {
+        MatchRepository matches = mock(MatchRepository.class);
+        EloHistoryRepository history = mock(EloHistoryRepository.class);
+        EloService service = new EloService(matches, history, mock(SeasonRepository.class));
+        List<Player> players = IntStream.range(0, 10).mapToObj(i -> {
+            Player player = new Player();
+            player.setSteamId(String.valueOf(i));
+            player.setElo(1500);
+            return player;
+        }).toList();
+        LocalDateTime now = LocalDateTime.now();
+        Match forfeit = match(1L, now.minusDays(2), Side.DIRE, players);
+        forfeit.setForfeit(true);
+        Match later = match(2L, now.minusDays(1), Side.RADIANT, players);
+        when(matches.findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(forfeit.getPlayedTime()))
+                .thenReturn(List.of(forfeit, later));
+
+        service.replay(forfeit.getPlayedTime());
+
+        // The later game from an even start, as if the forfeit weren't there: 1.84 × 7.5 × 0.5 = 6.9 each way
+        assertEquals(1506.9, players.get(0).getElo());
+        assertEquals(1493.1, players.get(9).getElo());
+        assertNull(forfeit.getAvgElo());
+        ArgumentCaptor<EloHistory> saved = ArgumentCaptor.forClass(EloHistory.class);
+        verify(history, times(10)).save(saved.capture());
+        assertTrue(saved.getAllValues().stream().allMatch(row -> row.getMatch() == later));
     }
 
     // An in-house: no season, so S = 7.5

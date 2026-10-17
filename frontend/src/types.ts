@@ -20,6 +20,7 @@ export interface PlayerMatchSummary {
     eloChange: number | null; // null when the match has no ELO record
     seasonId: string | null; // null for an in-house
     seasonName: string | null;
+    forfeit: boolean; // Listed, but not in the player's W/L
 }
 
 export type SteamUser = Pick<PlayerSummary, "steamId" | "username"> & {admin: boolean};
@@ -47,6 +48,7 @@ export interface BinMatch {
     winner: "RADIANT" | "DIRE";
     deletedAt: string;
     purgeAt: string; // When it's cleared for good, a week after deletedAt
+    forfeit: boolean; // Radiant forfeited; its ID is made up
 }
 
 // A season's league sync, admin-only: the last run, and the ticketed games that couldn't go in on their own
@@ -124,6 +126,7 @@ export interface MatchSummary {
     seasonName?: string;
     radiantTeamName?: string;
     direTeamName?: string;
+    forfeit: boolean; // Radiant didn't show: no ELO, and only the season table counts it
 }
 
 export interface MatchDetail {

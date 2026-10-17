@@ -6,6 +6,7 @@ import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,4 +43,9 @@ public class Match {
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL)
     private List<MatchParticipant> participants;
+
+    // A team didn't show: the forfeiting team is Radiant and loses. Counts in the season table only, never for ELO
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean forfeit;
 }

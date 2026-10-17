@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.service;
 
+import com.plainoldmoose.IDLWebApp.dto.request.CreateForfeitRequest;
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
@@ -41,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -151,6 +153,33 @@ public class MatchService {
     // to that season's games
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void create(CreateMatchRequest request) {
+        save(request, false);
+    }
+
+    // A team that didn't show loses to the other in the season table. Both full rosters go on it, so it's on everyone's
+    // profile, but nobody's ELO moves
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public void createForfeit(CreateForfeitRequest request) {
+        Season season = seasonRepository.findById(request.seasonId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        Team forfeiting = findTeam(season, request.forfeitingTeamId());
+        Team opponent = findTeam(season, request.opponentTeamId());
+        // Below the bin's too, so it can't take a deleted forfeit's ID while that's still restorable
+        long lowest = Stream.of(matchRepository.lowestMatchId(), deletedMatchRepository.lowestMatchId())
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .min()
+                .orElse(0);
+        long matchId = Math.min(lowest, 0) - 1;
+        save(new CreateMatchRequest(matchId, season.getId(), request.playedTime(), forfeiting.getTeamId(), opponent.getTeamId(),
+                Side.DIRE, roster(forfeiting), roster(opponent), Map.of()), true);
+    }
+
+    private static List<String> roster(Team team) {
+        return team.getMembers().stream().map(member -> member.getPlayer().getSteamId()).toList();
+    }
+
+    private void save(CreateMatchRequest request, boolean forfeit) {
         Season season = seasonRepository.findById(request.seasonId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
         if (season.getStatus() != SeasonStatus.ACTIVE) {
@@ -185,6 +214,7 @@ public class MatchService {
         match.setDireTeam(direTeam);
         match.setPlayedTime(played);
         match.setMatchWinner(request.winner());
+        match.setForfeit(forfeit);
         match.setParticipants(new ArrayList<>());
         Map<String, String> subbingFor = request.subbingFor() == null ? Map.of() : request.subbingFor();
         for (Side side : Side.values()) {
@@ -246,11 +276,11 @@ public class MatchService {
                 .map(copy -> new BinMatchResponse(copy.getMatchId(),
                         copy.getRadiantTeam() != null ? copy.getRadiantTeam().getName() : null,
                         copy.getDireTeam() != null ? copy.getDireTeam().getName() : null,
-                        copy.getWinner(), copy.getDeletedAt(), copy.getDeletedAt().plusDays(BIN_DAYS)))
+                        copy.getWinner(), copy.getDeletedAt(), copy.getDeletedAt().plusDays(BIN_DAYS), copy.isForfeit()))
                 .toList();
     }
 
-    // Puts a deleted match back as it was, through create, so standings and ELO replay and its checks still apply.
+    // Puts a deleted match back as it was, through save, so standings and ELO replay and its checks still apply.
     // If they refuse it, it stays in the bin
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void restore(Long matchId) {
@@ -259,8 +289,9 @@ public class MatchService {
         Map<String, String> subbingFor = copy.getParticipants().stream()
                 .filter(participant -> participant.getSubbingFor() != null)
                 .collect(Collectors.toMap(DeletedMatch.DeletedParticipant::getSteamId, DeletedMatch.DeletedParticipant::getSubbingFor));
-        create(new CreateMatchRequest(matchId, copy.getSeason().getId(), copy.getPlayedTime(), copy.getRadiantTeam().getTeamId(),
-                copy.getDireTeam().getTeamId(), copy.getWinner(), binSide(copy, Side.RADIANT), binSide(copy, Side.DIRE), subbingFor));
+        save(new CreateMatchRequest(matchId, copy.getSeason().getId(), copy.getPlayedTime(), copy.getRadiantTeam().getTeamId(),
+                copy.getDireTeam().getTeamId(), copy.getWinner(), binSide(copy, Side.RADIANT), binSide(copy, Side.DIRE), subbingFor),
+                copy.isForfeit());
     }
 
     @Scheduled(fixedDelayString = "PT1H", initialDelayString = "PT1M")
@@ -286,6 +317,7 @@ public class MatchService {
         copy.setRadiantTeam(match.getRadiantTeam());
         copy.setDireTeam(match.getDireTeam());
         copy.setDeletedAt(LocalDateTime.now());
+        copy.setForfeit(match.isForfeit());
         copy.setParticipants(new ArrayList<>(match.getParticipants().stream().map(participant -> {
             DeletedMatch.DeletedParticipant copied = new DeletedMatch.DeletedParticipant();
             copied.setSteamId(participant.getPlayer().getSteamId());
@@ -343,6 +375,7 @@ public class MatchService {
                 match.getRadiantTeam() != null ? match.getRadiantTeam()
                         .getName() : null,
                 match.getDireTeam() != null ? match.getDireTeam()
-                        .getName() : null);
+                        .getName() : null,
+                match.isForfeit());
     }
 }
