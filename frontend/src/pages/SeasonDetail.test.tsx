@@ -154,7 +154,7 @@ it("labels a drafting season", async () => {
 
 const team = (name: string, size: number): SeasonDetailData["teams"][number] => ({
     teamId: name, name, captainUsername: `${name}1`, avgElo: 1500, wins: 1, losses: 1,
-    members: Array.from({length: size}, (_, i) => ({steamId: `${name}${i + 1}`, username: `${name}${i + 1}`, elo: 1500})),
+    members: Array.from({length: size}, (_, i) => ({steamId: `${name}${i + 1}`, username: `${name}${i + 1}`, elo: 1500, disabled: false})),
 });
 
 const legacyNote = /This season comes from the old league records/;
@@ -196,7 +196,7 @@ it("leaves a full team of five alone", async () => {
 it("records who a sub replaced from the box they were typed into", async () => {
     const red = team("red", 5);
     const blue = team("blue", 5);
-    const players = [...red.members, ...blue.members, {steamId: "sub1", username: "sub1", elo: 1500}];
+    const players = [...red.members, ...blue.members, {steamId: "sub1", username: "sub1", elo: 1500, disabled: false}];
     renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], players, user: {steamId: "admin", username: "admin", admin: true}});
 
     await openAddMenu("Match");
@@ -227,7 +227,7 @@ it("records who a sub replaced from the box they were typed into", async () => {
 const ADMIN: SteamUser = {steamId: "admin", username: "admin", admin: true};
 const red = team("red", 5);
 const blue = team("blue", 5);
-const sub1 = {steamId: "sub1", username: "sub1", elo: 1500};
+const sub1 = {steamId: "sub1", username: "sub1", elo: 1500, disabled: false};
 const pendingMatch: LeagueSync["pending"][number] = {
     matchId: 7406531302, playedTime: "2026-02-10T19:00:00", winner: "DIRE", radiantTeamId: "red", direTeamId: "blue",
     radiant: [...red.members.slice(0, 4), sub1].map(({steamId, username}) => ({steamId, username})),

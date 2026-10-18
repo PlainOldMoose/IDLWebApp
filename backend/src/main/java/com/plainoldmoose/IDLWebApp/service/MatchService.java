@@ -199,6 +199,9 @@ public class MatchService {
         if (players.size() != 10) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A match needs 10 different registered players");
         }
+        if (players.values().stream().anyMatch(Player::isDisabled)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Disabled players can't play new matches");
+        }
         // Not before the season, so K counts the game as this season's, and not in the future
         LocalDateTime played = request.playedTime();
         if (played.isBefore(season.getStartDate().atStartOfDay()) || played.isAfter(LocalDateTime.now())) {

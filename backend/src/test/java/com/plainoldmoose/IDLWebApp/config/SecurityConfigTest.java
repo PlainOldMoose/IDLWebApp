@@ -5,6 +5,7 @@ import com.plainoldmoose.IDLWebApp.controller.InhouseController;
 import com.plainoldmoose.IDLWebApp.controller.LeagueSyncController;
 import com.plainoldmoose.IDLWebApp.controller.SeasonController;
 import com.plainoldmoose.IDLWebApp.controller.MatchController;
+import com.plainoldmoose.IDLWebApp.controller.PlayerController;
 import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.DraftService;
 import com.plainoldmoose.IDLWebApp.service.InhouseService;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -35,7 +38,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // SecurityConfig's rule order is the whole authorisation model, so these pin down who gets through to what
-@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class, DraftController.class, LeagueSyncController.class})
+@WebMvcTest({SeasonController.class, InhouseController.class, MatchController.class, DraftController.class, LeagueSyncController.class,
+        PlayerController.class})
 @Import(SecurityConfig.class)
 class SecurityConfigTest {
 
@@ -68,9 +72,11 @@ class SecurityConfigTest {
     @BeforeEach
     void players() {
         when(playerService.findSteamUser("76561198000000000"))
-                .thenReturn(Optional.of(new SteamUserResponse("76561198000000000", "player", false)));
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000000", "player", false, false)));
         when(playerService.findSteamUser("76561198000000001"))
-                .thenReturn(Optional.of(new SteamUserResponse("76561198000000001", "admin", true)));
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000001", "admin", true, false)));
+        when(playerService.findSteamUser("76561198000000003"))
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000003", "disabled", false, true)));
     }
 
     @Test
@@ -186,5 +192,33 @@ class SecurityConfigTest {
     void deletedPlayerIsSignedOut() throws Exception {
         RequestPostProcessor deleted = user("76561198000000002").roles("USER");
         mvc.perform(delete("/api/inhouses/1").with(deleted).with(csrf())).andExpect(status().isForbidden());
+    }
+
+    // Disabled behaviour 10: disabled since sign-in, so the session no longer counts
+    @Test
+    void disabledPlayerIsSignedOut() throws Exception {
+        RequestPostProcessor disabled = user("76561198000000003").roles("USER");
+        mvc.perform(delete("/api/inhouses/1").with(disabled).with(csrf())).andExpect(status().isForbidden());
+    }
+
+    // Disabled behaviour 11
+    @Test
+    void onlyAdminsDisableOrEnablePlayers() throws Exception {
+        String disabled = "/api/players/76561198000000000/disabled";
+        mvc.perform(put(disabled).with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(delete(disabled).with(PLAYER).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(put(disabled).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(delete(disabled).with(ADMIN).with(csrf())).andExpect(status().isNoContent());
+    }
+
+    // Disabled players are listed only for admins; anyone else asking gets the normal list
+    @Test
+    void onlyAdminsGetDisabledPlayersListed() throws Exception {
+        String all = "/api/players?includeDisabled=true";
+        mvc.perform(get(all)).andExpect(status().isOk());
+        mvc.perform(get(all).with(PLAYER)).andExpect(status().isOk());
+        verify(playerService, times(2)).getAllPlayersSummary(false);
+        mvc.perform(get(all).with(ADMIN)).andExpect(status().isOk());
+        verify(playerService).getAllPlayersSummary(true);
     }
 }

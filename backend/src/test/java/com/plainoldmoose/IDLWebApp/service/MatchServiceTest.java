@@ -366,6 +366,18 @@ class MatchServiceTest {
         verify(matches, never()).save(any());
     }
 
+    // Disabled behaviour 13
+    @Test
+    void refusesAMatchWithADisabledPlayer() {
+        stubPlayers();
+        everyone.get(5).setDisabledAt(LocalDateTime.now());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.create(request()));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
     @Test
     void onlyAnActiveSeasonTakesMatches() {
         season.setStatus(SeasonStatus.COMPLETED);

@@ -1,4 +1,4 @@
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {BinMatch, Draft, Inhouse, LeagueSync, MatchDetail, MatchSummary, PlayerDetail, PlayerSummary, Season, SeasonDetail, SeasonSignup, SteamUser} from "../types.ts";
 
 // /api and /auth are same-origin: proxied by Vite in dev and by nginx in prod
@@ -20,18 +20,20 @@ const request = async <T>(path: string, {json, ...init}: Omit<RequestInit, "body
     return text ? JSON.parse(text) : undefined as T;
 };
 
-export function usePlayers(enabled = true) {
+export function usePlayers(enabled = true, includeDisabled = false) {
     return useQuery({
-        queryKey: ["players"],
-        queryFn: () => request<PlayerSummary[]>("/api/players"),
+        queryKey: ["players", includeDisabled],
+        queryFn: () => request<PlayerSummary[]>(includeDisabled ? "/api/players?includeDisabled=true" : "/api/players"),
         enabled,
+        // Keeps the list on screen while the admin toggle swaps it, instead of flashing the loader
+        placeholderData: keepPreviousData,
     });
 }
 
 export function usePlayer(steamId: string | undefined) {
     return useQuery({
         queryKey: ["player", steamId],
-        queryFn: () => request<PlayerDetail>(`/api/players/${steamId}`),
+        queryFn: () => request<PlayerDetail>(`/api/players/${encodeURIComponent(steamId ?? "")}`),
         enabled: !!steamId
     })
 }
@@ -41,9 +43,21 @@ export function usePlayer(steamId: string | undefined) {
 export function useCreatePlayer() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (player: PlayerSummary) =>
+        mutationFn: (player: Omit<PlayerSummary, "disabled">) =>
             request<PlayerSummary>("/api/players", {method: "POST", json: player}),
         onSuccess: () => void queryClient.invalidateQueries({queryKey: ["players"]}),
+    });
+}
+
+export function useSetDisabled(steamId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (disabled: boolean) =>
+            request<void>(`/api/players/${encodeURIComponent(steamId)}/disabled`, {method: disabled ? "PUT" : "DELETE"}),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({queryKey: ["players"]});
+            void queryClient.invalidateQueries({queryKey: ["player", steamId]});
+        },
     });
 }
 

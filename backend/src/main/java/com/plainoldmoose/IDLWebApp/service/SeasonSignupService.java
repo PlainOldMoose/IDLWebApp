@@ -39,6 +39,10 @@ public class SeasonSignupService {
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found")));
                     return created;
                 });
+        // Signed out already, so this only matters for a sign-up made just as they were disabled
+        if (seasonSignup.getPlayer().isDisabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Disabled players can't sign up");
+        }
         // Switching from sub to player joins the player queue now, so overflow stays first come, first served
         if (seasonSignup.isSub() && !sub) {
             seasonSignup.setSignedUpAt(LocalDateTime.now());

@@ -125,6 +125,9 @@ public class InhouseService {
         if (steamIds.size() != 10 || players.size() != 10) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An in-house needs 10 different registered players");
         }
+        if (players.stream().anyMatch(Player::isDisabled)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Disabled players can't play in-houses");
+        }
         return players;
     }
 

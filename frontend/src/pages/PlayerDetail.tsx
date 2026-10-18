@@ -1,5 +1,6 @@
+import {useRef} from "react";
 import {Link, useParams} from "react-router";
-import {usePlayer, usePlayers} from "../services/Queries.ts";
+import {useCurrentUser, usePlayer, usePlayers, useSetDisabled} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
 import Panel from "../components/Panel.tsx";
 import EloLadder from "../components/EloLadder.tsx";
@@ -26,6 +27,14 @@ export default function PlayerDetail() {
     const {steamId} = useParams<{ steamId: string }>();
     const {data: player, isLoading, isError} = usePlayer(steamId);
     const {data: players} = usePlayers();
+    const {data: user} = useCurrentUser();
+    const setDisabled = useSetDisabled(steamId ?? "");
+    const disableDialogRef = useRef<HTMLDialogElement>(null);
+
+    const openDisableDialog = () => {
+        setDisabled.reset();
+        disableDialogRef.current?.showModal();
+    };
 
     // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
     if (isLoading) return (
@@ -39,6 +48,7 @@ export default function PlayerDetail() {
     if (isError || !player) return <Page title="Player not found"><QueryError message="Couldn't find this player."/></Page>;
 
     // Both lists come from the API already ordered: players by ELO, matches newest first
+    const action = player.disabled ? "Enable" : "Disable";
     const rank = players ? players.findIndex(p => p.steamId === player.steamId) + 1 : 0;
     const matches = player.matches;
     const shown = matches.slice(0, PROFILE_MATCH_COUNT);
@@ -54,6 +64,8 @@ export default function PlayerDetail() {
         <Page
             title={player.username}
             subtitle={<>
+                {/*Public wording: a disabled player may be banned or just long gone*/}
+                {player.disabledAt && <p>{`Inactive since ${formatDate(player.disabledAt)}`}</p>}
                 {rank > 0 && players && <p>Rank {rank} of {players.length}</p>}
                 <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
                     {profiles.map(({name, url, icon}) => (
@@ -76,6 +88,11 @@ export default function PlayerDetail() {
                         {player.wins} W <span className="text-ash">&ndash;</span> {player.losses} L
                         <span className="text-ash"> ({player.winRate}%)</span>
                     </p>
+                    {user?.admin && (
+                        <button className={`secondary-button ${player.disabled ? "" : "text-danger"}`} onClick={openDisableDialog}>
+                            {action} player
+                        </button>
+                    )}
                     {matches.length > 0 && (
                         <ol aria-label={`Last ${Math.min(matches.length, RECENT_MATCH_COUNT)} matches, newest first`} className="flex gap-1">
                             {matches.slice(0, RECENT_MATCH_COUNT).map(match => {
@@ -95,9 +112,30 @@ export default function PlayerDetail() {
                 </div>
             }
         >
+            {user?.admin && (
+                <dialog ref={disableDialogRef} aria-labelledby="disable-player-title" className="dialog">
+                    <h2 id="disable-player-title" className="font-display text-3xl font-bold">
+                        {action} player
+                    </h2>
+                    <p className="mt-4 text-ash">
+                        {player.disabled
+                            ? `${player.username} shows on the player list and leaderboard again and can sign in. Sign-ups removed when they were disabled don't come back.`
+                            : `${player.username} can't sign in, sign up or play new games, and leaves the player list and leaderboard. Sign-ups for seasons still taking them are removed. Their matches and ELO history stay.`}
+                    </p>
+                    {setDisabled.isError && <p role="alert" className="mt-4 text-sm text-ash">{setDisabled.error.message}</p>}
+                    <div className="mt-4 flex justify-end gap-3">
+                        <button type="button" className="secondary-button" onClick={() => disableDialogRef.current?.close()}>Cancel</button>
+                        <button type="button" className="primary-button" disabled={setDisabled.isPending}
+                                onClick={() => setDisabled.mutate(!player.disabled, {onSuccess: () => disableDialogRef.current?.close()})}>
+                            {action}
+                        </button>
+                    </div>
+                </dialog>
+            )}
             {/*Fixed-size summary first, the growing match list last*/}
             <div className="space-y-4">
-                {players && (
+                {/*Disabled players aren't on the ladder*/}
+                {players && !player.disabled && (
                     <Panel title="On the ladder" meta={`${players.length} players`}>
                         <EloLadder players={players} highlightSteamId={player.steamId} highlightLabel={player.username}/>
                     </Panel>

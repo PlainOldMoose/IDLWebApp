@@ -9,6 +9,7 @@ import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonSignupRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -44,6 +45,24 @@ class SeasonSignupServiceTest {
         verify(signups).save(existing);
         assertEquals("any", existing.getRolePreference());
         assertEquals(true, existing.isWillingToCaptain());
+    }
+
+    // Disabled behaviour 12
+    @Test
+    void disabledPlayerCantSignUp() {
+        PlayerRepository players = mock(PlayerRepository.class);
+        SeasonSignupService service = new SeasonSignupService(signups, mock(SeasonRepository.class, inv -> Optional.of(season)), players);
+        season.setStatus(SeasonStatus.REGISTRATION);
+        Player disabled = new Player();
+        disabled.setSteamId("1");
+        disabled.setDisabledAt(LocalDateTime.now());
+        when(players.findById("1")).thenReturn(Optional.of(disabled));
+        when(signups.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.signup(seasonId, "1", "any", false, false));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+        verify(signups, never()).save(any());
     }
 
     @Test

@@ -1,10 +1,12 @@
 package com.plainoldmoose.IDLWebApp.controller;
 
+import com.plainoldmoose.IDLWebApp.dto.response.auth.SteamUserResponse;
 import com.plainoldmoose.IDLWebApp.service.PlayerService;
 import com.plainoldmoose.IDLWebApp.service.SteamAuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
@@ -14,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -130,5 +133,25 @@ class SteamAuthTest {
         assertEquals("/", SteamAuthController.localPath(".evil.com"));
         assertEquals("/", SteamAuthController.localPath("@evil.com"));
         assertEquals("/", SteamAuthController.localPath("/seasons/a b"));
+    }
+
+    // Disabled behaviour 9: told why, not sent to the unregistered page, and not signed in
+    @Test
+    void disabledPlayerIsSentToTheDisabledPage() {
+        PlayerService playerService = mock(PlayerService.class);
+        when(playerService.findSteamUser("76561198000000000"))
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000000", "Gone", false, true)));
+        SteamAuthController controller = new SteamAuthController(steamAuthService, playerService);
+        ReflectionTestUtils.setField(controller, "baseUrl", "https://idl.vandermerwe.uk");
+        MockHttpServletRequest browser = new MockHttpServletRequest();
+        controller.login("/", browser);
+        String state = (String) browser.getSession().getAttribute("loginState");
+        SecurityContextHolder.clearContext();
+
+        var response = controller.callback(callbackWithState(state), browser);
+
+        assertEquals(HttpStatus.FOUND, response.getStatusCode());
+        assertEquals("https://idl.vandermerwe.uk/disabled", String.valueOf(response.getHeaders().getLocation()));
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 }
