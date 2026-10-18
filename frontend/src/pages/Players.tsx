@@ -7,6 +7,7 @@ import StatStrip from "../components/StatStrip.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import {formatElo} from "../util/format.ts";
 
 export default function Players() {
@@ -24,11 +25,6 @@ export default function Players() {
     }, {replace: true});
     const createPlayer = useCreatePlayer();
     const dialogRef = useRef<HTMLDialogElement>(null);
-
-    const openDialog = () => {
-        createPlayer.reset();
-        dialogRef.current?.showModal();
-    };
 
     const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -52,32 +48,23 @@ export default function Players() {
         title: "Players",
         aside: user?.admin && (
             <>
-                <button className="primary-button" onClick={openDialog}>Add player</button>
-                <dialog ref={dialogRef} aria-labelledby="add-player-title"
-                        className="dialog">
-                    <h2 id="add-player-title" className="font-display text-3xl font-bold">Add player</h2>
-                    <form onSubmit={handleCreate} className="mt-4 space-y-4">
-                        <label className="block">
-                            Username
-                            <input name="username" required maxLength={64} autoComplete="off" spellCheck={false} className={inputClass}/>
-                        </label>
-                        <label className="block">
-                            Steam ID
-                            <input name="steamId" required pattern="\d{17}" inputMode="numeric" autoComplete="off"
-                                   placeholder="7656119…" aria-describedby="steam-id-hint" className={`${inputClass} figures`}/>
-                            <span id="steam-id-hint" className="mt-1.5 block text-sm text-ash">The 17-digit SteamID64 from their Steam profile URL</span>
-                        </label>
-                        <label className="block">
-                            ELO
-                            <input name="elo" type="number" required min={0} max={10000} step="any" className={`${inputClass} figures`}/>
-                        </label>
-                        {createPlayer.isError && <p role="alert" className="text-sm text-ash">{createPlayer.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={createPlayer.isPending}>Add</button>
-                        </div>
-                    </form>
-                </dialog>
+                <button className="primary-button" onClick={() => dialogRef.current?.showModal()}>Add player</button>
+                <FormDialog dialogRef={dialogRef} title="Add player" onSubmit={handleCreate} mutation={createPlayer} submitLabel="Add">
+                    <label className="block">
+                        Username
+                        <input name="username" required maxLength={64} autoComplete="off" spellCheck={false} className={inputClass}/>
+                    </label>
+                    <label className="block">
+                        Steam ID
+                        <input name="steamId" required pattern="\d{17}" inputMode="numeric" autoComplete="off"
+                               placeholder="7656119…" aria-describedby="steam-id-hint" className={`${inputClass} figures`}/>
+                        <span id="steam-id-hint" className="mt-1.5 block text-sm text-ash">The 17-digit SteamID64 from their Steam profile URL</span>
+                    </label>
+                    <label className="block">
+                        ELO
+                        <input name="elo" type="number" required min={0} max={10000} step="any" className={`${inputClass} figures`}/>
+                    </label>
+                </FormDialog>
             </>
         ),
     };

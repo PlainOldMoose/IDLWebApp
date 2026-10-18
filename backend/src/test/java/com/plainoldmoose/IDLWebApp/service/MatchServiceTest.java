@@ -197,7 +197,7 @@ class MatchServiceTest {
     @CsvSource({"true, API_SYNC", "false, MANUAL"})
     void detailSaysWhereTheMatchCameFrom(boolean synced, MatchSource source) {
         activeSeasonMatch();
-        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId())).thenReturn(List.of());
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId(), Limit.unlimited())).thenReturn(List.of());
         when(leagueMatches.existsById(8652158100L)).thenReturn(synced);
 
         assertEquals(source, service.getMatch(8652158100L).source());
@@ -454,7 +454,7 @@ class MatchServiceTest {
 
     private MatchDetailResponse getMatch(Match match, Match... leagueMatches) {
         when(matches.findById(match.getMatchId())).thenReturn(Optional.of(match));
-        when(matches.findBySeasonIdOrderByPlayedTimeDesc(league.getId())).thenReturn(List.of(leagueMatches));
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(league.getId(), Limit.unlimited())).thenReturn(List.of(leagueMatches));
         return service.getMatch(match.getMatchId());
     }
 
@@ -713,7 +713,7 @@ class MatchServiceTest {
         Match match = activeSeasonMatch();
         match.setForfeit(true);
         when(matches.findAllByOrderByPlayedTimeDesc(any())).thenReturn(List.of(match));
-        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId())).thenReturn(List.of());
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId(), Limit.unlimited())).thenReturn(List.of());
 
         assertTrue(service.getAllMatches(null, null).get(0).forfeit());
         assertTrue(service.getMatch(8652158100L).match().forfeit());

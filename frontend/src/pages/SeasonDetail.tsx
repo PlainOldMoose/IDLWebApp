@@ -29,9 +29,10 @@ import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
 import WarningIcon from "../components/WarningIcon.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import SeasonDraft from "./SeasonDraft.tsx";
 import {statusStyles} from "../util/statusStyles.ts";
-import {hasDefaultName} from "../util/draft.ts";
+import {hasDefaultName, TEAM_SIZE} from "../util/draft.ts";
 import {formatDate, formatDateRange, formatElo, formatRelative, isLegacySeason, sideName} from "../util/format.ts";
 import type {PendingMatch, PlayerSummary, SeasonSignup} from "../types.ts";
 
@@ -45,7 +46,6 @@ const replacedMembers = (names: string[], members: PlayerSummary[]) => {
     return members.map((member, i) => typed[i] && !memberNames.includes(typed[i]) && !typed.includes(member.username.toLowerCase())
         ? member : null);
 };
-const TEAM_SIZE = 5;
 
 // A queued game's players in a team's Add match boxes: members who played in their own box, then the side's other
 // players in the boxes of members who didn't, so they show as subbing. Blank where the sync couldn't name anyone
@@ -72,7 +72,6 @@ export default function SeasonDetail() {
     const [asSub, setAsSub] = useState(false);
     const deleteSeason = useDeleteSeason(seasonId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
     const canAddMatch = !!user?.admin && season?.status === "ACTIVE";
     const createMatch = useCreateMatch();
@@ -101,8 +100,6 @@ export default function SeasonDetail() {
     const completeSeason = useCompleteSeason(seasonId);
     const endDialogRef = useRef<HTMLDialogElement>(null);
     const [winnerTeamId, setWinnerTeamId] = useState("");
-    // Can't be undone, so the admin types "end" to confirm
-    const [endConfirmText, setEndConfirmText] = useState("");
     const startDraft = useStartDraft(seasonId);
     const draftDialogRef = useRef<HTMLDialogElement>(null);
     // Shares the draft section's query, so this adds no requests
@@ -129,18 +126,10 @@ export default function SeasonDetail() {
     };
 
     const openSignupDialog = () => {
-        signup.reset();
-        withdraw.reset();
         // Back to the saved sign-up, dropping anything typed and then cancelled
         signupFormRef.current?.reset();
         setAsSub(!!mySignup?.sub);
         signupDialogRef.current?.showModal();
-    };
-
-    const openDeleteDialog = () => {
-        deleteSeason.reset();
-        setConfirmText("");
-        deleteDialogRef.current?.showModal();
     };
 
     const handleDelete = (e: SubmitEvent<HTMLFormElement>) => {
@@ -149,7 +138,6 @@ export default function SeasonDetail() {
     };
 
     const openAddMatchDialog = (pending?: PendingMatch) => {
-        createMatch.reset();
         setUnknownNames([]);
         setPrefill(pending ?? null);
         if (pending) {
@@ -169,7 +157,6 @@ export default function SeasonDetail() {
     };
 
     const openForfeitDialog = () => {
-        createForfeit.reset();
         forfeitFormRef.current?.reset();
         forfeitDialogRef.current?.showModal();
     };
@@ -197,11 +184,6 @@ export default function SeasonDetail() {
             const at = items.indexOf(document.activeElement as HTMLElement);
             items.at(e.key === "ArrowDown" ? (at + 1) % items.length : at - 1)?.focus();
         }
-    };
-
-    const openLeagueDialog = () => {
-        setLeague.reset();
-        leagueDialogRef.current?.showModal();
     };
 
     const handleSetLeague = (e: SubmitEvent<HTMLFormElement>) => {
@@ -248,9 +230,7 @@ export default function SeasonDetail() {
     };
 
     const openEndDialog = () => {
-        completeSeason.reset();
         setWinnerTeamId("");
-        setEndConfirmText("");
         endDialogRef.current?.showModal();
     };
 
@@ -259,28 +239,14 @@ export default function SeasonDetail() {
         completeSeason.mutate(winnerTeamId, {onSuccess: () => endDialogRef.current?.close()});
     };
 
-    const openDraftDialog = () => {
-        startDraft.reset();
-        draftDialogRef.current?.showModal();
-    };
-
     const handleStartDraft = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         startDraft.mutate(undefined, {onSuccess: () => draftDialogRef.current?.close()});
     };
 
-    const openStartSeasonDialog = () => {
-        startSeason.reset();
-        startSeasonDialogRef.current?.showModal();
-    };
-
     const handleStartSeason = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         startSeason.mutate(undefined, {onSuccess: () => startSeasonDialogRef.current?.close()});
-    };
-
-    const signIn = () => {
-        globalThis.location.href = `/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`;
     };
 
     // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
@@ -300,6 +266,10 @@ export default function SeasonDetail() {
     const captains = signedUp.filter(s => s.willingToCaptain).length;
     // Same rule as the API, so the button is greyed out instead of failing
     const deletable = !season.teams.length && !matches?.length;
+    const teamOptions = <>
+        <option value="">Pick a team…</option>
+        {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+    </>;
 
     const signupList = (list: SeasonSignup[]) => (
         <ul className="columns-2 gap-x-4 sm:columns-3">
@@ -329,7 +299,7 @@ export default function SeasonDetail() {
                         {draftComplete ? "Draft complete" : statusStyles[season.status].label}
                     </span>
                     {user?.admin && (
-                        <button aria-label="Delete season" onClick={openDeleteDialog} disabled={!deletable}
+                        <button aria-label="Delete season" onClick={() => deleteDialogRef.current?.showModal()} disabled={!deletable}
                                 title={deletable ? "Delete season" : "Seasons with teams or matches can't be deleted"}
                                 className="ml-3 rounded-md p-1 align-middle text-danger transition-colors enabled:cursor-pointer enabled:hover:bg-white/5 disabled:cursor-not-allowed disabled:text-ash disabled:opacity-50">
                             {/*Phosphor's Trash*/}
@@ -344,17 +314,17 @@ export default function SeasonDetail() {
                 season.status === "REGISTRATION" ? (
                     user ? (
                         <div className="flex gap-3">
-                            {user.admin && <button className="secondary-button" onClick={openDraftDialog}>Start draft</button>}
+                            {user.admin && <button className="secondary-button" onClick={() => draftDialogRef.current?.showModal()}>Start draft</button>}
                             <button className="primary-button" onClick={openSignupDialog}>
                                 {mySignup ? "Edit sign-up" : "Join now"}
                             </button>
                         </div>
                     ) : (
-                        <button className="primary-button" onClick={signIn}>Sign in with Steam</button>
+                        <a className="primary-button" href={`/auth/login?returnTo=${encodeURIComponent(globalThis.location.pathname)}`}>Sign in with Steam</a>
                     )
                 ) : season.status === "DRAFTING" ? (
                     user?.admin && (
-                        <button className="primary-button" onClick={openStartSeasonDialog} disabled={!draftComplete}
+                        <button className="primary-button" onClick={() => startSeasonDialogRef.current?.showModal()} disabled={!draftComplete}
                                 title={draftComplete ? undefined : "Every team needs 5 players first"}>
                             Start season
                         </button>
@@ -362,7 +332,7 @@ export default function SeasonDetail() {
                 ) : canAddMatch ? (
                     <div className="flex flex-wrap justify-end gap-3">
                         <button className="secondary-button" onClick={openEndDialog}>End season</button>
-                        <button className="secondary-button" onClick={openLeagueDialog}>League ticket</button>
+                        <button className="secondary-button" onClick={() => leagueDialogRef.current?.showModal()}>League ticket</button>
                         {canSync && (
                             <button className="secondary-button" onClick={() => syncLeague.mutate()} disabled={syncLeague.isPending}>
                                 {syncLeague.isPending ? "Syncing…" : "Sync now"}
@@ -569,8 +539,6 @@ export default function SeasonDetail() {
                        wraps grows every header in its row and the rosters and averages still line up*/}
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {season.teams.map((team) => {
-                            const captainFirst = [...team.members].sort((a, b) =>
-                                Number(b.username === team.captainUsername) - Number(a.username === team.captainUsername));
                             const isChampion = team.name === season.winnerTeamName;
                             const missing = Math.max(0, TEAM_SIZE - team.members.length);
                             return (
@@ -583,7 +551,7 @@ export default function SeasonDetail() {
                                        level={3}
                                        padded={false}>
                                     <ul className="mb-1.5">
-                                        {captainFirst.map(member => (
+                                        {team.members.map(member => (
                                             <li key={member.steamId}>
                                                 <Link to={`/players/${member.steamId}`}
                                                       className="row-link flex justify-between gap-3 px-3 py-1.5">
@@ -624,296 +592,232 @@ export default function SeasonDetail() {
             )}
 
             {user && (
-                <dialog ref={signupDialogRef} aria-labelledby="signup-title"
-                        className="dialog">
-                    <h2 id="signup-title" className="font-display text-3xl font-bold">
-                        {mySignup ? "Your sign-up" : `Join ${season.name}`}
-                    </h2>
-                    <form ref={signupFormRef} onSubmit={handleSignup} className="mt-4 space-y-4">
-                        <fieldset>
-                            <legend>Sign up as</legend>
-                            <div className="mt-1 flex gap-4">
-                                {[{value: false, label: "Player"}, {value: true, label: "Dedicated sub"}].map(({value, label}) => (
-                                    <label key={label} className="flex items-center gap-1.5">
-                                        <input type="radio" name="signupType" checked={asSub === value}
-                                               onChange={() => setAsSub(value)} className="accent-accent"/>
-                                        {label}
-                                    </label>
-                                ))}
-                            </div>
-                        </fieldset>
-                        {asSub ? (
-                            <p className="text-sm text-ash">Dedicated subs aren&apos;t put on a team. They fill in for a team when a player can&apos;t make it.</p>
-                        ) : (<>
-                            <div>
-                                <label htmlFor="role-preference">Your roles, most wanted first</label>
-                                {/*Same pattern and length as SeasonSignupRequest on the backend*/}
-                                <input
-                                    id="role-preference"
-                                    name="rolePreference"
-                                    required
-                                    maxLength={32}
-                                    pattern="\s*[Aa][Nn][Yy]\s*|(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
-                                    title='Roles 1 to 5, each once, joined by > or /, e.g. 1 >>> 2 > 3/4, or just "any"'
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    placeholder="1 >>> 2 > 3/4"
-                                    defaultValue={mySignup?.rolePreference ?? ""}
-                                    aria-describedby="role-hint"
-                                    className="text-input mt-2 block w-full"
-                                />
-                                <p id="role-hint" className="mt-1.5 text-sm text-ash">
-                                    1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
-                                    &gt; prefer, / equal, or just &quot;any&quot;
-                                </p>
-                            </div>
-                            <label className="flex items-center gap-2">
-                                <input type="checkbox" name="willingToCaptain" defaultChecked={mySignup?.willingToCaptain}
-                                       className="accent-accent"/>
-                                Willing to captain
-                            </label>
-                        </>)}
-                        {(signup.isError || withdraw.isError) &&
-                            <p role="alert" className="text-sm text-ash">Couldn't update your sign-up. Refresh and try again.</p>}
-                        <div className="flex justify-end gap-3">
-                            {mySignup && (
+                <FormDialog dialogRef={signupDialogRef} formRef={signupFormRef} onSubmit={handleSignup}
+                            title={mySignup ? "Your sign-up" : `Join ${season.name}`}
+                            mutation={{
+                                isPending: signup.isPending,
+                                isError: signup.isError || withdraw.isError,
+                                error: signup.error ?? withdraw.error,
+                                reset: () => {
+                                    signup.reset();
+                                    withdraw.reset();
+                                },
+                            }}
+                            errorMessage="Couldn't update your sign-up. Refresh and try again."
+                            extraButton={mySignup && (
                                 <button type="button" className="secondary-button mr-auto text-danger"
                                         onClick={handleWithdraw} disabled={withdraw.isPending}>Withdraw</button>
                             )}
-                            <button type="button" className="secondary-button" onClick={() => signupDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={signup.isPending}>{mySignup ? "Save" : "Sign up"}</button>
+                            submitLabel={mySignup ? "Save" : "Sign up"}>
+                    <fieldset>
+                        <legend>Sign up as</legend>
+                        <div className="mt-1 flex gap-4">
+                            {[{value: false, label: "Player"}, {value: true, label: "Dedicated sub"}].map(({value, label}) => (
+                                <label key={label} className="flex items-center gap-1.5">
+                                    <input type="radio" name="signupType" checked={asSub === value}
+                                           onChange={() => setAsSub(value)} className="accent-accent"/>
+                                    {label}
+                                </label>
+                            ))}
                         </div>
-                    </form>
-                </dialog>
+                    </fieldset>
+                    {asSub ? (
+                        <p className="text-sm text-ash">Dedicated subs aren&apos;t put on a team. They fill in for a team when a player can&apos;t make it.</p>
+                    ) : (<>
+                        <div>
+                            <label htmlFor="role-preference">Your roles, most wanted first</label>
+                            {/*Same pattern and length as SeasonSignupRequest on the backend*/}
+                            <input
+                                id="role-preference"
+                                name="rolePreference"
+                                required
+                                maxLength={32}
+                                pattern="\s*[Aa][Nn][Yy]\s*|(?!.*([1-5]).*\1)\s*[1-5](\s*(/|>+)\s*[1-5])*\s*"
+                                title='Roles 1 to 5, each once, joined by > or /, e.g. 1 >>> 2 > 3/4, or just "any"'
+                                autoComplete="off"
+                                spellCheck={false}
+                                placeholder="1 >>> 2 > 3/4"
+                                defaultValue={mySignup?.rolePreference ?? ""}
+                                aria-describedby="role-hint"
+                                className="text-input mt-2 block w-full"
+                            />
+                            <p id="role-hint" className="mt-1.5 text-sm text-ash">
+                                1 carry · 2 mid · 3 off · 4 soft · 5 hard<br/>
+                                &gt; prefer, / equal, or just &quot;any&quot;
+                            </p>
+                        </div>
+                        <label className="flex items-center gap-2">
+                            <input type="checkbox" name="willingToCaptain" defaultChecked={mySignup?.willingToCaptain}
+                                   className="accent-accent"/>
+                            Willing to captain
+                        </label>
+                    </>)}
+                </FormDialog>
             )}
 
             {user?.admin && (
-                <dialog ref={deleteDialogRef} aria-labelledby="delete-season-title"
-                        className="dialog">
-                    <h2 id="delete-season-title" className="font-display text-3xl font-bold">Delete season</h2>
-                    <form onSubmit={handleDelete} className="mt-4 space-y-4">
-                        <p>This permanently deletes <strong>{season.name}</strong> and its sign-ups.</p>
+                <FormDialog dialogRef={deleteDialogRef} title="Delete season" onSubmit={handleDelete} mutation={deleteSeason}
+                            errorMessage="Couldn't delete the season. Seasons with teams or matches can't be deleted."
+                            confirmWord="delete" submitLabel="Delete season">
+                    <p>This permanently deletes <strong>{season.name}</strong> and its sign-ups.</p>
+                </FormDialog>
+            )}
+
+            {canAddMatch && (
+                <FormDialog dialogRef={addMatchDialogRef} title="Add match" onSubmit={handleAddMatch} mutation={createMatch}
+                            submitLabel="Add match" className="max-w-2xl"
+                            // Keyed by the reviewed game, so its values fill the form's boxes afresh
+                            formKey={prefill?.matchId ?? "new"}>
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
-                            Type <strong>delete</strong> to confirm
-                            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
-                                   className="text-input mt-2 block w-full"/>
+                            Dota match ID
+                            <input name="matchId" required inputMode="numeric" pattern="\d+" title="The number in the game's Stratz or Dotabuff link"
+                                   defaultValue={prefill?.matchId} autoComplete="off" className="text-input mt-2 block w-full"/>
                         </label>
-                        {deleteSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't delete the season. Seasons with teams or matches can't be deleted.</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={confirmText !== "delete" || deleteSeason.isPending}>Delete season</button>
-                        </div>
-                    </form>
-                </dialog>
-            )}
-
-            {canAddMatch && (
-                <dialog ref={addMatchDialogRef} aria-labelledby="add-match-title"
-                        className="dialog max-w-2xl">
-                    <h2 id="add-match-title" className="font-display text-3xl font-bold">Add match</h2>
-                    {/*Keyed by the reviewed game, so its values fill the form's boxes afresh*/}
-                    <form key={prefill?.matchId ?? "new"} onSubmit={handleAddMatch} className="mt-4 space-y-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="block">
-                                Dota match ID
-                                <input name="matchId" required inputMode="numeric" pattern="\d+" title="The number in the game's Stratz or Dotabuff link"
-                                       defaultValue={prefill?.matchId} autoComplete="off" className="text-input mt-2 block w-full"/>
-                            </label>
-                            <label className="block">
-                                Played
-                                <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
-                                       defaultValue={prefill?.playedTime.slice(0, 16)} className="text-input mt-2 block w-full"/>
-                            </label>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            {[
-                                {side: "radiant", label: "Radiant", teamId: radiantTeamId, setTeamId: setRadiantTeamId},
-                                {side: "dire", label: "Dire", teamId: direTeamId, setTeamId: setDireTeamId},
-                            ].map(({side, label, teamId, setTeamId}) => {
-                                const team = season.teams.find(t => t.teamId === teamId);
-                                const names = boxNames[side] ?? team?.members.map(member => member.username) ?? [];
-                                const replaced = team ? replacedMembers(names, team.members) : [];
-                                return (
-                                    <fieldset key={side}>
-                                        <legend>{label}</legend>
-                                        <select value={teamId} onChange={(e) => {
-                                            setTeamId(e.target.value);
-                                            setBoxNames({...boxNames, [side]: undefined});
-                                        }} required
-                                                aria-label={`${label} team`} className="text-input mt-2 block w-full">
-                                            <option value="">Pick a team…</option>
-                                            {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
-                                        </select>
-                                        {/*Keyed by team so picking another refills the roster. Typing over a name puts a sub in*/}
-                                        {team && (
-                                            <div key={team.teamId} className="mt-2 space-y-2">
-                                                {team.members.map((member, i) => (
-                                                    <div key={member.steamId}>
-                                                        <input name={side} list="match-player-names" required
-                                                               defaultValue={names[i]} aria-label={`${label} player ${i + 1}`}
-                                                               onChange={(e) => setBoxNames({...boxNames, [side]: names.map((name, j) => j === i ? e.target.value : name)})}
-                                                               aria-describedby={replaced[i] ? `${side}-sub-${i}` : undefined}
-                                                               autoComplete="off" spellCheck={false} className="text-input block w-full"/>
-                                                        {replaced[i] && (
-                                                            <p id={`${side}-sub-${i}`} className="mt-1 text-sm text-ash">Subbing for {replaced[i].username}</p>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </fieldset>
-                                );
-                            })}
-                            <datalist id="match-player-names">
-                                {players?.map(player => <option key={player.steamId} value={player.username}/>)}
-                            </datalist>
-                        </div>
-                        <fieldset>
-                            <legend>Winner</legend>
-                            <div className="mt-1 flex gap-4">
-                                {(["RADIANT", "DIRE"] as const).map(side => (
-                                    <label key={side} className="flex items-center gap-1.5">
-                                        <input type="radio" name="winner" value={side} required defaultChecked={prefill?.winner === side}
-                                               className="accent-accent"/>
-                                        {sideName[side]}
-                                    </label>
-                                ))}
-                            </div>
-                        </fieldset>
-                        <p className="text-sm text-ash">Anyone not on their side's team counts as a sub. Everyone's ELO is worked out again from this game on.</p>
-                        {unknownNames.length > 0 && <p role="alert" className="text-sm text-ash">No player called {unknownNames.join(", ")}.</p>}
-                        {createMatch.isError && <p role="alert" className="text-sm text-ash">{createMatch.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={createMatch.isPending}>Add match</button>
-                        </div>
-                    </form>
-                </dialog>
-            )}
-
-            {canAddMatch && (
-                <dialog ref={forfeitDialogRef} aria-labelledby="record-forfeit-title" className="dialog">
-                    <h2 id="record-forfeit-title" className="font-display text-3xl font-bold">Record forfeit</h2>
-                    <form ref={forfeitFormRef} onSubmit={handleForfeit} className="mt-4 space-y-4">
-                        {[
-                            {name: "forfeitingTeamId", label: "Forfeited by"},
-                            {name: "opponentTeamId", label: "Against"},
-                        ].map(({name, label}) => (
-                            <label key={name} className="block">
-                                {label}
-                                <select name={name} required defaultValue="" className="text-input mt-2 block w-full">
-                                    <option value="">Pick a team…</option>
-                                    {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
-                                </select>
-                            </label>
-                        ))}
                         <label className="block">
                             Played
                             <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
-                                   className="text-input mt-2 block w-full"/>
+                                   defaultValue={prefill?.playedTime.slice(0, 16)} className="text-input mt-2 block w-full"/>
                         </label>
-                        <p className="text-sm text-ash">
-                            A loss for the team that forfeited and a win for the other in the table. Both rosters get it on
-                            their profiles. Nobody's ELO changes.
-                        </p>
-                        {createForfeit.isError && <p role="alert" className="text-sm text-ash">{createForfeit.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => forfeitDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={createForfeit.isPending}>Record forfeit</button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {[
+                            {side: "radiant", label: "Radiant", teamId: radiantTeamId, setTeamId: setRadiantTeamId},
+                            {side: "dire", label: "Dire", teamId: direTeamId, setTeamId: setDireTeamId},
+                        ].map(({side, label, teamId, setTeamId}) => {
+                            const team = season.teams.find(t => t.teamId === teamId);
+                            const names = boxNames[side] ?? team?.members.map(member => member.username) ?? [];
+                            const replaced = team ? replacedMembers(names, team.members) : [];
+                            return (
+                                <fieldset key={side}>
+                                    <legend>{label}</legend>
+                                    <select value={teamId} onChange={(e) => {
+                                        setTeamId(e.target.value);
+                                        setBoxNames({...boxNames, [side]: undefined});
+                                    }} required
+                                            aria-label={`${label} team`} className="text-input mt-2 block w-full">
+                                        {teamOptions}
+                                    </select>
+                                    {/*Keyed by team so picking another refills the roster. Typing over a name puts a sub in*/}
+                                    {team && (
+                                        <div key={team.teamId} className="mt-2 space-y-2">
+                                            {team.members.map((member, i) => (
+                                                <div key={member.steamId}>
+                                                    <input name={side} list="match-player-names" required
+                                                           defaultValue={names[i]} aria-label={`${label} player ${i + 1}`}
+                                                           onChange={(e) => setBoxNames({...boxNames, [side]: names.map((name, j) => j === i ? e.target.value : name)})}
+                                                           aria-describedby={replaced[i] ? `${side}-sub-${i}` : undefined}
+                                                           autoComplete="off" spellCheck={false} className="text-input block w-full"/>
+                                                    {replaced[i] && (
+                                                        <p id={`${side}-sub-${i}`} className="mt-1 text-sm text-ash">Subbing for {replaced[i].username}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </fieldset>
+                            );
+                        })}
+                        <datalist id="match-player-names">
+                            {players?.map(player => <option key={player.steamId} value={player.username}/>)}
+                        </datalist>
+                    </div>
+                    <fieldset>
+                        <legend>Winner</legend>
+                        <div className="mt-1 flex gap-4">
+                            {(["RADIANT", "DIRE"] as const).map(side => (
+                                <label key={side} className="flex items-center gap-1.5">
+                                    <input type="radio" name="winner" value={side} required defaultChecked={prefill?.winner === side}
+                                           className="accent-accent"/>
+                                    {sideName[side]}
+                                </label>
+                            ))}
                         </div>
-                    </form>
-                </dialog>
+                    </fieldset>
+                    <p className="text-sm text-ash">Anyone not on their side's team counts as a sub. Everyone's ELO is worked out again from this game on.</p>
+                    {unknownNames.length > 0 && <p role="alert" className="text-sm text-ash">No player called {unknownNames.join(", ")}.</p>}
+                </FormDialog>
             )}
 
             {canAddMatch && (
-                <dialog ref={leagueDialogRef} aria-labelledby="league-ticket-title" className="dialog">
-                    <h2 id="league-ticket-title" className="font-display text-3xl font-bold">League ticket</h2>
-                    <form key={season.leagueId ?? "none"} onSubmit={handleSetLeague} className="mt-4 space-y-4">
-                        <label className="block">
-                            League ticket ID
-                            <input name="leagueId" inputMode="numeric" pattern="\d+" title="The number in the ticket's OpenDota or Dotabuff league link"
-                                   defaultValue={season.leagueId ?? ""} autoComplete="off" className="text-input mt-2 block w-full"/>
+                <FormDialog dialogRef={forfeitDialogRef} formRef={forfeitFormRef} title="Record forfeit" onSubmit={handleForfeit}
+                            mutation={createForfeit} submitLabel="Record forfeit">
+                    {[
+                        {name: "forfeitingTeamId", label: "Forfeited by"},
+                        {name: "opponentTeamId", label: "Against"},
+                    ].map(({name, label}) => (
+                        <label key={name} className="block">
+                            {label}
+                            <select name={name} required defaultValue="" className="text-input mt-2 block w-full">
+                                {teamOptions}
+                            </select>
                         </label>
-                        <p className="text-sm text-ash">Games on the ticket are checked every 30 minutes. Leave it empty to stop.</p>
-                        {setLeague.isError && <p role="alert" className="text-sm text-ash">{setLeague.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => leagueDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={setLeague.isPending}>Save</button>
-                        </div>
-                    </form>
-                </dialog>
+                    ))}
+                    <label className="block">
+                        Played
+                        <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
+                               className="text-input mt-2 block w-full"/>
+                    </label>
+                    <p className="text-sm text-ash">
+                        A loss for the team that forfeited and a win for the other in the table. Both rosters get it on
+                        their profiles. Nobody's ELO changes.
+                    </p>
+                </FormDialog>
+            )}
+
+            {canAddMatch && (
+                <FormDialog dialogRef={leagueDialogRef} title="League ticket" onSubmit={handleSetLeague} mutation={setLeague}
+                            submitLabel="Save" formKey={season.leagueId ?? "none"}>
+                    <label className="block">
+                        League ticket ID
+                        <input name="leagueId" inputMode="numeric" pattern="\d+" title="The number in the ticket's OpenDota or Dotabuff league link"
+                               defaultValue={season.leagueId ?? ""} autoComplete="off" className="text-input mt-2 block w-full"/>
+                    </label>
+                    <p className="text-sm text-ash">Games on the ticket are checked every 30 minutes. Leave it empty to stop.</p>
+                </FormDialog>
             )}
 
             {user?.admin && season.status === "REGISTRATION" && (
-                <dialog ref={draftDialogRef} aria-labelledby="start-draft-title" className="dialog">
-                    <h2 id="start-draft-title" className="font-display text-3xl font-bold">Start draft</h2>
-                    <form onSubmit={handleStartDraft} className="mt-4 space-y-4">
-                        <p>
-                            This closes sign-ups for <strong>{season.name}</strong> and can&apos;t be undone. Players past a multiple
-                            of 5 become subs, everyone else gets a draft score, and the first players willing to captain become captains.
-                        </p>
-                        {startDraft.isError && <p role="alert" className="text-sm text-ash">{startDraft.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => draftDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={startDraft.isPending}>Start draft</button>
-                        </div>
-                    </form>
-                </dialog>
+                <FormDialog dialogRef={draftDialogRef} title="Start draft" onSubmit={handleStartDraft} mutation={startDraft}
+                            submitLabel="Start draft">
+                    <p>
+                        This closes sign-ups for <strong>{season.name}</strong> and can&apos;t be undone. Players past a multiple
+                        of 5 become subs, everyone else gets a draft score, and the first players willing to captain become captains.
+                    </p>
+                </FormDialog>
             )}
 
-
             {user?.admin && draftComplete && (
-                <dialog ref={startSeasonDialogRef} aria-labelledby="start-season-title" className="dialog">
-                    <h2 id="start-season-title" className="font-display text-3xl font-bold">Start season</h2>
-                    <form onSubmit={handleStartSeason} className="mt-4 space-y-4">
-                        <p>
-                            This starts <strong>{season.name}</strong> with the teams as drafted. Captains can&apos;t rename their teams
-                            after this, and matches can be added.
+                <FormDialog dialogRef={startSeasonDialogRef} title="Start season" onSubmit={handleStartSeason} mutation={startSeason}
+                            submitLabel="Start season">
+                    <p>
+                        This starts <strong>{season.name}</strong> with the teams as drafted. Captains can&apos;t rename their teams
+                        after this, and matches can be added.
+                    </p>
+                    {defaultNamed > 0 && (
+                        <p className="text-sm text-ash">
+                            {defaultNamed === 1 ? "1 team still has its default name." : `${defaultNamed} teams still have their default name.`}
                         </p>
-                        {defaultNamed > 0 && (
-                            <p className="text-sm text-ash">
-                                {defaultNamed === 1 ? "1 team still has its default name." : `${defaultNamed} teams still have their default name.`}
-                            </p>
-                        )}
-                        {startSeason.isError && <p role="alert" className="text-sm text-ash">{startSeason.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => startSeasonDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={startSeason.isPending}>Start season</button>
-                        </div>
-                    </form>
-                </dialog>
+                    )}
+                </FormDialog>
             )}
 
             {canAddMatch && (
-                <dialog ref={endDialogRef} aria-labelledby="end-season-title"
-                        className="dialog">
-                    <h2 id="end-season-title" className="font-display text-3xl font-bold">End season</h2>
-                    <form onSubmit={handleEnd} className="mt-4 space-y-4">
-                        <label className="block">
-                            Champions
-                            <select value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)} required
-                                    className="text-input mt-2 block w-full">
-                                <option value="">Pick a team…</option>
-                                {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
-                            </select>
-                        </label>
-                        <p>
-                            This marks <strong>{season.name}</strong> as completed
-                            {winnerTeamId && <> with <strong>{season.teams.find(t => t.teamId === winnerTeamId)?.name}</strong> as champions</>}.
-                            No more matches can be added, and the winner can't be changed.
-                        </p>
-                        <label className="block">
-                            Type <strong>end</strong> to confirm
-                            <input value={endConfirmText} onChange={(e) => setEndConfirmText(e.target.value)} autoComplete="off"
-                                   className="text-input mt-2 block w-full"/>
-                        </label>
-                        {completeSeason.isError && <p role="alert" className="text-sm text-ash">{completeSeason.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => endDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={endConfirmText !== "end" || completeSeason.isPending}>End season</button>
-                        </div>
-                    </form>
-                </dialog>
+                <FormDialog dialogRef={endDialogRef} title="End season" onSubmit={handleEnd} mutation={completeSeason}
+                            confirmWord="end" submitLabel="End season">
+                    <label className="block">
+                        Champions
+                        <select value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)} required
+                                className="text-input mt-2 block w-full">
+                            {teamOptions}
+                        </select>
+                    </label>
+                    <p>
+                        This marks <strong>{season.name}</strong> as completed
+                        {winnerTeamId && <> with <strong>{season.teams.find(t => t.teamId === winnerTeamId)?.name}</strong> as champions</>}.
+                        No more matches can be added, and the winner can't be changed.
+                    </p>
+                </FormDialog>
             )}
         </Page>
     );

@@ -15,6 +15,7 @@ import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Limit;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -103,6 +104,22 @@ class SeasonServiceTest {
                 service.getSeasonById(seasonId).teams().stream().map(TeamResponse::name).toList());
     }
 
+    @Test
+    void teamListsItsCaptainFirst() {
+        Team team = team("Team", 0, 0);
+        Player member = new Player();
+        member.setUsername("member");
+        for (Player player : List.of(member, team.getCaptain())) {
+            TeamMember teamMember = new TeamMember();
+            teamMember.setPlayer(player);
+            team.getMembers().add(teamMember);
+        }
+        season.setTeams(List.of(team));
+
+        assertEquals(List.of("Team captain", "member"),
+                service.getSeasonById(seasonId).teams().get(0).members().stream().map(PlayerSummaryResponse::username).toList());
+    }
+
     private static EloHistory eloHistory(double elo, double change) {
         EloHistory row = new EloHistory();
         row.setElo(elo);
@@ -116,7 +133,7 @@ class SeasonServiceTest {
         Match last = new Match();
         last.setPlayedTime(lastGame);
         season.setId(seasonId);
-        when(matchRepository.findBySeasonIdOrderByPlayedTimeDesc(seasonId)).thenReturn(List.of(last));
+        when(matchRepository.findBySeasonIdOrderByPlayedTimeDesc(seasonId, Limit.of(1))).thenReturn(List.of(last));
 
         // Played up to the end, only played after it, and never played
         Player played = new Player(), joinedLater = new Player(), idle = new Player();

@@ -1,11 +1,12 @@
 package com.plainoldmoose.IDLWebApp.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -23,7 +24,7 @@ public class SteamAuthService {
     private static final Pattern CLAIMED_ID = Pattern.compile("https://steamcommunity\\.com/openid/id/(\\d{17})");
 
     // Without timeouts a slow Steam holds a server thread per login attempt for as long as it stalls
-    private final RestTemplate restTemplate = new RestTemplate(steamTimeouts());
+    private final RestClient restClient = RestClient.builder().requestFactory(steamTimeouts()).build();
 
     private static SimpleClientHttpRequestFactory steamTimeouts() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -61,12 +62,16 @@ public class SteamAuthService {
     // Protected so tests can stand in for Steam
     protected boolean checkWithSteam(Map<String, String> params) {
         try {
-            // Posted as application/x-www-form-urlencoded, encoded by RestTemplate
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             params.forEach(form::add);
             form.set("openid.mode", "check_authentication");
 
-            String body = restTemplate.postForObject(STEAM_LOGIN, form, String.class);
+            String body = restClient.post()
+                    .uri(STEAM_LOGIN)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(String.class);
             return body != null && body.contains("is_valid:true");
         } catch (
                 Exception e) {

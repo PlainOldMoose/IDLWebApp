@@ -11,10 +11,10 @@ import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import com.plainoldmoose.IDLWebApp.repository.TeamRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
@@ -77,8 +77,7 @@ public class DraftService {
 
     // Polled by everyone watching, so it reads without the lock the writes take
     public DraftResponse getDraft(UUID seasonId) {
-        Season season = requireDrafting(seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found")));
+        Season season = requireDrafting(seasonRepository.findById(seasonId).orElseThrow(SeasonRepository::notFound));
         Map<String, SeasonSignup> drafted = drafted(season);
         Team onTheClock = onTheClock(season, drafted);
         return new DraftResponse(
@@ -160,8 +159,7 @@ public class DraftService {
     // Every write locks the season row until it commits, so two at once (say a captain sending two picks) run one
     // after the other instead of both picking from the same pool
     private Season findSeason(UUID seasonId) {
-        return seasonRepository.findLockedById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        return seasonRepository.findLockedById(seasonId).orElseThrow(SeasonRepository::notFound);
     }
 
     private Season findDraftingSeason(UUID seasonId) {
@@ -194,8 +192,7 @@ public class DraftService {
 
     private static List<SeasonSignup> pool(Season season, Map<String, SeasonSignup> drafted) {
         Set<String> onTeams = season.getTeams().stream()
-                .flatMap(team -> team.getMembers().stream())
-                .map(member -> member.getPlayer().getSteamId())
+                .flatMap(team -> team.steamIds().stream())
                 .collect(Collectors.toSet());
         return drafted.values().stream()
                 .filter(signup -> !onTeams.contains(signup.getPlayer().getSteamId()))

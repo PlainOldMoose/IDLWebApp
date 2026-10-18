@@ -133,7 +133,7 @@ public class MatchService {
         });
 
         Comparator<Match> replayOrder = Comparator.comparing(Match::getPlayedTime).thenComparing(Match::getMatchId);
-        for (Match later : matchRepository.findBySeasonIdOrderByPlayedTimeDesc(match.getSeason().getId())) {
+        for (Match later : matchRepository.findBySeasonIdOrderByPlayedTimeDesc(match.getSeason().getId(), Limit.unlimited())) {
             if (replayOrder.compare(later, match) < 0) continue;
             Team winner = winner(later);
             Team loser = loser(later);
@@ -160,8 +160,7 @@ public class MatchService {
     // profile, but nobody's ELO moves
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void createForfeit(CreateForfeitRequest request) {
-        Season season = seasonRepository.findById(request.seasonId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        Season season = seasonRepository.findById(request.seasonId()).orElseThrow(SeasonRepository::notFound);
         Team forfeiting = findTeam(season, request.forfeitingTeamId());
         Team opponent = findTeam(season, request.opponentTeamId());
         // Below the bin's too, so it can't take a deleted forfeit's ID while that's still restorable
@@ -172,16 +171,11 @@ public class MatchService {
                 .orElse(0);
         long matchId = Math.min(lowest, 0) - 1;
         save(new CreateMatchRequest(matchId, season.getId(), request.playedTime(), forfeiting.getTeamId(), opponent.getTeamId(),
-                Side.DIRE, roster(forfeiting), roster(opponent), Map.of()), true);
-    }
-
-    private static List<String> roster(Team team) {
-        return team.getMembers().stream().map(member -> member.getPlayer().getSteamId()).toList();
+                Side.DIRE, forfeiting.steamIds(), opponent.steamIds(), Map.of()), true);
     }
 
     private void save(CreateMatchRequest request, boolean forfeit) {
-        Season season = seasonRepository.findById(request.seasonId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        Season season = seasonRepository.findById(request.seasonId()).orElseThrow(SeasonRepository::notFound);
         if (season.getStatus() != SeasonStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Matches can only be added to an active season");
         }
