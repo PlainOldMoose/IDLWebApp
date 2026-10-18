@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.plainoldmoose.IDLWebApp.dto.request.CreateForfeitRequest;
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
@@ -57,6 +58,12 @@ public class MatchController {
     @ResponseStatus(HttpStatus.CREATED)
     public void createMatch(@Valid @RequestBody CreateMatchRequest request) {
         matchService.create(request);
+    }
+
+    @PostMapping("/forfeits")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void createForfeit(@Valid @RequestBody CreateForfeitRequest request) {
+        matchService.createForfeit(request);
     }
 
     @DeleteMapping("/{matchId}")

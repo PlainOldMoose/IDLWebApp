@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,6 +46,10 @@ public class DeletedMatch {
 
     @Column(nullable = false)
     private LocalDateTime deletedAt;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean forfeit;
 
     @ElementCollection
     @CollectionTable(name = "deleted_match_participants")

@@ -18,6 +18,9 @@ const PROFILE_MATCH_COUNT = 20;
 
 // Wins filled, losses hollow, so a result reads from shape alone: the most common colour blindness makes this green and red look alike
 const resultBadge = (won: boolean) => won ? "bg-win text-night" : "border-2 border-loss text-bone";
+const resultName = (match: PlayerMatchSummary) => match.forfeit
+    ? (match.won ? "Forfeit win" : "Forfeit loss")
+    : (match.won ? "Won" : "Lost");
 
 export default function PlayerDetail() {
     const {steamId} = useParams<{ steamId: string }>();
@@ -76,7 +79,7 @@ export default function PlayerDetail() {
                     {matches.length > 0 && (
                         <ol aria-label={`Last ${Math.min(matches.length, RECENT_MATCH_COUNT)} matches, newest first`} className="flex gap-1">
                             {matches.slice(0, RECENT_MATCH_COUNT).map(match => {
-                                const label = `${match.won ? "Won" : "Lost"} on ${formatDate(match.timePlayed)}`;
+                                const label = `${resultName(match)} on ${formatDate(match.timePlayed)}`;
                                 return (
                                     <li key={match.matchId}>
                                         <Link to={`/matches/${match.matchId}`}
@@ -132,19 +135,22 @@ export function MatchHistoryRows({matches}: { matches: PlayerMatchSummary[] }) {
                     <Link key={match.matchId} to={`/matches/${match.matchId}`}
                           className="grid grid-cols-[1.5rem_3.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-3 py-2.5 transition-colors hover:bg-panel-raised focus-visible:-outline-offset-2
                                   sm:grid-cols-[1.5rem_7rem_3.5rem_6rem_minmax(0,1fr)_7.5rem]">
-                        <span title={match.won ? "Won" : "Lost"}
+                        <span title={resultName(match)}
                               className={`inline-flex size-6 items-center justify-center rounded-[3px] text-xs font-bold ${resultBadge(match.won)}`}>
                             <span aria-hidden="true">{match.won ? "W" : "L"}</span>
-                            <span className="sr-only">{match.won ? "Won" : "Lost"}</span>
+                            <span className="sr-only">{resultName(match)}</span>
                         </span>
 
                         {/*Too narrow for the side on phones; it's one tap away on the match page*/}
                         <p className="sr-only flex items-center gap-2 text-sm text-ash sm:not-sr-only">
-                            {sideName[match.side]}
+                            {/*A forfeit's sides are arbitrary*/}
+                            {!match.forfeit && sideName[match.side]}
                             {match.sub && <span className="rounded-sm bg-panel-raised px-1 text-xs">Sub</span>}
                         </p>
 
-                        {change === null ? (
+                        {match.forfeit ? (
+                            <p className="text-right text-ash sm:border-l sm:border-rule sm:pl-4">Forfeit</p>
+                        ) : change === null ? (
                             <p className="text-right text-ash sm:border-l sm:border-rule sm:pl-4" title="No ELO record for this match">
                                 <NoValue label="No ELO record"/>
                             </p>

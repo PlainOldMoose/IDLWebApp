@@ -1,7 +1,8 @@
-import {type SubmitEvent, useRef, useState} from "react";
+import {type KeyboardEvent, type SubmitEvent, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {
     useCompleteSeason,
+    useCreateForfeit,
     useCreateMatch,
     useCurrentUser,
     useDeleteSeason,
@@ -53,6 +54,8 @@ const slotted = (members: PlayerSummary[], played: PendingMatch["radiant"]) => {
     return members.map(m => played.some(p => p.steamId === m.steamId) ? m.username : others.shift() ?? "");
 };
 
+const menuItem = "block w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-panel";
+
 export default function SeasonDetail() {
     const {seasonId} = useParams<{ seasonId: string }>();
     const {data: season, isPending, isError} = useSeasonDetail(seasonId);
@@ -73,6 +76,11 @@ export default function SeasonDetail() {
     const navigate = useNavigate();
     const canAddMatch = !!user?.admin && season?.status === "ACTIVE";
     const createMatch = useCreateMatch();
+    const createForfeit = useCreateForfeit();
+    const forfeitDialogRef = useRef<HTMLDialogElement>(null);
+    const forfeitFormRef = useRef<HTMLFormElement>(null);
+    const [addMenuOpen, setAddMenuOpen] = useState(false);
+    const addButtonRef = useRef<HTMLButtonElement>(null);
     const {data: players} = usePlayers(canAddMatch);
     const addMatchDialogRef = useRef<HTMLDialogElement>(null);
     const [radiantTeamId, setRadiantTeamId] = useState("");
@@ -158,6 +166,37 @@ export default function SeasonDetail() {
             setBoxNames({});
         }
         addMatchDialogRef.current?.showModal();
+    };
+
+    const openForfeitDialog = () => {
+        createForfeit.reset();
+        forfeitFormRef.current?.reset();
+        forfeitDialogRef.current?.showModal();
+    };
+
+    const handleForfeit = (e: SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        createForfeit.mutate({
+            seasonId: season!.id,
+            playedTime: String(data.get("playedTime")),
+            forfeitingTeamId: String(data.get("forfeitingTeamId")),
+            opponentTeamId: String(data.get("opponentTeamId")),
+        }, {onSuccess: () => forfeitDialogRef.current?.close()});
+    };
+
+    // A menu's keys: arrows move between its entries, Escape closes it and goes back to the Add button
+    const handleAddMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Escape" && addMenuOpen) {
+            setAddMenuOpen(false);
+            addButtonRef.current?.focus();
+        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (!addMenuOpen) setAddMenuOpen(true);
+            const items = [...e.currentTarget.querySelectorAll<HTMLElement>("[role=menuitem]")];
+            const at = items.indexOf(document.activeElement as HTMLElement);
+            items.at(e.key === "ArrowDown" ? (at + 1) % items.length : at - 1)?.focus();
+        }
     };
 
     const openLeagueDialog = () => {
@@ -329,7 +368,30 @@ export default function SeasonDetail() {
                                 {syncLeague.isPending ? "Syncing…" : "Sync now"}
                             </button>
                         )}
-                        <button className="primary-button" onClick={() => openAddMatchDialog()}>Add match</button>
+                        {/*Closes when focus leaves it, so a click elsewhere or tabbing away dismisses it*/}
+                        <div className="relative" onKeyDown={handleAddMenuKey}
+                             onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setAddMenuOpen(false)}>
+                            <button ref={addButtonRef} className="primary-button inline-flex items-center gap-2" aria-haspopup="menu" aria-expanded={addMenuOpen}
+                                    onClick={() => setAddMenuOpen(!addMenuOpen)}>
+                                Add
+                                {/*Phosphor's CaretDown*/}
+                                <svg aria-hidden="true" width={14} height={14} viewBox="0 0 256 256" fill="currentColor">
+                                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>
+                                </svg>
+                            </button>
+                            {addMenuOpen && (
+                                <div role="menu" className="absolute right-0 z-10 mt-2 min-w-36 rounded-md border border-rule bg-panel-raised p-1 shadow-lg">
+                                    <button role="menuitem" className={menuItem} onClick={() => {
+                                        setAddMenuOpen(false);
+                                        openAddMatchDialog();
+                                    }}>Match</button>
+                                    <button role="menuitem" className={menuItem} onClick={() => {
+                                        setAddMenuOpen(false);
+                                        openForfeitDialog();
+                                    }}>Forfeit</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : season.winnerTeamName && (
                     <div className="border-l-3 border-aegis pl-4">
@@ -434,8 +496,11 @@ export default function SeasonDetail() {
                         {bin.map(match => (
                             <li key={match.matchId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 first:pt-0">
                                 <div className="min-w-0">
-                                    <p id={`binned-${match.matchId}`} className="figures">{match.matchId}</p>
-                                    <p className="truncate text-sm">{`${match.radiantTeamName ?? sideName.RADIANT} vs ${match.direTeamName ?? sideName.DIRE} · ${sideName[match.winner]} won`}</p>
+                                    {/*A forfeit's ID is made up, so it's named instead. Radiant is the team that forfeited*/}
+                                    <p id={`binned-${match.matchId}`} className="figures">{match.forfeit ? "Forfeit" : match.matchId}</p>
+                                    <p className="truncate text-sm">{match.forfeit
+                                        ? `${match.radiantTeamName} forfeited to ${match.direTeamName}`
+                                        : `${match.radiantTeamName ?? sideName.RADIANT} vs ${match.direTeamName ?? sideName.DIRE} · ${sideName[match.winner]} won`}</p>
                                     <p className="text-sm text-ash">{`Deleted ${formatRelative(match.deletedAt)} · goes ${formatRelative(match.purgeAt)}`}</p>
                                 </div>
                                 <button className="secondary-button" onClick={() => restoreMatch.mutate(match.matchId)}
@@ -721,6 +786,40 @@ export default function SeasonDetail() {
                         <div className="flex justify-end gap-3">
                             <button type="button" className="secondary-button" onClick={() => addMatchDialogRef.current?.close()}>Cancel</button>
                             <button type="submit" className="primary-button" disabled={createMatch.isPending}>Add match</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {canAddMatch && (
+                <dialog ref={forfeitDialogRef} aria-labelledby="record-forfeit-title" className="dialog">
+                    <h2 id="record-forfeit-title" className="font-display text-3xl font-bold">Record forfeit</h2>
+                    <form ref={forfeitFormRef} onSubmit={handleForfeit} className="mt-4 space-y-4">
+                        {[
+                            {name: "forfeitingTeamId", label: "Forfeited by"},
+                            {name: "opponentTeamId", label: "Against"},
+                        ].map(({name, label}) => (
+                            <label key={name} className="block">
+                                {label}
+                                <select name={name} required defaultValue="" className="text-input mt-2 block w-full">
+                                    <option value="">Pick a team…</option>
+                                    {season.teams.map(t => <option key={t.teamId} value={t.teamId}>{t.name}</option>)}
+                                </select>
+                            </label>
+                        ))}
+                        <label className="block">
+                            Played
+                            <input name="playedTime" type="datetime-local" required min={`${season.startDate}T00:00`}
+                                   className="text-input mt-2 block w-full"/>
+                        </label>
+                        <p className="text-sm text-ash">
+                            A loss for the team that forfeited and a win for the other in the table. Both rosters get it on
+                            their profiles. Nobody's ELO changes.
+                        </p>
+                        {createForfeit.isError && <p role="alert" className="text-sm text-ash">{createForfeit.error.message}</p>}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" className="secondary-button" onClick={() => forfeitDialogRef.current?.close()}>Cancel</button>
+                            <button type="submit" className="primary-button" disabled={createForfeit.isPending}>Record forfeit</button>
                         </div>
                     </form>
                 </dialog>

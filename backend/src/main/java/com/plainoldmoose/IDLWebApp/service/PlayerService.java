@@ -76,11 +76,13 @@ public class PlayerService {
     private PlayerDetailResponse mapToDetailResponse(Player player) {
         List<MatchParticipant> matchParticipations = player.getMatchParticipations();
 
-        int wins = (int) matchParticipations.stream()
+        // Forfeits are listed but nobody played them, so they stay out of the record
+        List<MatchParticipant> played = matchParticipations.stream().filter(mp -> !mp.getMatch().isForfeit()).toList();
+        int wins = (int) played.stream()
                 .filter(mp -> mp.getMatch().getMatchWinner() == mp.getSide())
                 .count();
-        int losses = matchParticipations.size() - wins;
-        double winrate = matchParticipations.isEmpty() ? 0.0 : Math.round((double) wins / matchParticipations.size() * 10000) / 100.0;
+        int losses = played.size() - wins;
+        double winrate = played.isEmpty() ? 0.0 : Math.round((double) wins / played.size() * 10000) / 100.0;
 
         List<PlayerMatchResponse> matches = matchParticipations
                 .stream()
@@ -107,7 +109,8 @@ public class PlayerService {
                             eloChange,
                             match.getSeason() != null ? match.getSeason().getId() : null,
                             match.getSeason() != null ? match.getSeason()
-                                    .getName() : null);
+                                    .getName() : null,
+                            match.isForfeit());
                 }).toList();
 
         return new PlayerDetailResponse(

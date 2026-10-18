@@ -79,4 +79,23 @@ class PlayerServiceTest {
         assertEquals(season.getId(), detail.matches().get(0).seasonId());
         assertNull(detail.matches().get(1).seasonId());
     }
+
+    // Forfeit behaviour 8: on the list with the right side's result, but not in W/L or win rate
+    @Test
+    void forfeitsAreListedButLeftOutOfTheRecord() {
+        playMatch(1, LocalDateTime.of(2026, 1, 1, 20, 0), null);
+        playMatch(2, LocalDateTime.of(2026, 1, 2, 20, 0), null).setForfeit(true);
+        Match lost = playMatch(3, LocalDateTime.of(2026, 1, 3, 20, 0), null);
+        lost.setForfeit(true);
+        lost.setMatchWinner(Side.DIRE);
+
+        PlayerDetailResponse detail = service.findById(player.getSteamId());
+
+        assertEquals(1, detail.wins());
+        assertEquals(0, detail.losses());
+        assertEquals(100.0, detail.winRate());
+        assertEquals(List.of(3L, 2L, 1L), detail.matches().stream().map(PlayerMatchResponse::matchId).toList());
+        assertEquals(List.of(true, true, false), detail.matches().stream().map(PlayerMatchResponse::forfeit).toList());
+        assertEquals(List.of(false, true, true), detail.matches().stream().map(PlayerMatchResponse::won).toList());
+    }
 }

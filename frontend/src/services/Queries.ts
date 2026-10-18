@@ -145,6 +145,16 @@ export function useCreateMatch() {
     });
 }
 
+// Moves the season table, so everything cached is stale
+export function useCreateForfeit() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (forfeit: {seasonId: string, playedTime: string, forfeitingTeamId: string, opponentTeamId: string}) =>
+            request<void>("/api/matches/forfeits", {method: "POST", json: forfeit}),
+        onSuccess: () => void queryClient.invalidateQueries(),
+    });
+}
+
 // A season's "Recently deleted" bin. Admin-only, so only admins ask
 export function useMatchBin(seasonId: string | undefined, enabled: boolean) {
     return useQuery({

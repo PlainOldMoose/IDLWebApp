@@ -54,6 +54,8 @@ public class EloService {
     // NOTE: ~4 queries per player per game for K's inputs, fine for an active season's worth; batch them if it gets slow
     public void replay(LocalDateTime from) {
         for (Match match : matchRepository.findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(from)) {
+            // Nobody played it
+            if (match.isForfeit()) continue;
             match.setAvgElo((int) Math.round(average(match.getParticipants().stream().map(MatchParticipant::getPlayer).toList())));
             Map<String, Double> changes = changes(match);
             for (MatchParticipant participant : match.getParticipants()) {

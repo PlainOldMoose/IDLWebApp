@@ -65,21 +65,24 @@ export default function MatchDetail() {
     return (
         <Page
             title={
-                <span className="inline-flex items-baseline gap-4">
-                    {/*Sits on the baseline and stands one capital tall, so it spans the letters rather than the font's line box*/}
-                    <span aria-hidden="true" className={`h-[1cap] w-1 shrink-0 ${radiantWon ? "bg-radiant" : "bg-dire"}`}/>
-                    {/*Season games name the winning team; in-houses have no teams, only sides*/}
-                    {(radiantWon ? radiantTeam : direTeam).name} victory
-                </span>
+                match.forfeit ? `${radiantTeam.name} forfeited` : (
+                    <span className="inline-flex items-baseline gap-4">
+                        {/*Sits on the baseline and stands one capital tall, so it spans the letters rather than the font's line box*/}
+                        <span aria-hidden="true" className={`h-[1cap] w-1 shrink-0 ${radiantWon ? "bg-radiant" : "bg-dire"}`}/>
+                        {/*Season games name the winning team; in-houses have no teams, only sides*/}
+                        {(radiantWon ? radiantTeam : direTeam).name} victory
+                    </span>
+                )
             }
             subtitle={
                 <span className="flex flex-wrap gap-x-4 gap-y-1">
                     <span>{formatDate(match.timePlayed)}</span>
                     <span>{match.seasonName ?? "In-house"}</span>
                     {match.avgElo !== null && <span>{match.avgElo.toLocaleString("en-GB")} avg ELO</span>}
-                    <span>Match {match.matchId}</span>
+                    {/*A forfeit's ID is made up, and an admin always adds it*/}
+                    {!match.forfeit && <span>Match {match.matchId}</span>}
                     {/*Season games only: in-houses are always reported by players*/}
-                    {user?.admin && match.seasonName && <span><span className="sr-only">Source: </span>{sourceName[data.source]}</span>}
+                    {user?.admin && match.seasonName && !match.forfeit && <span><span className="sr-only">Source: </span>{sourceName[data.source]}</span>}
                 </span>
             }
             aside={match.seasonName && (
@@ -88,9 +91,11 @@ export default function MatchDetail() {
                     {user?.admin && (
                         <button className="secondary-button text-danger" onClick={openDeleteDialog}>Delete match</button>
                     )}
-                    <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
-                        Open on Stratz
-                    </a>
+                    {!match.forfeit && (
+                        <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
+                            Open on Stratz
+                        </a>
+                    )}
                 </div>
             )}
         >
@@ -125,7 +130,8 @@ export default function MatchDetail() {
                                title={
                                    <span className="flex items-baseline gap-2">
                                        {name}
-                                       {name !== sideName[side] && <span className="text-sm font-normal text-ash">{sideName[side]}</span>}
+                                       {/*A forfeit's sides are arbitrary*/}
+                                       {name !== sideName[side] && !match.forfeit && <span className="text-sm font-normal text-ash">{sideName[side]}</span>}
                                    </span>
                                }
                                meta={
@@ -138,7 +144,7 @@ export default function MatchDetail() {
                                        </span>
                                    </span>
                                }
-                               className={won ? winnerRing[side] : ""}
+                               className={won && !match.forfeit ? winnerRing[side] : ""}
                                padded={false}>
                             {/*Where the team stood in the season just before this game; a first game has no standing or rate yet*/}
                             {standing && (
@@ -155,8 +161,10 @@ export default function MatchDetail() {
                                 <>
                                     <div aria-hidden="true" className={`${rowColumns} px-3 pt-1.5 pb-2 text-sm text-ash`}>
                                         <p>Player</p>
-                                        <p className="text-right">ELO</p>
-                                        <p className="text-right">±</p>
+                                        {!match.forfeit && <>
+                                            <p className="text-right">ELO</p>
+                                            <p className="text-right">±</p>
+                                        </>}
                                     </div>
                                     <ul>
                                         {team.map(player => (
@@ -171,7 +179,8 @@ export default function MatchDetail() {
                                                             </span>
                                                         )}
                                                     </span>
-                                                    {player.eloBefore === null || player.eloChange === null ? (
+                                                    {/*Nobody played a forfeit, so there's no ELO to be missing*/}
+                                                    {match.forfeit ? null : player.eloBefore === null || player.eloChange === null ? (
                                                         <span className="col-span-2 text-right text-ash" title="No ELO record for this match">
                                                             <NoValue label="No ELO record"/>
                                                         </span>
@@ -210,10 +219,14 @@ export default function MatchDetail() {
                         className="dialog">
                     <h2 id="delete-match-title" className="font-display text-3xl font-bold">Delete match</h2>
                     <form onSubmit={handleDelete} className="mt-4 space-y-4">
-                        <p>
-                            This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
-                            off the standings. Everyone's ELO is worked out again from this game on.
-                        </p>
+                        {match.forfeit ? (
+                            <p>This permanently deletes the forfeit and takes it off the standings.</p>
+                        ) : (
+                            <p>
+                                This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
+                                off the standings. Everyone's ELO is worked out again from this game on.
+                            </p>
+                        )}
                         <p className="text-sm text-ash">It goes to Recently deleted for 7 days, where you can restore it.</p>
                         <label className="block">
                             Type <strong>delete</strong> to confirm

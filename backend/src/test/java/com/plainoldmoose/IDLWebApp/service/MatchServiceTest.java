@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.service;
 
+import com.plainoldmoose.IDLWebApp.dto.request.CreateForfeitRequest;
 import com.plainoldmoose.IDLWebApp.dto.request.CreateMatchRequest;
 import com.plainoldmoose.IDLWebApp.dto.response.match.BinMatchResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.match.MatchDetailResponse;
@@ -272,7 +273,7 @@ class MatchServiceTest {
         when(bin.findBySeasonIdOrderByDeletedAtDesc(season.getId())).thenReturn(List.of(copy));
 
         assertEquals(List.of(new BinMatchResponse(8652158100L, "Third Times the Charm", "1 brain cell in 5 trenchcoats", Side.DIRE,
-                        LocalDateTime.of(2026, 10, 12, 20, 0), LocalDateTime.of(2026, 10, 19, 20, 0))),
+                        LocalDateTime.of(2026, 10, 12, 20, 0), LocalDateTime.of(2026, 10, 19, 20, 0), false)),
                 service.getBin(season.getId()));
     }
 
@@ -568,5 +569,172 @@ class MatchServiceTest {
     void getAllMatchesRejectsALimitBelowOne() {
         ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.getAllMatches(null, 0));
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+    }
+
+    // Forfeits: the dire team didn't show, so it's the forfeiting team
+
+    private CreateForfeitRequest forfeit() {
+        return new CreateForfeitRequest(season.getId(), LocalDateTime.now().minusDays(1), dire.getTeamId(), radiant.getTeamId());
+    }
+
+    private Match recordForfeit() {
+        return recordForfeit(forfeit());
+    }
+
+    private Match recordForfeit(CreateForfeitRequest request) {
+        stubPlayers();
+        service.createForfeit(request);
+        ArgumentCaptor<Match> saved = ArgumentCaptor.forClass(Match.class);
+        verify(matches).save(saved.capture());
+        return saved.getValue();
+    }
+
+    // Forfeit behaviour 1: the forfeiting team on Radiant, losing, with both full rosters and no subs
+    @Test
+    void forfeitRecordsBothRostersWithTheForfeitingTeamLosing() {
+        CreateForfeitRequest request = forfeit();
+
+        Match match = recordForfeit(request);
+
+        assertTrue(match.isForfeit());
+        assertSame(season, match.getSeason());
+        assertEquals(request.playedTime(), match.getPlayedTime());
+        assertSame(dire, match.getRadiantTeam());
+        assertSame(radiant, match.getDireTeam());
+        assertEquals(Side.DIRE, match.getMatchWinner());
+        assertEquals(List.of("5", "6", "7", "8", "9"), match.getParticipants().stream()
+                .filter(p -> p.getSide() == Side.RADIANT).map(p -> p.getPlayer().getSteamId()).toList());
+        assertEquals(List.of("0", "1", "2", "3", "4"), match.getParticipants().stream()
+                .filter(p -> p.getSide() == Side.DIRE).map(p -> p.getPlayer().getSteamId()).toList());
+        assertTrue(match.getParticipants().stream().noneMatch(MatchParticipant::isSub));
+    }
+
+    // Forfeit behaviour 2: no Dota game, so the ID is made up below anything stored
+    @ParameterizedTest
+    @CsvSource(value = {"NULL, -1", "8652158100, -1", "-4, -5"}, nullValues = "NULL")
+    void forfeitGetsAnIdBelowTheLowestStored(Long lowest, long expected) {
+        when(matches.lowestMatchId()).thenReturn(lowest);
+
+        assertEquals(expected, recordForfeit().getMatchId());
+    }
+
+    // A binned forfeit keeps its ID, so a new one can't take it and wipe it from the bin
+    @ParameterizedTest
+    @CsvSource(value = {"NULL, -3, -4", "-2, -5, -6", "-7, -5, -8"}, nullValues = "NULL")
+    void forfeitIdSkipsTheBin(Long lowestRecorded, Long lowestBinned, long expected) {
+        when(matches.lowestMatchId()).thenReturn(lowestRecorded);
+        when(bin.lowestMatchId()).thenReturn(lowestBinned);
+
+        assertEquals(expected, recordForfeit().getMatchId());
+    }
+
+    // The bin says which are forfeits, as their IDs are made up
+    @Test
+    void binSaysWhichAreForfeits() {
+        DeletedMatch copy = binned();
+        copy.setForfeit(true);
+        when(bin.findBySeasonIdOrderByDeletedAtDesc(season.getId())).thenReturn(List.of(copy));
+
+        assertTrue(service.getBin(season.getId()).get(0).forfeit());
+    }
+
+    // Forfeit behaviour 3
+    @Test
+    void forfeitCountsInTheSeasonTable() {
+        recordForfeit();
+
+        assertEquals(1, dire.getLosses());
+        assertEquals(0, dire.getWins());
+        assertEquals(1, radiant.getWins());
+        assertEquals(0, radiant.getLosses());
+    }
+
+    // Forfeit behaviour 4: the same rules as adding a match
+    @Test
+    void forfeitOnlyInAnActiveSeason() {
+        stubPlayers();
+        season.setStatus(SeasonStatus.COMPLETED);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.createForfeit(forfeit()));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
+    @Test
+    void forfeitRefusesATeamFromElsewhere() {
+        stubPlayers();
+        CreateForfeitRequest request = new CreateForfeitRequest(season.getId(), LocalDateTime.now().minusDays(1), UUID.randomUUID(), radiant.getTeamId());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.createForfeit(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
+    @Test
+    void forfeitRefusesATeamAgainstItself() {
+        stubPlayers();
+        CreateForfeitRequest request = new CreateForfeitRequest(season.getId(), LocalDateTime.now().minusDays(1), dire.getTeamId(), dire.getTeamId());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.createForfeit(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-15", "1"})
+    void forfeitRefusesATimeOutsideTheSeason(int daysFromNow) {
+        stubPlayers();
+        CreateForfeitRequest request = new CreateForfeitRequest(season.getId(), LocalDateTime.now().plusDays(daysFromNow), dire.getTeamId(), radiant.getTeamId());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.createForfeit(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(matches, never()).save(any());
+    }
+
+    // Forfeit behaviour 7
+    @Test
+    void listsAndDetailSayItsAForfeit() {
+        Match match = activeSeasonMatch();
+        match.setForfeit(true);
+        when(matches.findAllByOrderByPlayedTimeDesc(any())).thenReturn(List.of(match));
+        when(matches.findBySeasonIdOrderByPlayedTimeDesc(season.getId())).thenReturn(List.of());
+
+        assertTrue(service.getAllMatches(null, null).get(0).forfeit());
+        assertTrue(service.getMatch(8652158100L).match().forfeit());
+    }
+
+    // Forfeit behaviour 9: binned as a forfeit, and restored as one under the same ID
+    @Test
+    void deletedForfeitComesBackAsAForfeit() {
+        Match match = activeSeasonMatch();
+        match.setForfeit(true);
+
+        service.delete(8652158100L);
+
+        ArgumentCaptor<DeletedMatch> binnedCopy = ArgumentCaptor.forClass(DeletedMatch.class);
+        verify(bin).save(binnedCopy.capture());
+        assertTrue(binnedCopy.getValue().isForfeit());
+
+        // Both full rosters, as a forfeit records them
+        DeletedMatch copy = binned();
+        copy.setForfeit(true);
+        copy.setParticipants(IntStream.range(0, 10).mapToObj(i -> {
+            DeletedMatch.DeletedParticipant p = new DeletedMatch.DeletedParticipant();
+            p.setSteamId(String.valueOf(i));
+            p.setSide(i < 5 ? Side.RADIANT : Side.DIRE);
+            return p;
+        }).toList());
+        stubPlayers();
+
+        service.restore(8652158100L);
+
+        ArgumentCaptor<Match> restored = ArgumentCaptor.forClass(Match.class);
+        verify(matches).save(restored.capture());
+        assertTrue(restored.getValue().isForfeit());
+        assertEquals(8652158100L, restored.getValue().getMatchId());
     }
 }

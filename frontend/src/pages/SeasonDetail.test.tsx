@@ -15,9 +15,9 @@ let postedTo: string | undefined;
 let writes: {method: string, path: string, body: unknown}[];
 let fetched: string[];
 
-function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = [], players = [], leagueId, league, bin = [], restoreFails}: {
+function renderSeason({status = "REGISTRATION", signups, user = null, name = "Season 5", teams = [], players = [], leagueId, league, bin = [], restoreFails, forfeitFails}: {
     status?: SeasonDetailData["status"], signups: SeasonSignup[], user?: SteamUser | null, name?: string, teams?: SeasonDetailData["teams"],
-    players?: PlayerSummary[], leagueId?: number, league?: LeagueSync, bin?: BinMatch[], restoreFails?: string
+    players?: PlayerSummary[], leagueId?: number, league?: LeagueSync, bin?: BinMatch[], restoreFails?: string, forfeitFails?: string
 }) {
     const season: SeasonDetailData = {id: "s1", name, startDate: "2026-02-01", endDate: "2026-03-01", status, teams, leagueId};
     vi.stubGlobal("fetch", vi.fn(async (path: string, init?: RequestInit) => {
@@ -31,6 +31,9 @@ function renderSeason({status = "REGISTRATION", signups, user = null, name = "Se
         }
         if (restoreFails && path.endsWith("/restore")) {
             return new Response(JSON.stringify({detail: restoreFails}), {status: 409});
+        }
+        if (forfeitFails && path === "/api/matches/forfeits") {
+            return new Response(JSON.stringify({detail: forfeitFails}), {status: 400});
         }
         const body = path === "/auth/me" ? user
             : path === "/api/seasons/s1" ? season
@@ -49,6 +52,12 @@ function renderSeason({status = "REGISTRATION", signups, user = null, name = "Se
         </QueryClientProvider>
     );
 }
+
+// The admin's Add menu, then one of its entries
+const openAddMenu = async (entry: "Match" | "Forfeit") => {
+    await userEvent.click(await screen.findByRole("button", {name: "Add"}));
+    await userEvent.click(screen.getByRole("menuitem", {name: entry}));
+};
 
 const panel = async (title: string) => (await screen.findByRole("heading", {name: title})).closest("section")!;
 
@@ -193,7 +202,7 @@ it("records who a sub replaced from the box they were typed into", async () => {
     const players = [...red.members, ...blue.members, {steamId: "sub1", username: "sub1", elo: 1500}];
     renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], players, user: {steamId: "admin", username: "admin", admin: true}});
 
-    await userEvent.click(await screen.findByRole("button", {name: "Add match"}));
+    await openAddMenu("Match");
     const dialog = screen.getByRole("dialog", {name: "Add match"});
     await userEvent.type(within(dialog).getByRole("textbox", {name: "Dota match ID"}), "8652158100");
     fireEvent.change(within(dialog).getByLabelText("Played"), {target: {value: "2026-02-10T19:00"}});
@@ -338,7 +347,7 @@ const localIso = (offsetDays: number) => {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
 };
 const binned: BinMatch = {
-    matchId: 9036873306, radiantTeamName: "red", direTeamName: "blue", winner: "DIRE", deletedAt: localIso(-2), purgeAt: localIso(5),
+    matchId: 9036873306, radiantTeamName: "red", direTeamName: "blue", winner: "DIRE", deletedAt: localIso(-2), purgeAt: localIso(5), forfeit: false,
 };
 const renderBin = (options: {bin?: BinMatch[], user?: SteamUser, restoreFails?: string} = {}) => renderSeason({
     status: "ACTIVE", signups: [], teams: [red, blue], user: options.user ?? ADMIN, bin: options.bin ?? [binned], restoreFails: options.restoreFails,
@@ -353,10 +362,20 @@ it("shows admins the season's recently deleted matches", async () => {
     expect(within(recent).getByText("Deleted 2 days ago · goes in 5 days")).toBeTruthy();
 });
 
+// Red didn't show; the made-up ID means nothing to an admin
+it("shows a deleted forfeit as a forfeit", async () => {
+    renderBin({bin: [{...binned, matchId: -1, forfeit: true}]});
+
+    const recent = await panel("Recently deleted");
+    expect(await within(recent).findByText("Forfeit")).toBeTruthy();
+    expect(within(recent).getByText("red forfeited to blue")).toBeTruthy();
+    expect(within(recent).queryByText("-1")).toBeNull();
+});
+
 it("hides an empty bin", async () => {
     renderBin({bin: []});
 
-    await screen.findByRole("button", {name: "Add match"});
+    await screen.findByRole("button", {name: "Add"});
     await vi.waitFor(() => expect(fetched).toContain("/api/matches/bin?seasonId=s1"));
     expect(screen.queryByRole("heading", {name: "Recently deleted"})).toBeNull();
 });
@@ -385,4 +404,34 @@ it("says why a restore failed", async () => {
     await userEvent.click(await within(recent).findByRole("button", {name: "Restore"}));
 
     expect(await within(recent).findByText("Match 9036873306 is already recorded")).toBeTruthy();
+});
+
+// Forfeit behaviours 13 and 14: red didn't show against blue
+const recordForfeit = async () => {
+    await openAddMenu("Forfeit");
+    const dialog = screen.getByRole<HTMLDialogElement>("dialog", {name: "Record forfeit"});
+    await userEvent.selectOptions(within(dialog).getByRole("combobox", {name: "Forfeited by"}), "red");
+    await userEvent.selectOptions(within(dialog).getByRole("combobox", {name: "Against"}), "blue");
+    fireEvent.change(within(dialog).getByLabelText("Played"), {target: {value: "2026-02-10T19:00"}});
+    await userEvent.click(within(dialog).getByRole("button", {name: "Record forfeit"}));
+    return dialog;
+};
+
+it("records a forfeit from the Add menu", async () => {
+    renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], user: ADMIN});
+
+    const dialog = await recordForfeit();
+
+    await vi.waitFor(() => expect(postedTo).toBe("/api/matches/forfeits"));
+    expect(posted).toEqual({seasonId: "s1", playedTime: "2026-02-10T19:00", forfeitingTeamId: "red", opponentTeamId: "blue"});
+    await vi.waitFor(() => expect(dialog.open).toBe(false));
+});
+
+it("says why a forfeit was refused", async () => {
+    renderSeason({status: "ACTIVE", signups: [], teams: [red, blue], user: ADMIN, forfeitFails: "A team can't play itself"});
+
+    const dialog = await recordForfeit();
+
+    expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", "A team can't play itself");
+    expect(dialog.open).toBe(true);
 });

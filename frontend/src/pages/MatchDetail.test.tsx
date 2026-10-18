@@ -18,7 +18,7 @@ function fillers(side: Player["side"], count: number): Player[] {
 const seasonMatch: MatchDetailData = {
     match: {
         matchId: 1234, winner: "RADIANT", timePlayed: "2026-10-01T19:00:00", avgElo: 1600,
-        seasonId: "season-41", seasonName: "Season 41", radiantTeamName: "Sporky Diver", direTeamName: "The Bad Guys",
+        seasonId: "season-41", seasonName: "Season 41", radiantTeamName: "Sporky Diver", direTeamName: "The Bad Guys", forfeit: false,
     },
     players: [
         {steamId: "1", username: "Borky", side: "RADIANT", sub: false, subbingFor: null, eloBefore: 1600, eloChange: 10},
@@ -220,4 +220,27 @@ it.each(["MANUAL", "API_SYNC"] as const)("says a deleted %s match goes to the bi
     expect(within(dialog).getByText("It goes to Recently deleted for 7 days, where you can restore it.")).toBeTruthy();
     expect(within(dialog).queryByText(manualWarning)).toBeNull();
     expect(within(dialog).queryByText("The sync won't add it back. Add match can.")).toBeNull();
+});
+
+// Forfeit behaviour 11: The Bad Guys didn't show. No Dota game, so no ELO, odds or Stratz page
+const forfeit: MatchDetailData = {
+    ...seasonMatch,
+    match: {...seasonMatch.match, matchId: -1, winner: "DIRE", avgElo: null, radiantTeamName: "The Bad Guys", direTeamName: "Sporky Diver", forfeit: true},
+    players: seasonMatch.players.map(p => ({...p, side: p.side === "RADIANT" ? "DIRE" : "RADIANT", eloBefore: null, eloChange: null})),
+    radiantWinChance: null,
+};
+
+it("shows a forfeit as who forfeited, with both rosters and no ELO", async () => {
+    detail = forfeit;
+    user = ADMIN;
+    renderMatch();
+
+    expect(await screen.findByRole("heading", {level: 1, name: "The Bad Guys forfeited"})).toBeTruthy();
+    expect(screen.getByText("Borky")).toBeTruthy();
+    expect(screen.getByText("Dev")).toBeTruthy();
+    expect(screen.queryByText("No ELO record")).toBeNull();
+    expect(screen.queryByRole("link", {name: "Open on Stratz"})).toBeNull();
+    expect(screen.queryByRole("heading", {name: "Pre-game odds"})).toBeNull();
+    expect(screen.queryByText("Match -1")).toBeNull();
+    expect(screen.getByRole("button", {name: "Delete match"})).toBeTruthy();
 });
