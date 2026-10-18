@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface PlayerRepository extends JpaRepository<Player, String> {
     List<Player> findAllByOrderByEloDesc();
+    List<Player> findAllByDisabledAtIsNullOrderByEloDesc();
     boolean existsByUsername(String username);
 }

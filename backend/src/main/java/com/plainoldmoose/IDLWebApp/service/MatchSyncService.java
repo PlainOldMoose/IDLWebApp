@@ -217,13 +217,17 @@ public class MatchSyncService {
         if (privateProfiles > 0) {
             reasons.add(count(privateProfiles, "private profile"));
         }
-        Set<String> registered = playerRepository.findAllById(Stream.concat(radiant.stream(), dire.stream()).toList())
-                .stream()
+        List<Player> found = playerRepository.findAllById(Stream.concat(radiant.stream(), dire.stream()).toList());
+        Set<String> registered = found.stream()
                 .map(Player::getSteamId)
                 .collect(Collectors.toSet());
         long unregistered = Stream.concat(radiant.stream(), dire.stream()).filter(id -> !registered.contains(id)).count();
         if (unregistered > 0) {
             reasons.add(count(unregistered, "unregistered account"));
+        }
+        long disabled = found.stream().filter(Player::isDisabled).count();
+        if (disabled > 0) {
+            reasons.add(count(disabled, "disabled account"));
         }
         if (radiantTeam == null || direTeam == null || radiantTeam == direTeam) {
             reasons.add("Sides don't match two season teams");

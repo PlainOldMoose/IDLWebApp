@@ -18,7 +18,7 @@ const range = (from: number, to: number, season: string | null) =>
 
 function renderHistory(matches: PlayerMatchSummary[] | null, search = "") {
     const player: PlayerDetail | null = matches && {
-        steamId, username: "Antab", elo: 1600, wins: matches.length, losses: 0, winRate: 100, matches,
+        steamId, username: "Antab", elo: 1600, wins: matches.length, losses: 0, winRate: 100, disabled: false, disabledAt: null, matches,
     };
     vi.stubGlobal("fetch", vi.fn(async () => player
         ? new Response(JSON.stringify(player))

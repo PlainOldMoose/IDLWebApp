@@ -172,7 +172,7 @@ public class SeasonService {
         List<PlayerSummaryResponse> members = team.getMembers()
                 .stream()
                 .map(TeamMember::getPlayer)
-                .map(player -> new PlayerSummaryResponse(player.getUsername(), eloAt(player, end), player.getSteamId()))
+                .map(player -> new PlayerSummaryResponse(player.getUsername(), eloAt(player, end), player.getSteamId(), player.isDisabled()))
                 .toList();
 
         return new TeamResponse(

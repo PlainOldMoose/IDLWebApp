@@ -10,12 +10,18 @@ import QueryError from "../components/QueryError.tsx";
 import {formatElo} from "../util/format.ts";
 
 export default function Players() {
-    // Highest ELO first, as the API returns them, so position is rank
-    const {data: players, isPending, isError} = usePlayers();
     const {data: user} = useCurrentUser();
-    // The search lives in the URL (?q=) so a filtered list can be shared or bookmarked
+    // The search (?q=) and admins' disabled toggle (?disabled=1) live in the URL so a filtered list can be shared or bookmarked
     const [searchParams, setSearchParams] = useSearchParams();
     const search = searchParams.get("q") ?? "";
+    const showDisabled = !!user?.admin && searchParams.get("disabled") === "1";
+    // Highest ELO first, as the API returns them
+    const {data: players, isPending, isError} = usePlayers(true, showDisabled);
+    const setParam = (name: string, value: string) => setSearchParams(params => {
+        if (value) params.set(name, value);
+        else params.delete(name);
+        return params;
+    }, {replace: true});
     const createPlayer = useCreatePlayer();
     const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -80,22 +86,30 @@ export default function Players() {
     if (isError) return <Page {...header}><QueryError message="Couldn't load players."/></Page>;
 
     const query = search.trim().toLowerCase();
+    // Disabled players only show when an admin asks, unranked, so the ladder and stats always leave them out
+    const ranked = players.filter(player => !player.disabled);
     const visible = players
-        .map((player, index) => ({player, rank: index + 1}))
+        .map(player => ({player, rank: player.disabled ? null : ranked.indexOf(player) + 1}))
         .filter(({player}) => player.username.toLowerCase().includes(query));
 
-    const yourRank = players.findIndex(p => p.steamId === user?.steamId) + 1;
-    const median = players.length ? players[Math.floor(players.length / 2)].elo : 0;
+    const yourRank = ranked.findIndex(p => p.steamId === user?.steamId) + 1;
+    const median = ranked.length ? ranked[Math.floor(ranked.length / 2)].elo : 0;
 
     return (
-        <Page {...header} subtitle={`${players.length} players, ranked by ELO`}>
+        <Page {...header} subtitle={`${ranked.length} players, ranked by ELO`}>
             <Panel title="Ladder" meta="Hover to see who, click to open their page" className="mb-4">
-                <EloLadder players={players} highlightSteamId={user?.steamId} highlightLabel="You"/>
+                <EloLadder players={ranked} highlightSteamId={user?.steamId} highlightLabel="You"/>
             </Panel>
 
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
                 <Panel title="Rankings" padded={false} meta={
-                    <>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                        {user?.admin && (
+                            <label className="flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked={showDisabled} onChange={(e) => setParam("disabled", e.target.checked ? "1" : "")}/>
+                                Show disabled
+                            </label>
+                        )}
                         <label htmlFor="player-search" className="sr-only">Find a player</label>
                         <input
                             id="player-search"
@@ -104,11 +118,11 @@ export default function Players() {
                             autoComplete="off"
                             spellCheck={false}
                             value={search}
-                            onChange={(e) => setSearchParams(e.target.value ? {q: e.target.value} : {}, {replace: true})}
+                            onChange={(e) => setParam("q", e.target.value)}
                             placeholder="Find a player…"
                             className="text-input w-52"
                         />
-                    </>
+                    </div>
                 }>
                     <div aria-hidden="true" className="grid grid-cols-[3rem_1fr_auto] gap-x-4 px-3 pt-1.5 pb-2 text-sm text-ash">
                         <p className="text-right">Rank</p>
@@ -126,6 +140,7 @@ export default function Players() {
                                         <span className="truncate">
                                             {player.username}
                                             {isYou && <span className="ml-2 text-sm font-medium text-accent">You</span>}
+                                            {player.disabled && <span className="ml-2 text-sm text-ash">Disabled</span>}
                                         </span>
                                         <span className="figures text-right">{formatElo(player.elo)}</span>
                                     </Link>
@@ -143,16 +158,16 @@ export default function Players() {
                         <Panel title="Your standing">
                             <StatStrip stats={[
                                 {label: "Rank", value: yourRank},
-                                {label: "ELO", value: formatElo(players[yourRank - 1].elo)},
-                                {label: "Percentile", value: `Top ${Math.ceil((yourRank / players.length) * 100)}%`},
+                                {label: "ELO", value: formatElo(ranked[yourRank - 1].elo)},
+                                {label: "Percentile", value: `Top ${Math.ceil((yourRank / ranked.length) * 100)}%`},
                             ]}/>
                         </Panel>
                     )}
                     <Panel title="League">
                         <StatStrip stats={[
-                            {label: "Players", value: players.length},
+                            {label: "Players", value: ranked.length},
                             {label: "Median", value: formatElo(median)},
-                            {label: "Highest", value: players.length ? formatElo(players[0].elo) : "None"},
+                            {label: "Highest", value: ranked.length ? formatElo(ranked[0].elo) : "None"},
                         ]}/>
                     </Panel>
                 </aside>

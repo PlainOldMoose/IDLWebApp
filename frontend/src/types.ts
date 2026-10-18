@@ -2,12 +2,14 @@ export interface PlayerSummary {
     steamId: string;
     username: string;
     elo: number;
+    disabled: boolean; // Banned or long inactive; only listed when asked for
 }
 
 export interface PlayerDetail extends PlayerSummary {
     wins: number;
     losses: number;
     winRate: number;
+    disabledAt: string | null;
     matches: PlayerMatchSummary[];
 }
 
