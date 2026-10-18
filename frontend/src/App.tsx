@@ -7,6 +7,7 @@ import Matches from "./pages/Matches.tsx";
 import MatchDetail from "./pages/MatchDetail.tsx";
 import SeasonDetail from "./pages/SeasonDetail.tsx";
 import Unregistered from "./pages/Unregistered.tsx";
+import Disabled from "./pages/Disabled.tsx";
 import PlayerDetail from "./pages/PlayerDetail.tsx";
 import PlayerMatches from "./pages/PlayerMatches.tsx";
 import Inhouses from "./pages/Inhouses.tsx";
@@ -68,6 +69,7 @@ function App() {
                     <Route path="/inhouses" element={<Inhouses/>}/>
                     <Route path="/rules" element={<Rules/>}/>
                     <Route path="/unregistered" element={<Unregistered/>}/>
+                    <Route path="/disabled" element={<Disabled/>}/>
                     <Route path="*" element={<NotFound/>}/>
                 </Routes>
             </main>

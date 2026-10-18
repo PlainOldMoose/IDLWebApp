@@ -268,6 +268,15 @@ class MatchSyncServiceTest {
         assertTrue(match.getDire().contains("76561198051995905"));
     }
 
+    // Disabled behaviour 15
+    @Test
+    void disabledAccountWaitsForAnAdmin() {
+        everyone.get(9).setDisabledAt(LocalDateTime.now());
+        game(ids(0, 1, 2, 3, 4), ids(5, 6, 7, 8, 9));
+
+        assertEquals("1 disabled account", pending().getReason());
+    }
+
     // Behaviour 5: the radiant side has no team with 3 of its players; dire's guess is still kept
     @Test
     void sidesThatDontMatchTwoTeamsWaitForAnAdmin() {

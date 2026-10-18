@@ -33,11 +33,19 @@ public class Player {
     @Column(nullable = false)
     private boolean admin;
 
+    // Set for disabled players (banned or long inactive). They keep their matches and ELO history, but can't sign in
+    // and are left out of the player list
+    private LocalDateTime disabledAt;
+
     @OneToMany(mappedBy = "player")
     private List<EloHistory> eloHistory;
 
     @OneToMany(mappedBy = "player")
     private List<MatchParticipant> matchParticipations;
+
+    public boolean isDisabled() {
+        return disabledAt != null;
+    }
 
     @PrePersist
     public void prePersist() {

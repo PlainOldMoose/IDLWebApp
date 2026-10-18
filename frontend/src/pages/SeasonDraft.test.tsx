@@ -64,9 +64,6 @@ const section = async (title: string) => (await screen.findByRole("heading", {na
 
 beforeEach(() => {
     sent = [];
-    // NOTE: jsdom has no modal dialogs
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
-    HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.open = false; };
 });
 
 it("shows each team's total and who is on the clock", async () => {

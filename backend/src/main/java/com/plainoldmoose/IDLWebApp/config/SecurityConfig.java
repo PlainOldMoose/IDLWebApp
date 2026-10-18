@@ -71,7 +71,7 @@ public class SecurityConfig {
     }
 
     // Roles come from the player row on every request, not from sign-in, so admin is granted or revoked straight away
-    // and a deleted player is signed out. Only rewrites the session when they changed.
+    // and a deleted or disabled player is signed out. Only rewrites the session when they changed.
     // NOTE: one primary-key lookup per signed-in request; cache it if that ever shows up
     private static OncePerRequestFilter currentRoles(PlayerService playerService) {
         return new OncePerRequestFilter() {
@@ -82,6 +82,7 @@ public class SecurityConfig {
                 Authentication signedIn = context.getAuthentication();
                 if (signedIn instanceof UsernamePasswordAuthenticationToken) {
                     Authentication current = playerService.findSteamUser(signedIn.getName())
+                            .filter(user -> !user.disabled())
                             .map(SteamAuthController::authenticationFor)
                             .orElse(null);
                     if (current == null || !current.getAuthorities().equals(signedIn.getAuthorities())) {

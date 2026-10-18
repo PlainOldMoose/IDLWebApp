@@ -1,5 +1,6 @@
 import {expect, it, vi} from "vitest";
-import {render, screen, within} from "@testing-library/react";
+import {render, screen, waitFor, within} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {MemoryRouter, Route, Routes} from "react-router";
 import PlayerDetail from "./PlayerDetail";
@@ -11,16 +12,24 @@ const playedMatches = (count: number): PlayerMatchSummary[] => Array.from({lengt
     eloChange: 10, seasonId: null, seasonName: null, forfeit: false,
 }));
 
-function renderProfile(matchCount: number | PlayerMatchSummary[]) {
+function renderProfile(matchCount: number | PlayerMatchSummary[], {admin = false, disabledAt = null as string | null} = {}) {
     const matches = typeof matchCount === "number" ? playedMatches(matchCount) : matchCount;
     const player: PlayerDetailData = {
         steamId: "76561197960265729", username: "Antab", elo: 1600,
         wins: matches.filter(m => m.won).length, losses: matches.filter(m => !m.won).length, winRate: 50,
+        disabled: disabledAt !== null, disabledAt,
         matches,
     };
-    vi.stubGlobal("fetch", vi.fn(async (path: string) => path === "/api/players"
-        ? new Response(JSON.stringify([player]))
-        : new Response(JSON.stringify(player))));
+    const fetch = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>(async path => {
+        // The player list leaves disabled players out
+        if (path === "/api/players") return new Response(JSON.stringify(player.disabled ? [] : [player]));
+        if (path === "/auth/me") return admin
+            ? new Response(JSON.stringify({steamId: "76561197960265730", username: "Admin", admin: true}))
+            : new Response(null, {status: 401});
+        if (path.endsWith("/disabled")) return new Response(null, {status: 204});
+        return new Response(JSON.stringify(player));
+    });
+    vi.stubGlobal("fetch", fetch);
     render(
         <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
             <MemoryRouter initialEntries={[`/players/${player.steamId}`]}>
@@ -28,6 +37,7 @@ function renderProfile(matchCount: number | PlayerMatchSummary[]) {
             </MemoryRouter>
         </QueryClientProvider>
     );
+    return fetch;
 }
 
 // Behaviour 3
@@ -67,4 +77,52 @@ it("labels forfeits as forfeit wins and losses", async () => {
     const recent = screen.getByRole("list", {name: /^Last 2 matches/});
     expect(within(recent).getByRole("link", {name: /^Forfeit win on /})).toBeTruthy();
     expect(within(recent).getByRole("link", {name: /^Forfeit loss on /})).toBeTruthy();
+});
+
+// Disabled behaviour 19: "inactive" in public, whether banned or just gone quiet, and no place on the ladder
+it("shows a disabled player as inactive, with no rank", async () => {
+    renderProfile(3, {disabledAt: "2026-10-01T12:00:00"});
+
+    expect(await screen.findByText(/^Inactive since 1 Oct 2026/)).toBeTruthy();
+    expect(screen.queryByText(/^Rank \d+ of/)).toBeNull();
+    // Their history still shows
+    expect(within(screen.getByRole("region", {name: "Match history"})).getAllByRole("link", {name: /^(Won|Lost)/})).toHaveLength(3);
+});
+
+const confirmIn = async (button: string, confirm: string) => {
+    await userEvent.click(await screen.findByRole("button", {name: button}));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", {name: confirm}));
+};
+
+// Disabled behaviour 20
+it("lets an admin disable a player after confirming", async () => {
+    const fetch = renderProfile(3, {admin: true});
+
+    await confirmIn("Disable player", "Disable");
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/players/76561197960265729/disabled", expect.objectContaining({method: "PUT"})));
+});
+
+// Disabled behaviour 21
+it("lets an admin enable a disabled player after confirming", async () => {
+    const fetch = renderProfile(3, {admin: true, disabledAt: "2026-10-01T12:00:00"});
+
+    await confirmIn("Enable player", "Enable");
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/players/76561197960265729/disabled", expect.objectContaining({method: "DELETE"})));
+});
+
+// Disabled behaviour 22
+it("doesn't offer disabling to players", async () => {
+    renderProfile(3);
+
+    await screen.findByRole("region", {name: "Match history"});
+    expect(screen.queryByRole("button", {name: "Disable player"})).toBeNull();
+});
+
+it("doesn't offer enabling to players", async () => {
+    renderProfile(3, {disabledAt: "2026-10-01T12:00:00"});
+
+    await screen.findByRole("region", {name: "Match history"});
+    expect(screen.queryByRole("button", {name: "Enable player"})).toBeNull();
 });

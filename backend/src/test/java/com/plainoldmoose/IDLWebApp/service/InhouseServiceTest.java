@@ -1,5 +1,6 @@
 package com.plainoldmoose.IDLWebApp.service;
 
+import com.plainoldmoose.IDLWebApp.dto.request.CreateInhouseRequest;
 import com.plainoldmoose.IDLWebApp.model.Inhouse;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
@@ -10,6 +11,7 @@ import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -55,6 +57,29 @@ class InhouseServiceTest {
             previousGap = gap;
         }
         assertEquals(7300, sum(options.get(0)));
+    }
+
+    // Disabled behaviour 14
+    @Test
+    void refusesAnInhouseWithADisabledPlayer() {
+        PlayerRepository players = mock(PlayerRepository.class);
+        InhouseRepository inhouses = mock(InhouseRepository.class);
+        InhouseService service = new InhouseService(inhouses, players, mock(MatchRepository.class), mock(EloService.class));
+        List<Player> ten = IntStream.range(0, 10).mapToObj(i -> {
+            Player player = new Player();
+            player.setSteamId(String.valueOf(i));
+            player.setElo(1500);
+            return player;
+        }).toList();
+        ten.get(9).setDisabledAt(LocalDateTime.now());
+        when(players.findAllById(any())).thenReturn(ten);
+        when(inhouses.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        CreateInhouseRequest request = new CreateInhouseRequest(List.of("0", "1", "2", "3", "4"), List.of("5", "6", "7", "8", "9"));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.create(request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        verify(inhouses, never()).save(any());
     }
 
     @Test

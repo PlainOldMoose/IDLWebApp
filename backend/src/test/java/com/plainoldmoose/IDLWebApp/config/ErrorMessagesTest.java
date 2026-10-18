@@ -37,7 +37,7 @@ class ErrorMessagesTest {
     @Test
     void unknownEndpointSaysSoPlainly() throws Exception {
         when(playerService.findSteamUser("76561198000000001"))
-                .thenReturn(Optional.of(new SteamUserResponse("76561198000000001", "admin", true)));
+                .thenReturn(Optional.of(new SteamUserResponse("76561198000000001", "admin", true, false)));
         mvc.perform(post("/api/no-such-endpoint").with(csrf()).with(user("76561198000000001").roles("USER", "ADMIN")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("The server doesn't support that yet. It may be running an older version."));

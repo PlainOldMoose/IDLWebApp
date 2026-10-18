@@ -91,6 +91,11 @@ public class SteamAuthController {
                     .location(URI.create(baseUrl + "/unregistered"))
                     .build();
         }
+        if (user.disabled()) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(baseUrl + "/disabled"))
+                    .build();
+        }
 
         // New session id at login, so a session id planted in the browser beforehand is useless afterwards.
         // The session always exists here: the state check above needs it

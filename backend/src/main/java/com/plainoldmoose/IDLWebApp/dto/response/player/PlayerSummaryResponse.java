@@ -5,9 +5,10 @@ import com.plainoldmoose.IDLWebApp.model.player.Player;
 public record PlayerSummaryResponse(
         String username,
         double elo,
-        String steamId) {
+        String steamId,
+        boolean disabled) {
 
     public static PlayerSummaryResponse from(Player player) {
-        return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId());
+        return new PlayerSummaryResponse(player.getUsername(), player.getElo(), player.getSteamId(), player.isDisabled());
     }
 }

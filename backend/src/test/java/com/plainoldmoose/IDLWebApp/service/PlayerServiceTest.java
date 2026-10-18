@@ -2,14 +2,19 @@ package com.plainoldmoose.IDLWebApp.service;
 
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerDetailResponse;
 import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerMatchResponse;
+import com.plainoldmoose.IDLWebApp.dto.response.player.PlayerSummaryResponse;
 import com.plainoldmoose.IDLWebApp.model.Season;
+import com.plainoldmoose.IDLWebApp.model.enums.SeasonStatus;
 import com.plainoldmoose.IDLWebApp.model.enums.Side;
 import com.plainoldmoose.IDLWebApp.model.match.Match;
 import com.plainoldmoose.IDLWebApp.model.match.MatchParticipant;
 import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
+import com.plainoldmoose.IDLWebApp.repository.SeasonSignupRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,14 +23,22 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PlayerServiceTest {
 
     private final PlayerRepository players = mock(PlayerRepository.class);
-    private final PlayerService service = new PlayerService(players, mock(EloHistoryRepository.class));
+    private final SeasonSignupRepository signups = mock(SeasonSignupRepository.class);
+    private final PlayerService service = new PlayerService(players, mock(EloHistoryRepository.class), signups);
 
     private final Player player = new Player();
 
@@ -97,5 +110,91 @@ class PlayerServiceTest {
         assertEquals(List.of(3L, 2L, 1L), detail.matches().stream().map(PlayerMatchResponse::matchId).toList());
         assertEquals(List.of(true, true, false), detail.matches().stream().map(PlayerMatchResponse::forfeit).toList());
         assertEquals(List.of(false, true, true), detail.matches().stream().map(PlayerMatchResponse::won).toList());
+    }
+
+    // Disabled behaviour 1
+    @Test
+    void disablingMarksThePlayerDisabledFromNow() {
+        LocalDateTime before = LocalDateTime.now();
+
+        service.disable(player.getSteamId());
+
+        assertTrue(player.isDisabled());
+        assertNotNull(player.getDisabledAt());
+        assertFalse(player.getDisabledAt().isBefore(before));
+        verify(players).save(player);
+    }
+
+    // Disabled behaviour 2
+    @Test
+    void adminsCantBeDisabled() {
+        player.setAdmin(true);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.disable(player.getSteamId()));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertFalse(player.isDisabled());
+        verify(players, never()).save(any());
+    }
+
+    // Disabled behaviour 3
+    @Test
+    void disablingDropsSignupsForSeasonsStillTakingThem() {
+        service.disable(player.getSteamId());
+
+        verify(signups).deleteByPlayerSteamIdAndSeasonStatus(player.getSteamId(), SeasonStatus.REGISTRATION);
+    }
+
+    // Disabled behaviour 4
+    @Test
+    void enablingClearsIt() {
+        player.setDisabledAt(LocalDateTime.now());
+
+        service.enable(player.getSteamId());
+
+        assertFalse(player.isDisabled());
+        assertNull(player.getDisabledAt());
+        verify(players).save(player);
+    }
+
+    // Disabled behaviour 5
+    @Test
+    void disablingSomeoneUnknownIsNotFound() {
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class, () -> service.disable("1")).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class, () -> service.enable("1")).getStatusCode());
+    }
+
+    // Disabled behaviours 6 and 7
+    @Test
+    void playerListLeavesOutDisabledPlayersUnlessAsked() {
+        Player disabled = new Player();
+        disabled.setSteamId("76561197960265730");
+        disabled.setUsername("Gone");
+        disabled.setElo(1700);
+        disabled.setDisabledAt(LocalDateTime.now());
+        player.setElo(1500);
+        when(players.findAllByDisabledAtIsNullOrderByEloDesc()).thenReturn(List.of(player));
+        when(players.findAllByOrderByEloDesc()).thenReturn(List.of(disabled, player));
+
+        assertEquals(List.of(player.getSteamId()),
+                service.getAllPlayersSummary(false).stream().map(PlayerSummaryResponse::steamId).toList());
+        List<PlayerSummaryResponse> all = service.getAllPlayersSummary(true);
+        assertEquals(List.of(disabled.getSteamId(), player.getSteamId()), all.stream().map(PlayerSummaryResponse::steamId).toList());
+        assertEquals(List.of(true, false), all.stream().map(PlayerSummaryResponse::disabled).toList());
+    }
+
+    // Disabled behaviour 8
+    @Test
+    void disabledPlayersProfileStillLoadsWithTheirHistory() {
+        LocalDateTime disabledAt = LocalDateTime.of(2026, 10, 1, 12, 0);
+        player.setDisabledAt(disabledAt);
+        playMatch(1, LocalDateTime.of(2026, 1, 1, 20, 0), null);
+
+        PlayerDetailResponse detail = service.findById(player.getSteamId());
+
+        assertTrue(detail.disabled());
+        assertEquals(disabledAt, detail.disabledAt());
+        assertEquals(1, detail.matches().size());
+        assertEquals(1, detail.wins());
     }
 }
