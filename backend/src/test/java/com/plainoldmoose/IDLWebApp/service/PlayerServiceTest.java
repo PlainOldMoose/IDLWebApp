@@ -28,9 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -122,7 +120,6 @@ class PlayerServiceTest {
         assertTrue(player.isDisabled());
         assertNotNull(player.getDisabledAt());
         assertFalse(player.getDisabledAt().isBefore(before));
-        verify(players).save(player);
     }
 
     // Disabled behaviour 2
@@ -134,7 +131,6 @@ class PlayerServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
         assertFalse(player.isDisabled());
-        verify(players, never()).save(any());
     }
 
     // Disabled behaviour 3
@@ -154,7 +150,6 @@ class PlayerServiceTest {
 
         assertFalse(player.isDisabled());
         assertNull(player.getDisabledAt());
-        verify(players).save(player);
     }
 
     // Disabled behaviour 5

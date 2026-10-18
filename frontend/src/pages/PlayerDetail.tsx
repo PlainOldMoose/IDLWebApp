@@ -6,6 +6,7 @@ import Panel from "../components/Panel.tsx";
 import EloLadder from "../components/EloLadder.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import NoValue from "../components/NoValue.tsx";
 import {formatDate, formatElo, formatEloChange, formatRelative, sideName} from "../util/format.ts";
 import opendotaIcon from "../assets/opendota.png";
@@ -30,11 +31,6 @@ export default function PlayerDetail() {
     const {data: user} = useCurrentUser();
     const setDisabled = useSetDisabled(steamId ?? "");
     const disableDialogRef = useRef<HTMLDialogElement>(null);
-
-    const openDisableDialog = () => {
-        setDisabled.reset();
-        disableDialogRef.current?.showModal();
-    };
 
     // A grey bar stands in for the title, at the same height so the banner doesn't jump when data arrives
     if (isLoading) return (
@@ -89,7 +85,7 @@ export default function PlayerDetail() {
                         <span className="text-ash"> ({player.winRate}%)</span>
                     </p>
                     {user?.admin && (
-                        <button className={`secondary-button ${player.disabled ? "" : "text-danger"}`} onClick={openDisableDialog}>
+                        <button className={`secondary-button ${player.disabled ? "" : "text-danger"}`} onClick={() => disableDialogRef.current?.showModal()}>
                             {action} player
                         </button>
                     )}
@@ -113,24 +109,17 @@ export default function PlayerDetail() {
             }
         >
             {user?.admin && (
-                <dialog ref={disableDialogRef} aria-labelledby="disable-player-title" className="dialog">
-                    <h2 id="disable-player-title" className="font-display text-3xl font-bold">
-                        {action} player
-                    </h2>
-                    <p className="mt-4 text-ash">
+                <FormDialog dialogRef={disableDialogRef} title={`${action} player`} mutation={setDisabled} submitLabel={action}
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                setDisabled.mutate(!player.disabled, {onSuccess: () => disableDialogRef.current?.close()});
+                            }}>
+                    <p className="text-ash">
                         {player.disabled
                             ? `${player.username} shows on the player list and leaderboard again and can sign in. Sign-ups removed when they were disabled don't come back.`
                             : `${player.username} can't sign in, sign up or play new games, and leaves the player list and leaderboard. Sign-ups for seasons still taking them are removed. Their matches and ELO history stay.`}
                     </p>
-                    {setDisabled.isError && <p role="alert" className="mt-4 text-sm text-ash">{setDisabled.error.message}</p>}
-                    <div className="mt-4 flex justify-end gap-3">
-                        <button type="button" className="secondary-button" onClick={() => disableDialogRef.current?.close()}>Cancel</button>
-                        <button type="button" className="primary-button" disabled={setDisabled.isPending}
-                                onClick={() => setDisabled.mutate(!player.disabled, {onSuccess: () => disableDialogRef.current?.close()})}>
-                            {action}
-                        </button>
-                    </div>
-                </dialog>
+                </FormDialog>
             )}
             {/*Fixed-size summary first, the growing match list last*/}
             <div className="space-y-4">

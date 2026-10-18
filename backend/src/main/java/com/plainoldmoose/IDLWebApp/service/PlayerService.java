@@ -13,16 +13,18 @@ import com.plainoldmoose.IDLWebApp.model.player.Player;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.PlayerRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonSignupRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,15 +69,13 @@ public class PlayerService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Admins can't be disabled");
         }
         player.setDisabledAt(LocalDateTime.now());
-        playerRepository.save(player);
         // Seasons already drafted keep them on their team
         seasonSignupRepository.deleteByPlayerSteamIdAndSeasonStatus(steamId, SeasonStatus.REGISTRATION);
     }
 
+    @Transactional
     public void enable(String steamId) {
-        Player player = find(steamId);
-        player.setDisabledAt(null);
-        playerRepository.save(player);
+        find(steamId).setDisabledAt(null);
     }
 
     public List<PlayerSummaryResponse> getAllPlayersSummary(boolean includeDisabled) {
@@ -110,6 +110,10 @@ public class PlayerService {
         int losses = played.size() - wins;
         double winrate = played.isEmpty() ? 0.0 : Math.round((double) wins / played.size() * 10000) / 100.0;
 
+        Map<Long, Double> eloChanges = player.getEloHistory().stream()
+                .filter(eh -> eh.getMatch() != null)
+                .collect(Collectors.toMap(eh -> eh.getMatch().getMatchId(), EloHistory::getEloChange, (first, second) -> first));
+
         List<PlayerMatchResponse> matches = matchParticipations
                 .stream()
                 .filter(mp -> mp.getMatch()
@@ -119,20 +123,12 @@ public class PlayerService {
                 .map(mp -> {
                     Match match = mp.getMatch();
                     boolean won = mp.getSide() == match.getMatchWinner();
-
-                    Double eloChange = player.getEloHistory().stream()
-                            .filter(eh -> eh.getMatch() != null && eh.getMatch()
-                                    .getMatchId()
-                                    .equals(match.getMatchId()))
-                            .findFirst()
-                            .map(EloHistory::getEloChange)
-                            .orElse(null);
                     return new PlayerMatchResponse(match.getMatchId(),
                             match.getPlayedTime(),
                             won,
                             mp.getSide(),
                             mp.isSub(),
-                            eloChange,
+                            eloChanges.get(match.getMatchId()),
                             match.getSeason() != null ? match.getSeason().getId() : null,
                             match.getSeason() != null ? match.getSeason()
                                     .getName() : null,

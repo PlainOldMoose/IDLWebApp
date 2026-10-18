@@ -12,8 +12,6 @@ import java.util.UUID;
 public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findAllByOrderByPlayedTimeDesc(Limit limit);
 
-    List<Match> findBySeasonIdOrderByPlayedTimeDesc(UUID seasonId);
-
     List<Match> findBySeasonIdOrderByPlayedTimeDesc(UUID seasonId, Limit limit);
 
     boolean existsBySeasonId(UUID seasonId);

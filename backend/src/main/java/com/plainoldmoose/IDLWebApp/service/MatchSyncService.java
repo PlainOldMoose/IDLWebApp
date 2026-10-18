@@ -51,7 +51,6 @@ import java.util.stream.Stream;
 @Service
 @AllArgsConstructor
 public class MatchSyncService {
-    private static final String SEASON_NOT_FOUND = "Season not found";
     // Shorter is a remake or an early GG, which an admin decides on
     private static final int MIN_DURATION_SECONDS = 15 * 60;
 
@@ -71,10 +70,7 @@ public class MatchSyncService {
         // Off a request there's no open session to load teams on demand like "Sync now" has, so the rosters are
         // loaded up front
         List<Season> seasons = transactions.execute(status -> {
-            List<Season> active = seasonRepository.findAll()
-                    .stream()
-                    .filter(season -> season.getStatus() == SeasonStatus.ACTIVE && season.getLeagueId() != null)
-                    .toList();
+            List<Season> active = seasonRepository.findByStatusAndLeagueIdNotNull(SeasonStatus.ACTIVE);
             active.forEach(season -> season.getTeams().forEach(team -> team.getMembers().size()));
             return active;
         });
@@ -89,7 +85,7 @@ public class MatchSyncService {
 
     // An admin's "Sync now"
     public void sync(UUID seasonId) {
-        Season season = findSeason(seasonId);
+        Season season = seasonRepository.findById(seasonId).orElseThrow(SeasonRepository::notFound);
         if (season.getStatus() != SeasonStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an active season's games are synced");
         }
@@ -104,7 +100,7 @@ public class MatchSyncService {
     }
 
     public LeagueSyncResponse getLeagueSync(UUID seasonId) {
-        Season season = findSeason(seasonId);
+        Season season = seasonRepository.findById(seasonId).orElseThrow(SeasonRepository::notFound);
         List<LeagueMatch> pending = leagueMatchRepository.findBySeasonIdAndStatusOrderByPlayedTimeAsc(seasonId, LeagueMatchStatus.PENDING);
         Map<String, String> usernames = playerRepository.findAllById(pending.stream()
                         .flatMap(match -> Stream.concat(match.getRadiant().stream(), match.getDire().stream()))
@@ -259,14 +255,14 @@ public class MatchSyncService {
     // The team with 3 or more of a side's players; null when none has
     private static Team majority(Season season, List<String> side) {
         return season.getTeams().stream()
-                .filter(team -> team.getMembers().stream().filter(member -> side.contains(member.getPlayer().getSteamId())).count() >= 3)
+                .filter(team -> team.steamIds().stream().filter(side::contains).count() >= 3)
                 .findFirst()
                 .orElse(null);
     }
 
     // Only a guess when it can't be wrong: one sub, and one team member who didn't play
     private static Map<String, String> subbingFor(Team team, List<String> side) {
-        List<String> roster = team.getMembers().stream().map(member -> member.getPlayer().getSteamId()).toList();
+        List<String> roster = team.steamIds();
         List<String> subs = side.stream().filter(id -> !roster.contains(id)).toList();
         List<String> missing = roster.stream().filter(id -> !side.contains(id)).toList();
         return subs.size() == 1 && missing.size() == 1 ? Map.of(subs.get(0), missing.get(0)) : Map.of();
@@ -282,9 +278,5 @@ public class MatchSyncService {
 
     private static List<PendingPlayerResponse> players(List<String> steamIds, Map<String, String> usernames) {
         return steamIds.stream().map(id -> new PendingPlayerResponse(id, usernames.get(id))).toList();
-    }
-
-    private Season findSeason(UUID id) {
-        return seasonRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
     }
 }

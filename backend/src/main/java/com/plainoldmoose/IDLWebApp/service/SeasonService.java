@@ -16,10 +16,11 @@ import com.plainoldmoose.IDLWebApp.repository.DeletedMatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.EloHistoryRepository;
 import com.plainoldmoose.IDLWebApp.repository.MatchRepository;
 import com.plainoldmoose.IDLWebApp.repository.SeasonRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -30,8 +31,6 @@ import java.util.UUID;
 @Service
 @AllArgsConstructor
 public class SeasonService {
-
-    private static final String SEASON_NOT_FOUND = "Season not found";
 
     private SeasonRepository seasonRepository;
     private MatchRepository matchRepository;
@@ -59,14 +58,13 @@ public class SeasonService {
     public SeasonDetailResponse getSeasonById(UUID id) {
         return seasonRepository.findById(id)
                 .map(this::mapToDetailResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
+                .orElseThrow(SeasonRepository::notFound);
     }
 
     // Only seasons nothing has been played in: matches carry ELO history and teams their standings
     @Transactional
     public void deleteSeason(UUID id) {
-        Season season = seasonRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
+        Season season = seasonRepository.findById(id).orElseThrow(SeasonRepository::notFound);
 
         if (!season.getTeams().isEmpty() || matchRepository.existsBySeasonId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Seasons with teams or matches can't be deleted");
@@ -79,8 +77,7 @@ public class SeasonService {
     // season and the winner is fixed once set
     @Transactional
     public void completeSeason(UUID id, UUID winnerTeamId) {
-        Season season = seasonRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND));
+        Season season = seasonRepository.findById(id).orElseThrow(SeasonRepository::notFound);
         if (season.getStatus() != SeasonStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an active season can be ended");
         }
@@ -111,11 +108,16 @@ public class SeasonService {
         if (winner == null) {
             return season.getLegacyWinnerPlayers();
         }
-        return winner.getMembers()
+        return captainFirst(winner).stream()
+                .map(Player::getUsername)
+                .toList();
+    }
+
+    private static List<Player> captainFirst(Team team) {
+        return team.getMembers()
                 .stream()
                 .map(TeamMember::getPlayer)
-                .sorted(Comparator.comparing((Player player) -> player != winner.getCaptain()))
-                .map(Player::getUsername)
+                .sorted(Comparator.comparing((Player player) -> player != team.getCaptain()))
                 .toList();
     }
 
@@ -137,8 +139,7 @@ public class SeasonService {
 
     @Transactional
     public void setLeague(UUID id, Long leagueId) {
-        seasonRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, SEASON_NOT_FOUND))
+        seasonRepository.findById(id).orElseThrow(SeasonRepository::notFound)
                 .setLeagueId(leagueId);
     }
 
@@ -147,7 +148,7 @@ public class SeasonService {
         if (season.getStatus() != SeasonStatus.COMPLETED) {
             return null;
         }
-        return matchRepository.findBySeasonIdOrderByPlayedTimeDesc(season.getId())
+        return matchRepository.findBySeasonIdOrderByPlayedTimeDesc(season.getId(), Limit.of(1))
                 .stream()
                 .findFirst()
                 .map(Match::getPlayedTime)
@@ -169,9 +170,7 @@ public class SeasonService {
     }
 
     private TeamResponse mapToTeamResponse(Team team, LocalDateTime end) {
-        List<PlayerSummaryResponse> members = team.getMembers()
-                .stream()
-                .map(TeamMember::getPlayer)
+        List<PlayerSummaryResponse> members = captainFirst(team).stream()
                 .map(player -> new PlayerSummaryResponse(player.getUsername(), eloAt(player, end), player.getSteamId(), player.isDisabled()))
                 .toList();
 

@@ -44,6 +44,10 @@ public class Team {
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
     private List<TeamMember> members = new ArrayList<>();
 
+    public List<String> steamIds() {
+        return members.stream().map(member -> member.getPlayer().getSteamId()).toList();
+    }
+
     // The season table's order: most wins, then fewest losses. Sorts are stable, so ties keep the season's own team order
     public static <T> Comparator<T> tableOrder(ToIntFunction<T> wins, ToIntFunction<T> losses) {
         return Comparator.comparingInt(wins).reversed().thenComparingInt(losses);

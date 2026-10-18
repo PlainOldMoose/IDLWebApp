@@ -81,7 +81,7 @@ class MatchSyncServiceTest {
         season.setLeagueId(LEAGUE);
         season.setTeams(List.of(first, second));
         when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
-        when(seasons.findAll()).thenReturn(List.of(season));
+        when(seasons.findByStatusAndLeagueIdNotNull(SeasonStatus.ACTIVE)).thenReturn(List.of(season));
         when(steam.leagueMatches(LEAGUE)).thenReturn(games);
         when(players.findAllById(any())).thenAnswer(call -> {
             Iterable<String> ids = call.getArgument(0);
@@ -338,23 +338,17 @@ class MatchSyncServiceTest {
     // Behaviour 9
     @Test
     void timerSyncsOnlyActiveSeasonsWithATicket() {
-        Season noTicket = new Season();
-        noTicket.setStatus(SeasonStatus.ACTIVE);
-        Season finished = new Season();
-        finished.setStatus(SeasonStatus.COMPLETED);
-        finished.setLeagueId(111L);
         Season broken = new Season();
         broken.setStatus(SeasonStatus.ACTIVE);
         broken.setLeagueId(222L);
         broken.setTeams(List.of());
-        when(seasons.findAll()).thenReturn(List.of(broken, noTicket, finished, season));
+        when(seasons.findByStatusAndLeagueIdNotNull(SeasonStatus.ACTIVE)).thenReturn(List.of(broken, season));
         when(steam.leagueMatches(222L)).thenThrow(new RestClientException("Connection reset"));
 
         service.syncAll();
 
         verify(steam).leagueMatches(222L);
         verify(steam).leagueMatches(LEAGUE);
-        verify(steam, never()).leagueMatches(111L);
         assertNotNull(season.getLeagueSyncedAt());
         assertNotNull(broken.getLeagueSyncError());
     }

@@ -1,4 +1,4 @@
-import {type SubmitEvent, useRef, useState} from "react";
+import {type SubmitEvent, useRef} from "react";
 import {Link, useNavigate, useParams} from "react-router";
 import {useCurrentUser, useDeleteMatch, useMatchDetail} from "../services/Queries.ts";
 import Page from "../components/Page.tsx";
@@ -6,12 +6,13 @@ import Panel from "../components/Panel.tsx";
 import StatStrip from "../components/StatStrip.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import WarningIcon from "../components/WarningIcon.tsx";
 import NoValue from "../components/NoValue.tsx";
 import {formatDate, formatElo, formatEloChange, formatOrdinal, isLegacySeason, sideName} from "../util/format.ts";
+import {TEAM_SIZE} from "../util/draft.ts";
 
 const sides = ["RADIANT", "DIRE"] as const;
-const TEAM_SIZE = 5;
 const rowColumns = "grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] gap-x-3";
 const winnerRing = {RADIANT: "ring-1 ring-radiant/70", DIRE: "ring-1 ring-dire/70"};
 const changeColour = (change: number) => change > 0 ? "text-win" : change < 0 ? "text-loss" : "";
@@ -25,14 +26,7 @@ export default function MatchDetail() {
     const {data: user} = useCurrentUser();
     const deleteMatch = useDeleteMatch(matchId);
     const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    const [confirmText, setConfirmText] = useState("");
     const navigate = useNavigate();
-
-    const openDeleteDialog = () => {
-        deleteMatch.reset();
-        setConfirmText("");
-        deleteDialogRef.current?.showModal();
-    };
 
     const handleDelete = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -89,7 +83,7 @@ export default function MatchDetail() {
                 <div className="flex flex-wrap gap-3">
                     {/*The API refuses a finished season's matches*/}
                     {user?.admin && (
-                        <button className="secondary-button text-danger" onClick={openDeleteDialog}>Delete match</button>
+                        <button className="secondary-button text-danger" onClick={() => deleteDialogRef.current?.showModal()}>Delete match</button>
                     )}
                     {!match.forfeit && (
                         <a href={`https://stratz.com/matches/${match.matchId}`} target="_blank" rel="noopener noreferrer" className="primary-button">
@@ -215,31 +209,18 @@ export default function MatchDetail() {
             </div>
 
             {user?.admin && (
-                <dialog ref={deleteDialogRef} aria-labelledby="delete-match-title"
-                        className="dialog">
-                    <h2 id="delete-match-title" className="font-display text-3xl font-bold">Delete match</h2>
-                    <form onSubmit={handleDelete} className="mt-4 space-y-4">
-                        {match.forfeit ? (
-                            <p>This permanently deletes the forfeit and takes it off the standings.</p>
-                        ) : (
-                            <p>
-                                This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
-                                off the standings. Everyone's ELO is worked out again from this game on.
-                            </p>
-                        )}
-                        <p className="text-sm text-ash">It goes to Recently deleted for 7 days, where you can restore it.</p>
-                        <label className="block">
-                            Type <strong>delete</strong> to confirm
-                            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off"
-                                   className="text-input mt-2 block w-full"/>
-                        </label>
-                        {deleteMatch.isError && <p role="alert" className="text-sm text-ash">{deleteMatch.error.message}</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={confirmText !== "delete" || deleteMatch.isPending}>Delete match</button>
-                        </div>
-                    </form>
-                </dialog>
+                <FormDialog dialogRef={deleteDialogRef} title="Delete match" onSubmit={handleDelete} mutation={deleteMatch}
+                            confirmWord="delete" submitLabel="Delete match">
+                    {match.forfeit ? (
+                        <p>This permanently deletes the forfeit and takes it off the standings.</p>
+                    ) : (
+                        <p>
+                            This permanently deletes match <strong className="figures">{match.matchId}</strong> and takes it
+                            off the standings. Everyone's ELO is worked out again from this game on.
+                        </p>
+                    )}
+                    <p className="text-sm text-ash">It goes to Recently deleted for 7 days, where you can restore it.</p>
+                </FormDialog>
             )}
         </Page>
     );

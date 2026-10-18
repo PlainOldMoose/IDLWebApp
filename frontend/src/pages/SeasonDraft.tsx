@@ -4,12 +4,12 @@ import {useDraft, useDraftCaptain, useDraftPick, useRenameTeam} from "../service
 import Panel from "../components/Panel.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import WarningIcon from "../components/WarningIcon.tsx";
 import {formatElo} from "../util/format.ts";
-import {hasDefaultName} from "../util/draft.ts";
+import {hasDefaultName, TEAM_SIZE} from "../util/draft.ts";
 import type {DraftPlayer, DraftTeam, SteamUser} from "../types.ts";
 
-const TEAM_SIZE = 5;
 // Roles get their own column from sm, so each row reads on one line; on phones, and in the pool's four columns from lg,
 // they sit under the name. While captains are being made there's a last column for the "Make captain" button ("Captain"
 // on phones); picks need none, as the whole row is the button
@@ -47,13 +47,11 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
     const myDefaultNamedTeam = draft.teams.find(team => team.captainSteamId === user?.steamId && hasDefaultName(team));
 
     const openRenameDialog = (team: DraftTeam) => {
-        rename.reset();
         setRenaming(team);
         renameDialogRef.current?.showModal();
     };
 
     const openPickDialog = (player: DraftPlayer) => {
-        pick.reset();
         setPicking({player, teamName: onTheClock!.name});
         pickDialogRef.current?.showModal();
     };
@@ -232,37 +230,21 @@ export default function SeasonDraft({seasonId, user}: { seasonId: string, user: 
                 </Panel>
             </div>
 
-            <dialog ref={pickDialogRef} aria-labelledby="pick-title" className="dialog">
-                <h2 id="pick-title" className="font-display text-3xl font-bold">Confirm pick</h2>
-                <form onSubmit={handlePick} className="mt-4 space-y-4">
-                    <p>{`${picking?.player.username} joins ${picking?.teamName}. Picks can't be undone.`}</p>
-                    {pick.isError && <p role="alert" className="text-sm text-ash">{pick.error.message}</p>}
-                    <div className="flex justify-end gap-3">
-                        <button type="button" className="secondary-button" onClick={() => pickDialogRef.current?.close()}>Cancel</button>
-                        {/*The dialog opens on Cancel, so a stray Enter backs out of a pick that can't be undone*/}
-                        <button type="submit" className="primary-button" disabled={pick.isPending}>
-                            {`Pick ${picking?.player.username}`}
-                        </button>
-                    </div>
-                </form>
-            </dialog>
+            {/*No fields, so it opens on Cancel and a stray Enter backs out of a pick that can't be undone*/}
+            <FormDialog dialogRef={pickDialogRef} title="Confirm pick" onSubmit={handlePick} mutation={pick}
+                        submitLabel={`Pick ${picking?.player.username}`}>
+                <p>{`${picking?.player.username} joins ${picking?.teamName}. Picks can't be undone.`}</p>
+            </FormDialog>
 
-            <dialog ref={renameDialogRef} aria-labelledby="rename-team-title" className="dialog">
-                <h2 id="rename-team-title" className="font-display text-3xl font-bold">Rename team</h2>
-                {/*Keyed by team so the field starts from that team's current name*/}
-                <form key={renaming?.teamId} onSubmit={handleRename} className="mt-4 space-y-4">
-                    <label className="block">
-                        Team name
-                        <input name="name" required maxLength={32} defaultValue={renaming?.name} autoComplete="off"
-                               className="text-input mt-2 block w-full"/>
-                    </label>
-                    {rename.isError && <p role="alert" className="text-sm text-ash">{rename.error.message}</p>}
-                    <div className="flex justify-end gap-3">
-                        <button type="button" className="secondary-button" onClick={() => renameDialogRef.current?.close()}>Cancel</button>
-                        <button type="submit" className="primary-button" disabled={rename.isPending}>Save</button>
-                    </div>
-                </form>
-            </dialog>
+            {/*Keyed by team so the field starts from that team's current name*/}
+            <FormDialog dialogRef={renameDialogRef} title="Rename team" onSubmit={handleRename} mutation={rename} submitLabel="Save"
+                        formKey={renaming?.teamId}>
+                <label className="block">
+                    Team name
+                    <input name="name" required maxLength={32} defaultValue={renaming?.name} autoComplete="off"
+                           className="text-input mt-2 block w-full"/>
+                </label>
+            </FormDialog>
         </>
     );
 }
