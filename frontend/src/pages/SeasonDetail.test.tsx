@@ -66,9 +66,6 @@ beforeEach(() => {
     postedTo = undefined;
     writes = [];
     fetched = [];
-    // NOTE: jsdom has no modal dialogs
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
-    HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.open = false; };
 });
 
 it("lists dedicated subs apart from players while sign-ups are open", async () => {

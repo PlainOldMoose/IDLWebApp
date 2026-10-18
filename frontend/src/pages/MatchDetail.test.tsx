@@ -50,8 +50,6 @@ beforeEach(() => {
         : path === "/auth/me" && user ? new Response(JSON.stringify(user))
         // Signed out
         : new Response(null, {status: 401})));
-    // NOTE: jsdom has no modal dialogs
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
 });
 
 afterEach(() => vi.unstubAllGlobals());
