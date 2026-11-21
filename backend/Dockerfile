@@ -13,4 +13,5 @@
   WORKDIR /app
   COPY --from=build /app/target/*.jar app.jar
   EXPOSE 8080
-  ENTRYPOINT ["java", "-jar", "app.jar"]
+  # CVE-2026-114938 (Java4Shell): turns off the AVX-512 Base64 path it abuses. Drop once Temurin ships the fix and prod runs it
+  ENTRYPOINT ["java", "-XX:-UseBASE64Intrinsics", "-jar", "app.jar"]

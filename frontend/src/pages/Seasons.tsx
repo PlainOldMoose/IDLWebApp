@@ -4,6 +4,7 @@ import {useCreateSeason, useCurrentUser, useSeasons} from "../services/Queries.t
 import Page from "../components/Page.tsx";
 import Loader from "../components/Loader.tsx";
 import QueryError from "../components/QueryError.tsx";
+import FormDialog from "../components/FormDialog.tsx";
 import WarningIcon from "../components/WarningIcon.tsx";
 import {formatDateRange, isLegacySeason} from "../util/format.ts";
 import {statusStyles} from "../util/statusStyles.ts";
@@ -14,11 +15,6 @@ export default function Seasons() {
     const createSeason = useCreateSeason();
     const dialogRef = useRef<HTMLDialogElement>(null);
     const [startDate, setStartDate] = useState("");
-
-    const openDialog = () => {
-        createSeason.reset();
-        dialogRef.current?.showModal();
-    };
 
     const handleCreate = (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -43,33 +39,25 @@ export default function Seasons() {
         title: "Seasons",
         aside: user?.admin && (
             <>
-                <button className="primary-button" onClick={openDialog}>New season</button>
-                <dialog ref={dialogRef} aria-labelledby="new-season-title"
-                        className="dialog">
-                    <h2 id="new-season-title" className="font-display text-3xl font-bold">New season</h2>
-                    <form onSubmit={handleCreate} className="mt-4 space-y-4">
+                <button className="primary-button" onClick={() => dialogRef.current?.showModal()}>New season</button>
+                <FormDialog dialogRef={dialogRef} title="New season" onSubmit={handleCreate} mutation={createSeason}
+                        errorMessage="Couldn't create the season. Refresh and try again." submitLabel="Create">
+                    <label className="block">
+                        Name
+                        <input name="name" required maxLength={64} autoComplete="off" className={inputClass}/>
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
                         <label className="block">
-                            Name
-                            <input name="name" required maxLength={64} autoComplete="off" className={inputClass}/>
+                            Starts
+                            <input name="startDate" type="date" required value={startDate}
+                                   onChange={(e) => setStartDate(e.target.value)} className={inputClass}/>
                         </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <label className="block">
-                                Starts
-                                <input name="startDate" type="date" required value={startDate}
-                                       onChange={(e) => setStartDate(e.target.value)} className={inputClass}/>
-                            </label>
-                            <label className="block">
-                                Ends
-                                <input name="endDate" type="date" required min={startDate || undefined} className={inputClass}/>
-                            </label>
-                        </div>
-                        {createSeason.isError && <p role="alert" className="text-sm text-ash">Couldn't create the season. Refresh and try again.</p>}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-                            <button type="submit" className="primary-button" disabled={createSeason.isPending}>Create</button>
-                        </div>
-                    </form>
-                </dialog>
+                        <label className="block">
+                            Ends
+                            <input name="endDate" type="date" required min={startDate || undefined} className={inputClass}/>
+                        </label>
+                    </div>
+                </FormDialog>
             </>
         ),
     };

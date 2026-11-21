@@ -83,8 +83,7 @@ public class SeasonSignupService {
     }
 
     private Season openSeason(UUID seasonId) {
-        Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found"));
+        Season season = seasonRepository.findById(seasonId).orElseThrow(SeasonRepository::notFound);
 
         if (season.getStatus() != SeasonStatus.REGISTRATION) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Season signups closed");

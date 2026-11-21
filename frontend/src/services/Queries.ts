@@ -38,27 +38,34 @@ export function usePlayer(steamId: string | undefined) {
     })
 }
 
-// Mutations don't return the invalidation, so they settle (and their callers navigate or close dialogs) without
-// waiting for the refetch
-export function useCreatePlayer() {
+// Invalidates queryKeys on success, or everything cached when none are given. It doesn't return the invalidation, so
+// mutations settle (and their callers navigate or close dialogs) without waiting for the refetch
+function useApiMutation<V = void, T = void>(mutationFn: (variables: V) => Promise<T>, ...queryKeys: unknown[][]) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (player: Omit<PlayerSummary, "disabled">) =>
-            request<PlayerSummary>("/api/players", {method: "POST", json: player}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["players"]}),
+        mutationFn,
+        onSuccess: () => {
+            if (queryKeys.length === 0) void queryClient.invalidateQueries();
+            queryKeys.forEach(queryKey => void queryClient.invalidateQueries({queryKey}));
+        },
     });
 }
 
+export function useCreatePlayer() {
+    return useApiMutation(
+        (player: Omit<PlayerSummary, "disabled">) =>
+            request<PlayerSummary>("/api/players", {method: "POST", json: player}),
+        ["players"],
+    );
+}
+
 export function useSetDisabled(steamId: string) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (disabled: boolean) =>
+    return useApiMutation(
+        (disabled: boolean) =>
             request<void>(`/api/players/${encodeURIComponent(steamId)}/disabled`, {method: disabled ? "PUT" : "DELETE"}),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({queryKey: ["players"]});
-            void queryClient.invalidateQueries({queryKey: ["player", steamId]});
-        },
-    });
+        ["players"],
+        ["player", steamId],
+    );
 }
 
 export function useSeasons() {
@@ -69,32 +76,24 @@ export function useSeasons() {
 }
 
 export function useCreateSeason() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (season: Pick<Season, "name" | "startDate" | "endDate">) =>
+    return useApiMutation(
+        (season: Pick<Season, "name" | "startDate" | "endDate">) =>
             request<Season>("/api/seasons", {method: "POST", json: season}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasons"]}),
-    });
+        ["seasons"],
+    );
 }
 
 export function useDeleteSeason(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasons"]}),
-    });
+    return useApiMutation(() => request<void>(`/api/seasons/${seasonId}`, {method: "DELETE"}), ["seasons"]);
 }
 
 export function useCompleteSeason(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (winnerTeamId: string) =>
+    return useApiMutation(
+        (winnerTeamId: string) =>
             request<void>(`/api/seasons/${seasonId}/complete`, {method: "POST", json: {winnerTeamId}}),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
-            void queryClient.invalidateQueries({queryKey: ["seasons"]});
-        },
-    });
+        ["season", seasonId],
+        ["seasons"],
+    );
 }
 
 // Admin-only, so only admins ask; under ["season", id] so the season's own invalidations refresh it
@@ -107,11 +106,10 @@ export function useLeagueSync(seasonId: string | undefined, enabled: boolean) {
 }
 
 export function useSetLeague(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (leagueId: number | null) => request<void>(`/api/seasons/${seasonId}/league`, {method: "PUT", json: {leagueId}}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["season", seasonId]}),
-    });
+    return useApiMutation(
+        (leagueId: number | null) => request<void>(`/api/seasons/${seasonId}/league`, {method: "PUT", json: {leagueId}}),
+        ["season", seasonId],
+    );
 }
 
 // Imported games replay everyone's ELO, and a failure is recorded on the season, so everything is stale either way
@@ -124,11 +122,10 @@ export function useSyncLeague(seasonId: string | undefined) {
 }
 
 export function useRejectPendingMatch(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (matchId: number) => request<void>(`/api/seasons/${seasonId}/league/pending/${matchId}`, {method: "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["season", seasonId, "league"]}),
-    });
+    return useApiMutation(
+        (matchId: number) => request<void>(`/api/seasons/${seasonId}/league/pending/${matchId}`, {method: "DELETE"}),
+        ["season", seasonId, "league"],
+    );
 }
 
 export function useMatches(seasonId?: string, enabled = true) {
@@ -149,24 +146,20 @@ export function useRecentMatches(limit: number) {
 
 // Everyone's ELO is replayed from the game on, so everything cached is stale
 export function useCreateMatch() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (match: {
+    return useApiMutation(
+        (match: {
             matchId: number, seasonId: string, playedTime: string, radiantTeamId: string, direTeamId: string,
             winner: "RADIANT" | "DIRE", radiant: string[], dire: string[], subbingFor: Record<string, string>
         }) => request<void>("/api/matches", {method: "POST", json: match}),
-        onSuccess: () => void queryClient.invalidateQueries(),
-    });
+    );
 }
 
 // Moves the season table, so everything cached is stale
 export function useCreateForfeit() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (forfeit: {seasonId: string, playedTime: string, forfeitingTeamId: string, opponentTeamId: string}) =>
+    return useApiMutation(
+        (forfeit: {seasonId: string, playedTime: string, forfeitingTeamId: string, opponentTeamId: string}) =>
             request<void>("/api/matches/forfeits", {method: "POST", json: forfeit}),
-        onSuccess: () => void queryClient.invalidateQueries(),
-    });
+    );
 }
 
 // A season's "Recently deleted" bin. Admin-only, so only admins ask
@@ -180,20 +173,12 @@ export function useMatchBin(seasonId: string | undefined, enabled: boolean) {
 
 // Back in with ELO replayed from the game on, so everything cached is stale
 export function useRestoreMatch() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (matchId: number) => request<void>(`/api/matches/${matchId}/restore`, {method: "POST"}),
-        onSuccess: () => void queryClient.invalidateQueries(),
-    });
+    return useApiMutation((matchId: number) => request<void>(`/api/matches/${matchId}/restore`, {method: "POST"}));
 }
 
 // ELO is replayed without the game, so everything cached is stale
 export function useDeleteMatch(matchId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => request<void>(`/api/matches/${matchId}`, {method: "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries(),
-    });
+    return useApiMutation(() => request<void>(`/api/matches/${matchId}`, {method: "DELETE"}));
 }
 
 export function useMatchDetail(matchId: string | undefined) {
@@ -240,20 +225,18 @@ export function useSeasonSignups(seasonId: string | undefined) {
 }
 
 export function useSeasonSignup(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (body: { rolePreference: string | null, willingToCaptain: boolean, sub: boolean }) =>
+    return useApiMutation(
+        (body: { rolePreference: string | null, willingToCaptain: boolean, sub: boolean }) =>
             request<SeasonSignup>(`/api/seasons/${seasonId}/signups`, {method: "POST", json: body}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
-    });
+        ["seasonSignups", seasonId],
+    );
 }
 
 export function useWithdrawSignup(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]}),
-    });
+    return useApiMutation(
+        () => request<void>(`/api/seasons/${seasonId}/signups`, {method: "DELETE"}),
+        ["seasonSignups", seasonId],
+    );
 }
 
 // Polled, so everyone watching sees each pick without refreshing
@@ -268,54 +251,45 @@ export function useDraft(seasonId: string | undefined, enabled = true) {
 
 // Closes sign-ups, scores everyone and makes the first willing captains captain
 export function useStartDraft(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft`, {method: "POST"}),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
-            void queryClient.invalidateQueries({queryKey: ["seasons"]});
-            void queryClient.invalidateQueries({queryKey: ["seasonSignups", seasonId]});
-        },
-    });
+    return useApiMutation(
+        () => request<void>(`/api/seasons/${seasonId}/draft`, {method: "POST"}),
+        ["season", seasonId],
+        ["seasons"],
+        ["seasonSignups", seasonId],
+    );
 }
 
 export function useDraftPick(seasonId: string) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (steamId: string) =>
+    return useApiMutation(
+        (steamId: string) =>
             request<void>(`/api/seasons/${seasonId}/draft/picks`, {method: "POST", json: {steamId}}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
-    });
+        ["draft", seasonId],
+    );
 }
 
 // Locks the team names; matches can be added from here
 export function useStartSeason(seasonId: string | undefined) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => request<void>(`/api/seasons/${seasonId}/draft/start`, {method: "POST"}),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({queryKey: ["season", seasonId]});
-            void queryClient.invalidateQueries({queryKey: ["seasons"]});
-        },
-    });
+    return useApiMutation(
+        () => request<void>(`/api/seasons/${seasonId}/draft/start`, {method: "POST"}),
+        ["season", seasonId],
+        ["seasons"],
+    );
 }
 
 export function useDraftCaptain(seasonId: string) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({steamId, captain}: { steamId: string, captain: boolean }) =>
+    return useApiMutation(
+        ({steamId, captain}: { steamId: string, captain: boolean }) =>
             request<void>(`/api/seasons/${seasonId}/draft/captains/${steamId}`, {method: captain ? "PUT" : "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
-    });
+        ["draft", seasonId],
+    );
 }
 
 export function useRenameTeam(seasonId: string) {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({teamId, name}: { teamId: string, name: string }) =>
+    return useApiMutation(
+        ({teamId, name}: { teamId: string, name: string }) =>
             request<void>(`/api/seasons/${seasonId}/draft/teams/${teamId}`, {method: "PUT", json: {name}}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["draft", seasonId]}),
-    });
+        ["draft", seasonId],
+    );
 }
 
 // In-houses whose result isn't in yet, newest first
@@ -344,37 +318,27 @@ export function useInhouseBalance(steamIds: string[]) {
 }
 
 export function useCreateInhouse() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (teams: { teamA: string[], teamB: string[] }) =>
+    return useApiMutation(
+        (teams: { teamA: string[], teamB: string[] }) =>
             request<Inhouse>("/api/inhouses", {method: "POST", json: teams}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
-    });
+        ["inhouses"],
+    );
 }
 
 // Sends the winning side and Team A's side to the admin queue; nobody's ELO moves yet
 export function useInhouseResult() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({id, teamASide, winner}: { id: number, teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" }) =>
+    return useApiMutation(
+        ({id, teamASide, winner}: { id: number, teamASide: "RADIANT" | "DIRE", winner: "RADIANT" | "DIRE" }) =>
             request<void>(`/api/inhouses/${id}/result?teamASide=${teamASide}&winner=${winner}`, {method: "POST"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
-    });
+        ["inhouses"],
+    );
 }
 
 // The match is recorded under the in-house's ID. ELO moves for all 10 players, so everything cached is stale
 export function useApproveInhouse() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (id: number) => request<void>(`/api/inhouses/${id}/approve`, {method: "POST"}),
-        onSuccess: () => void queryClient.invalidateQueries(),
-    });
+    return useApiMutation((id: number) => request<void>(`/api/inhouses/${id}/approve`, {method: "POST"}));
 }
 
 export function useCancelInhouse() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (id: number) => request<void>(`/api/inhouses/${id}`, {method: "DELETE"}),
-        onSuccess: () => void queryClient.invalidateQueries({queryKey: ["inhouses"]}),
-    });
+    return useApiMutation((id: number) => request<void>(`/api/inhouses/${id}`, {method: "DELETE"}), ["inhouses"]);
 }

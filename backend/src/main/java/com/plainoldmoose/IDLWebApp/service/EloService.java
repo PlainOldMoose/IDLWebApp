@@ -53,11 +53,12 @@ public class EloService {
     // Plays every game from `from` on back through the formula, oldest first, moving ELO and writing history as it goes.
     // NOTE: ~4 queries per player per game for K's inputs, fine for an active season's worth; batch them if it gets slow
     public void replay(LocalDateTime from) {
+        List<LocalDateTime> starts = seasonStarts();
         for (Match match : matchRepository.findByPlayedTimeGreaterThanEqualOrderByPlayedTimeAscMatchIdAsc(from)) {
             // Nobody played it
             if (match.isForfeit()) continue;
             match.setAvgElo((int) Math.round(average(match.getParticipants().stream().map(MatchParticipant::getPlayer).toList())));
-            Map<String, Double> changes = changes(match);
+            Map<String, Double> changes = changes(match, starts);
             for (MatchParticipant participant : match.getParticipants()) {
                 Player player = participant.getPlayer();
                 double change = changes.get(player.getSteamId());
@@ -78,15 +79,23 @@ public class EloService {
     // differs player to player, through their own K. Game counts stop short of the match's own time, so it doesn't
     // count itself whether it's saved yet or not
     public Map<String, Double> changes(Match match) {
-        LocalDateTime played = match.getPlayedTime();
-        // The season this game falls in, and the one before. Before the first season, every game counts as this season's
-        List<LocalDateTime> starts = seasonRepository.findAllByOrderByStartDateDesc()
+        return changes(match, seasonStarts());
+    }
+
+    // Every season's start, latest first
+    private List<LocalDateTime> seasonStarts() {
+        return seasonRepository.findAllByOrderByStartDateDesc()
                 .stream()
                 .map(Season::getStartDate)
                 .filter(Objects::nonNull)
                 .map(LocalDate::atStartOfDay)
-                .filter(start -> !start.isAfter(played))
                 .toList();
+    }
+
+    private Map<String, Double> changes(Match match, List<LocalDateTime> allStarts) {
+        LocalDateTime played = match.getPlayedTime();
+        // The season this game falls in, and the one before. Before the first season, every game counts as this season's
+        List<LocalDateTime> starts = allStarts.stream().filter(start -> !start.isAfter(played)).toList();
         LocalDateTime seasonStart = starts.isEmpty() ? null : starts.get(0);
         LocalDateTime previousStart = starts.size() < 2 ? null : starts.get(1);
 
